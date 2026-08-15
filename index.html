@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="FIT Booker">
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#F3F3F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0B0C0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <script>
@@ -87,7 +87,7 @@
   --fill:rgba(18,20,24,.055);
   --fill2:rgba(18,20,24,.10);
   --barbg:rgba(243,243,240,.94);
-  --tabbg:rgba(243,243,240,.965);
+  --tabbg:#FFFFFF;   /* == theme-color: matches the strip iOS leaves below the web view */
   --sheet:#FFFFFF;
   --scrim:rgba(14,16,18,.34);
   --shadow:0 1px 2px rgba(12,14,18,.05),0 8px 22px -14px rgba(12,14,18,.30);
@@ -125,7 +125,7 @@
     --fill:rgba(255,255,255,.075);
     --fill2:rgba(255,255,255,.14);
     --barbg:rgba(12,13,15,.92);
-    --tabbg:rgba(10,11,13,.955);
+    --tabbg:#000000; /* == dark theme-color */
     --sheet:#1B1D20;
     --scrim:rgba(0,0,0,.55);
     --shadow:0 1px 2px rgba(0,0,0,.5);
@@ -632,7 +632,7 @@ svg{display:block;flex:none}
   padding-bottom:var(--tabpad);padding-left:var(--sal);padding-right:var(--sar);
   background:var(--tabbg);              /* F15 — see .navbar */
 }
-.tabbar::before{content:'';position:absolute;left:0;right:0;top:0;height:.5px;background:var(--hair)}
+.tabbar::before{content:'';position:absolute;left:0;right:0;top:0;height:.5px;background:var(--hair);opacity:1}
 .tabbtn{
   flex:1 1 0;min-width:0;height:var(--tabh);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
