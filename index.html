@@ -120,6 +120,21 @@
 /* nothing outside #app ever scrolls: the shell owns the viewport, each tab owns its
    own scroller. This is also what stops Safari's toolbar from resizing under us. */
 html,body{width:100%;max-width:100%;height:100%;overflow:hidden;background:var(--bg)}
+
+/* iOS 26.1+/27 regression (WebKit bug 301994): in a home-screen web app the layout
+   viewport comes back ~62px shorter than the physical screen, leaving a system-painted
+   strip no DOM element can reach. `lvh` still measures the full screen while `dvh` does
+   not, so paint the whole screen from behind everything else. `var(--bg)` means the strip
+   follows prefers-color-scheme, which a manifest colour can never do. Harmless where the
+   bug is absent: lvh == dvh and this is exactly the viewport.
+   NOTE: only this painter uses lvh. Layout MUST stay on dvh — sizing the interactive shell
+   to lvh would push the tab bar below the region that actually accepts touches. */
+#bleed{
+  position:fixed;left:0;right:0;top:0;
+  height:100lvh;min-height:100dvh;
+  z-index:-1;pointer-events:none;
+  background:var(--bg);
+}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   color:var(--ink);font-size:17px;line-height:1.3;
@@ -740,6 +755,7 @@ svg{display:block;flex:none}
 </style>
 </head>
 <body>
+<div id="bleed" aria-hidden="true"></div>
 <div id="app">
 
   <header class="navbar" id="navbar">

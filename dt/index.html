@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Viewport test matrix</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0F1113;color:#E9EBEE;font:400 15px/1.45 -apple-system,system-ui,sans-serif;
+  padding:20px 16px calc(40px + env(safe-area-inset-bottom,0px));
+  padding-top:calc(20px + env(safe-area-inset-top,0px));-webkit-text-size-adjust:100%}
+h1{font-size:22px;letter-spacing:-.02em;margin-bottom:4px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;opacity:.55;margin:26px 0 8px}
+p{margin:8px 0;font-size:14px}
+ol,ul{margin:8px 0 8px 20px;font-size:14px}
+li{margin:5px 0}
+code{font:600 12.5px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.09);padding:1px 5px;border-radius:4px}
+a.t{display:block;background:#1B1E22;border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  padding:12px 14px;margin:8px 0;text-decoration:none;color:inherit}
+a.t:active{background:#25292E}
+a.t .id{font:800 16px ui-monospace,Menlo,monospace;letter-spacing:-.01em}
+a.t .lb{font-weight:600;font-size:14px;margin-top:2px}
+a.t .ex{font-size:12.5px;opacity:.6;margin-top:4px}
+.tier{display:inline-block;font:800 10px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;
+  padding:4px 6px;border-radius:5px;vertical-align:2px;margin-right:7px}
+.A{background:#3DFF9E;color:#04361F}.B{background:#7C86A0;color:#0F1113}.C{background:#00E5FF;color:#04303A}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px;border:1px solid rgba(255,255,255,.3)}
+.box{background:#181B1F;border-left:3px solid #FFB020;border-radius:0 10px 10px 0;padding:12px 14px;margin:14px 0;font-size:13.5px}
+</style>
+</head>
+<body>
+
+<h1>iOS standalone viewport test matrix</h1>
+<p>Nine one-file probes. Each isolates <b>one</b> head/manifest variable. No network, no data, no login.</p>
+
+<div class="box">
+<b>How to run each one (2 minutes each):</b>
+<ol>
+<li>Tap the variant below &mdash; it opens in <b>Safari</b>.</li>
+<li>Share sheet <span style="opacity:.6">(square with arrow)</span> &rarr; <b>Add to Home Screen</b> &rarr; Add.</li>
+<li>Go to the Home Screen and <b>open the new icon</b> (not the Safari tab &mdash; the tab always says FAIL).</li>
+<li><b>Screenshot it</b> (side button + volume up).</li>
+<li>Delete the icon again. Move to the next variant.</li>
+</ol>
+If you already have an old icon for a variant, <b>delete it first</b> &mdash; iOS caches the manifest per installed app.
+</div>
+
+<h2>What to look for in the screenshot</h2>
+<ul>
+<li>Every page has a <span class="sw" style="background:#FF2D2D"></span><b>red bar</b> pinned to the very top of the web view and a <span class="sw" style="background:#2D7BFF"></span><b>blue bar</b> pinned to the very bottom.</li>
+<li><b>PASS</b> = red bar touches the top of the physical screen (under the Dynamic Island) <i>and</i> blue bar touches the bottom edge, with no foreign colour beyond either.</li>
+<li>Any strip of colour <b>above the red bar or below the blue bar</b> is the unpainted band. Its colour names the culprit:
+<ul>
+<li><span class="sw" style="background:#FF00FF"></span><code>#FF00FF</code> magenta &rarr; painted from the <b>manifest <code>theme_color</code></b></li>
+<li><span class="sw" style="background:#00FF00"></span><code>#00FF00</code> lime &rarr; painted from the <b>manifest <code>background_color</code></b></li>
+<li><span class="sw" style="background:#0000FF"></span><code>#0000FF</code> blue-violet or <span class="sw" style="background:#FFFF00"></span><code>#FFFF00</code> yellow &rarr; painted from the <b><code>theme-color</code> meta</b> (and it <i>does</i> follow <code>prefers-color-scheme</code> &mdash; blue in Light, yellow in Dark)</li>
+<li>white / black &rarr; painted from neither; iOS default</li>
+</ul>
+</li>
+<li>The big number line reads <code>innerHeight / screen.height</code>. Also note <b>100lvh</b> in the table &mdash; if <code>100lvh</code> is bigger than <code>100dvh</code>, the paint-over fallback is available.</li>
+</ul>
+
+<h2>Tier A &mdash; run these four first</h2>
+<p style="font-size:13.5px;opacity:.7">If any of these PASSes, stop: that is the fix.</p>
+
+<a class="t" href="t1.html"><span class="tier A">A</span><span class="id">t1</span>
+<div class="lb">CONTROL &mdash; the app's exact current config</div>
+<div class="ex">manifest linked &middot; display:standalone &middot; black-translucent &middot; viewport-fit=cover &middot; theme-color metas<br>Expected: reproduces the bug. This is the calibration shot.</div></a>
+
+<a class="t" href="t7.html"><span class="tier A">A</span><span class="id">t7</span>
+<div class="lb">LEGACY PURE &mdash; no manifest, no theme-color meta</div>
+<div class="ex">apple-mobile-web-app-capable + black-translucent + viewport-fit=cover, nothing else<br>Highest chance of PASS. Removes both suspects at once.</div></a>
+
+<a class="t" href="t2.html"><span class="tier A">A</span><span class="id">t2</span>
+<div class="lb">NO MANIFEST (theme-color meta kept)</div>
+<div class="ex">Isolates <code>&lt;link rel="manifest"&gt;</code> as the trigger. t7 PASS + t2 FAIL &rArr; the theme-color meta is the culprit. t7 PASS + t2 PASS &rArr; the manifest is.</div></a>
+
+<a class="t" href="t4.html"><span class="tier A">A</span><span class="id">t4</span>
+<div class="lb">NO COLOURS ANYWHERE (manifest kept)</div>
+<div class="ex">manifest with no theme_color and no background_color, and no theme-color meta<br>If the band disappears or turns black, the colour declaration is what makes iOS reserve the bar.</div></a>
+
+<h2>Tier B &mdash; only if all of Tier A fails</h2>
+
+<a class="t" href="t3.html"><span class="tier B">B</span><span class="id">t3</span>
+<div class="lb">manifest <code>display:fullscreen</code> + display_override</div>
+<div class="ex">Tests whether fullscreen escapes the reserved status-bar band.</div></a>
+
+<a class="t" href="t5.html"><span class="tier B">B</span><span class="id">t5</span>
+<div class="lb">black-translucent, <b>no</b> viewport-fit=cover</div>
+<div class="ex">Tests whether <code>cover</code> is being applied at all. If t5 and t1 measure identically, cover is a no-op here.</div></a>
+
+<a class="t" href="t6.html"><span class="tier B">B</span><span class="id">t6</span>
+<div class="lb">MANIFEST ONLY &mdash; no apple-mobile-web-app-capable, no status-bar-style</div>
+<div class="ex">The modern spec-only config. Also confirms whether the manifest alone still produces display-mode: standalone.</div></a>
+
+<a class="t" href="t8.html"><span class="tier B">B</span><span class="id">t8</span>
+<div class="lb">CALIBRATION &mdash; <code>status-bar-style: default</code>, deliberately opaque</div>
+<div class="ex">Expected FAIL by design. Compare its band against t1's: if they look identical, iOS is treating black-translucent exactly as if it were <code>default</code>.</div></a>
+
+<h2>Tier C &mdash; run this one regardless</h2>
+
+<a class="t" href="t9.html"><span class="tier C">C</span><span class="id">t9</span>
+<div class="lb">FALLBACK FIX &mdash; control config + a <code>height:100lvh</code> full-bleed painter</div>
+<div class="ex">A fixed, z-index:-1 layer sized <code>100lvh</code> with a <span class="sw" style="background:#00E5FF"></span>cyan 120px foot.<br><b>If the cyan bleeds past the blue bottom bar and fills the band, the app can paint over the strip itself</b> &mdash; that is the guaranteed fix even if the viewport stays at 894.</div></a>
+
+<h2>What to send back</h2>
+<p>The 5 screenshots (t1, t7, t2, t4, t9) &mdash; or just the ones where the verdict line or the band colour changed versus t1. The full numeric table in each shot is what matters most.</p>
+
+</body>
+</html>
