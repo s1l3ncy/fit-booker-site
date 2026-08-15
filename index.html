@@ -27,6 +27,7 @@
      studio hues → identification only, small and always labelled
    ══════════════════════════════════════════════════════════════════ */
 :root{
+  --probe-dvh:100dvh;
   --tabpadref:max(calc(var(--sab) - 16px), 6px);
   /* safe-area insets, exposed as custom properties so they are testable */
   --sat: env(safe-area-inset-top, 0px);
@@ -136,8 +137,10 @@ svg{display:block;flex:none}
    look like it "sits higher" than the screen edge. 100dvh tracks the dynamic
    viewport; 100vh is the fallback for engines without dvh. */
 #app{
-  position:fixed;top:0;left:0;right:0;width:100%;max-width:100%;
-  height:100vh;height:100dvh;
+  /* top+bottom (not a computed height) so the shell always spans the real visual
+     viewport. 100dvh proved unreliable in the iOS standalone web app — it reported
+     short, which stranded the bottom-anchored tab bar well above the screen edge. */
+  position:fixed;top:0;left:0;right:0;bottom:0;width:100%;max-width:100%;
   overflow:hidden;
 }
 @supports (height:100dvh){ html,body{height:100dvh} }
@@ -520,7 +523,7 @@ svg{display:block;flex:none}
 
 /* ── save bar (docked material) ──────────────────────────────── */
 .savebar{
-  position:absolute;left:0;right:0;z-index:55;bottom:calc(var(--tabpadref) + var(--tabh));
+  position:fixed;left:0;right:0;z-index:55;bottom:calc(var(--tabpadref) + var(--tabh));
   padding:9px var(--pr) 9px var(--pl);
   background:var(--barbg);
   -webkit-backdrop-filter:saturate(180%) blur(22px);
@@ -538,7 +541,7 @@ svg{display:block;flex:none}
 
 /* ── tab bar ─────────────────────────────────────────────────── */
 .tabfade{
-  position:absolute;left:0;right:0;z-index:48;pointer-events:none;
+  position:fixed;left:0;right:0;z-index:48;pointer-events:none;
   bottom:calc(var(--tabpadref) + var(--tabh));height:40px;
   background:linear-gradient(to top,var(--bg),var(--bg0));
   transition:opacity .2s ease;
@@ -554,7 +557,7 @@ svg{display:block;flex:none}
      reserving all 34px strands the icons visibly high. We keep a comfortable margin
      and still never sit under the pill. */
   --tabpad:var(--tabpadref);
-  position:absolute;left:0;right:0;bottom:0;z-index:50;display:flex;min-width:0;
+  position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;min-width:0;
   min-height:calc(var(--tabh) + var(--tabpad));
   padding-bottom:var(--tabpad);padding-left:var(--sal);padding-right:var(--sar);
   background:var(--tabbg);
@@ -2176,6 +2179,37 @@ function factRow(k,v){
   return '<div class="factrow"><span class="fk">'+k+'</span><span class="fv">'+v+'</span></div>';
 }
 
+function layoutDiag(){
+  const bar = document.querySelector('.tabbar');
+  const r = bar ? bar.getBoundingClientRect() : null;
+  const cs = getComputedStyle(document.documentElement);
+  const vv = window.visualViewport;
+  const standalone = (window.navigator.standalone === true) ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  const rows = [
+    ['mode', standalone ? 'standalone (home screen)' : 'browser tab'],
+    ['screen', screen.width + ' x ' + screen.height],
+    ['innerHeight', String(window.innerHeight)],
+    ['visualViewport', vv ? Math.round(vv.height) + ' (offsetTop ' + Math.round(vv.offsetTop) + ')' : 'n/a'],
+    ['100dvh measures', (function(){
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:100dvh;visibility:hidden;pointer-events:none';
+      document.body.appendChild(d);
+      var h = Math.round(d.getBoundingClientRect().height);
+      d.remove();
+      return h + 'px' + (h !== window.innerHeight ? '  <-- MISMATCH' : '');
+    })()],
+    ['safe-area bottom', cs.getPropertyValue('--sab').trim() || '0px'],
+    ['reserved (--tabpadref)', cs.getPropertyValue('--tabpadref').trim() || 'n/a'],
+    ['tab bar top', r ? Math.round(r.top) + 'px' : 'n/a'],
+    ['tab bar bottom', r ? Math.round(r.bottom) + 'px' : 'n/a'],
+    ['gap below bar', r ? Math.round(window.innerHeight - r.bottom) + 'px' : 'n/a'],
+  ];
+  return '<div class="rulerow"><div class="rt"><b>Layout diagnostics</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.7;display:block">' +
+    rows.map(function(x){ return x[0] + ': <b>' + x[1] + '</b>'; }).join('<br>') +
+    '</span></div></div>';
+}
+
 function openInfoSheet(){
   const html =
   '<div class="sheet-card"><div class="grabber"></div><div class="sheet-scroll">'+
@@ -2197,7 +2231,7 @@ function openInfoSheet(){
     '</div>'+
     '<div class="sheet-actions"><button class="btn gray" data-act="close">Done</button></div>'+
     '<div class="sheet-note">Data lives in your own GitHub repo. Your access token never leaves this device.</div>'+
-  '</div></div>';
+  '' + layoutDiag() + '</div></div>';
   openSheet(html);
 }
 
