@@ -9,10 +9,13 @@
 <meta name="apple-mobile-web-app-title" content="FIT Booker">
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
-<!-- Deliberately ONE plain theme-color, no media attribute. A sibling web app on the
-     same device renders full height with exactly this shape; media-conditional
-     theme-color metas are the only head difference left between the two. -->
-<meta name="theme-color" content="#FFFFFF">
+<!-- theme-color is what iOS paints into the ~62px strip below the web view under WebKit
+     301994, so these MUST stay identical to --tabbg in each scheme: that is what makes the
+     tab bar read as running to the screen edge instead of floating above a band.
+     Media-conditional metas are fine — variants S1 (plain light) and S3 (plain dark) both
+     still failed, so the media attribute was never the cause of the short viewport. -->
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <script>
@@ -3267,7 +3270,7 @@ function fixBottomInset(){
     if(!standalone) return;
     const missing = (window.screen && window.screen.height ? window.screen.height : 0) -
                     window.innerHeight;
-    if(missing >= 40 && missing <= 200) root.style.setProperty('--tabpadref', '6px');
+    if(missing >= 40 && missing <= 200) root.style.setProperty('--tabpadref', '2px');
   }catch(e){}
 }
 fixBottomInset();
