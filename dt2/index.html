@@ -1,0 +1,16 @@
+<!DOCTYPE html><html><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>Viewport isolation tests</title>
+<style>body{font:16px/1.5 -apple-system;margin:0;padding:24px;background:#F3F3F0}
+a{display:block;padding:16px;margin:10px 0;background:#fff;border-radius:12px;
+ text-decoration:none;color:#000;font-weight:700;border:1px solid #ddd}
+p{color:#555}</style></head><body>
+<h1>Which one goes full height?</h1>
+<p>Open a variant, then <b>Share &rarr; Add to Home Screen</b>, launch it from the icon,
+and screenshot. Each isolates one difference from the NRL Tips app, which works on your phone.</p>
+<p><b>Start with S4.</b> If S4 passes, try S2 and S3 to find which single change did it.</p>
+<a href="s4/">S4 — full NRL clone (natural scroll + dark theme-color + service worker)</a>
+<a href="s2/">S2 — FIT shell + service worker only</a>
+<a href="s3/">S3 — FIT shell + dark theme-color only</a>
+<a href="s1/">S1 — control, expected to FAIL like the app does now</a>
+</body></html>

@@ -3293,5 +3293,17 @@ window.addEventListener('orientationchange', ()=> setTimeout(fixSafeAreaTop, 250
   }
 })();
 </script>
+<script>
+/* Network-first service worker. Two reasons: (1) the NRL Tips app on the same phone
+   registers one and renders full height, making this one of three structural differences
+   under test; (2) it independently fixes the offline cold-launch, which today is a WebKit
+   error page with no reload button. Network-first, never cache-first — a cache-first worker
+   is what pins a home-screen app to a stale build, and this app ships often. */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
 </body>
 </html>
