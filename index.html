@@ -265,8 +265,38 @@ async function savePicks(){
     picksSha = j.content.sha; savedPicksJson = JSON.stringify(picks);
     toast('Picks saved — booking schedule updating itself now.');
     render();
+    maybeKickSnipe();
   }catch(e){ toast(String(e.message||e),4000); }
   btn.disabled=false;
+}
+
+// Mirror of the bot's bookable_occurrence: opens time (ms) of the ~7-days-out
+// occurrence whose booking window is opening now (>= now - 20min grace).
+function bookableOpensMs(p){
+  const now = new Date();
+  const wd = DAY_ORDER.indexOf(p.day);            // MON=0..SUN=6
+  const [h,m] = p.time.split(':').map(Number);
+  for(let i=0;i<10;i++){
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    if(((d.getDay()+6)%7) === wd){                 // JS Sun=0 -> MON=0 mapping
+      const start = new Date(d); start.setHours(h,m,0,0);
+      const opens = start.getTime() - (7*24*60+60)*60000;
+      if(opens >= now.getTime() - 20*60000) return opens;
+    }
+  }
+  return null;
+}
+
+// If any saved pick's window opens within the next 45 min (or just opened),
+// fire a booking run immediately — no waiting on GitHub's cron activation.
+async function maybeKickSnipe(){
+  const now = Date.now();
+  const imminent = picks.some(p => { const o = bookableOpensMs(p); return o!==null && (o-now) <= 45*60000; });
+  if(imminent){
+    try{ await dispatch('snipe.yml');
+      toast('A pick opens soon — booking run started now; it will book on the second.',5000);
+    }catch(e){}
+  }
 }
 
 async function dispatch(workflow, inputs){
