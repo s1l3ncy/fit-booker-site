@@ -900,8 +900,31 @@ const SCOLOR = {exhale:'var(--s-exhale)',reformer:'var(--s-reformer)',run:'var(-
                 cycle:'var(--s-cycle)',nurture:'var(--s-nurture)'};
 const SLABEL = {exhale:'Exhale',reformer:'Reformer',run:'Run',cycle:'Cycle',nurture:'Nurture'};
 
+/* The login Worker. It is the only thing that can verify a FIT password (the gym portal
+   sends no CORS headers, so the browser cannot ask it directly) and it hands back the
+   GitHub token on success, so nobody ever pastes a PAT again. WORKER_URL='' falls back to
+   the old paste-a-token screen. */
+const WORKER_URL = 'https://fit-login.joshrandall182.workers.dev';
+
 let token = '';
-try { token = localStorage.getItem('fitbooker_token') || ''; } catch(e){ token = ''; }
+/* Which member is signed in. Selects data/<user>/… — everything except the timetable,
+   which is the same for everybody. Defaults to josh so an existing install that already
+   holds a token keeps working without a re-login. */
+let USER = 'josh', USERNAME = '';
+try {
+  token    = localStorage.getItem('fitbooker_token') || '';
+  USER     = localStorage.getItem('fitbooker_user')  || 'josh';
+  USERNAME = localStorage.getItem('fitbooker_name')  || '';
+} catch(e){ token = ''; }
+const dpath = f => 'data/' + USER + '/' + f;   // per-member data file
+function signOut(){
+  try {
+    localStorage.removeItem('fitbooker_token');
+    localStorage.removeItem('fitbooker_user');
+    localStorage.removeItem('fitbooker_name');
+  } catch(x){}
+  token = ''; USERNAME = '';
+}
 
 let timetable = {updated:null, classes:[]};
 let bookings  = {updated:null, bookings:[]};
@@ -1235,6 +1258,10 @@ async function apiGet(path, raw){
   } finally { if(kill) clearTimeout(kill); }
 }
 async function dispatch(workflow, inputs){
+  /* booknow acts on ONE member's account, so it always carries who is signed in — a
+     dispatch without it would book on the default account, i.e. take the wrong person's
+     spot. snipe/refresh cover every member and take no user input. */
+  if(inputs && workflow === 'booknow.yml') inputs = Object.assign({user: USER}, inputs);
   const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/actions/workflows/'+workflow+'/dispatches', {
     method:'POST', headers:hdrs(), body: JSON.stringify({ref:'main', inputs: inputs||{}})});
   if(r.status !== 204) throw new Error(workflow+' dispatch failed: '+r.status);
@@ -1243,13 +1270,13 @@ function isAuthErr(e){ const s = String(e && e.message || e); return s.indexOf('
 /* CONTRACT §2: ANY 401/403 clears the token and returns to setup — not just the
    initial load, or an expired PAT leaves the user tapping Save forever. */
 function bailToSetup(msg){
-  try { localStorage.removeItem('fitbooker_token'); } catch(x){}
-  token = ''; booted = false;
+  signOut();
+  booted = false;
   stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
   /* F24 — the in-flight hairline was left animating behind the setup screen forever */
   clearFlight();
   closeSheet();
-  renderSetup(msg || 'That token was rejected. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
+  renderSetup(msg || (WORKER_URL ? 'Your session expired. Sign in again.' : 'That token was rejected. Generate a new fine-grained token with Contents + Actions write access and paste it again.'));
 }
 function handleApiErr(e){
   if(isAuthErr(e)){ bailToSetup(); return true; }
@@ -1281,9 +1308,9 @@ async function loadAllInner(silent){
     const soft = pr => pr.catch(e=>{ if(isAuthErr(e)) throw e; failed++; return FETCH_FAILED; });
     const res = await Promise.all([
       soft(apiGet('data/timetable.json', true)),
-      soft(apiGet('data/bookings.json', true)),
-      soft(apiGet('data/log.json', true)),
-      soft(apiGet('data/picks.json'))
+      soft(apiGet(dpath('bookings.json'), true)),
+      soft(apiGet(dpath('log.json'), true)),
+      soft(apiGet(dpath('picks.json')))
     ]);
     const ok = v => (v === FETCH_FAILED ? null : v);
     const tt = safeParse(ok(res[0]), null);
@@ -1480,10 +1507,10 @@ async function savePicks(){
   try{
     const body = {message:'update picks', content: b64(JSON.stringify(picks, null, 1)), branch:'main'};
     if(picksSha) body.sha = picksSha;
-    const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/data/picks.json',
+    const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+dpath('picks.json'),
       {method:'PUT', headers:hdrs(), body: JSON.stringify(body)});
     if(r.status === 401 || r.status === 403){
-      bailToSetup('Your token no longer has write access. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
+      bailToSetup(WORKER_URL ? 'This app has lost write access to the booking repo. Sign in again — if it keeps happening the stored GitHub token needs renewing.' : 'Your token no longer has write access. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
       return;
     }
     if(r.status === 409 || r.status === 422){
@@ -1494,7 +1521,7 @@ async function savePicks(){
          his removals only. Nothing the user typed is ever discarded silently. */
       let merged = null;
       try{
-        const cur = await apiGet('data/picks.json');
+        const cur = await apiGet(dpath('picks.json'));
         picksSha = (cur && cur.sha) || null;
         let theirs = [];
         const raw = String((cur && cur.content) || '').replace(/\s/g,'');
@@ -2481,55 +2508,155 @@ function renderSetup(msg){
   $('#app').classList.remove('dirty');
   $$('.page').forEach(p=>p.classList.remove('active'));
   $('#page-book').classList.add('active');
+  /* Two screens share this shell. With a Worker configured it is a real FIT login —
+     email + password, verified against the gym, refused if the gym refuses. Without one
+     it falls back to the original paste-a-PAT screen so the app is never bricked by the
+     Worker being down or unconfigured. */
   $('#w-book').innerHTML =
     '<div class="setup">'+
       '<div class="mark">'+G.mark+'</div>'+
       '<h1>FIT Booker</h1>'+
-      '<p>Paste your GitHub access token to connect this phone to the booking bot. It is stored only on this device.</p>'+
-      /* F8 — enterkeyhint="go" turns the generic iOS "return" key into "Go"; the keydown
-         handler below makes it actually connect. Without it the only way to submit was a
-         button the keyboard was covering. */
-      '<input type="password" id="tokin" name="fitbooker-token" placeholder="github_pat_…" '+
-        'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" '+
-        'inputmode="text" enterkeyhint="go">'+
-      '<button class="btn filled" data-act="connect" style="margin-top:12px">Connect</button>'+
-      (msg ? '<div class="warn">'+esc(msg)+'</div>' : '')+
+      (WORKER_URL
+        ? '<p>Sign in with the email and password you use for the FIT app.</p>'+
+          '<input type="email" id="loginemail" name="fitbooker-email" placeholder="Email" '+
+            'autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" '+
+            'inputmode="email" enterkeyhint="next">'+
+          '<input type="password" id="loginpass" name="fitbooker-pass" placeholder="Password" '+
+            'autocomplete="current-password" autocapitalize="off" autocorrect="off" '+
+            'spellcheck="false" enterkeyhint="go">'+
+          '<button class="btn filled" id="loginbtn" data-act="login" style="margin-top:12px">Sign in</button>'
+        : '<p>Paste your GitHub access token to connect this phone to the booking bot. It is stored only on this device.</p>'+
+          /* F8 — enterkeyhint="go" turns the generic iOS "return" key into "Go"; the keydown
+             handler below makes it actually connect. Without it the only way to submit was a
+             button the keyboard was covering. */
+          '<input type="password" id="tokin" name="fitbooker-token" placeholder="github_pat_…" '+
+            'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" '+
+            'inputmode="text" enterkeyhint="go">'+
+          '<button class="btn filled" data-act="connect" style="margin-top:12px">Connect</button>')+
+      '<div class="warn" id="loginwarn"'+(msg ? '' : ' style="display:none"')+'>'+
+        (msg ? esc(msg) : '')+'</div>'+
     '</div>';
+  const em = $('#loginemail'), pw = $('#loginpass');
+  if(em && pw){
+    em.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); pw.focus(); }
+    });
+    pw.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); pw.blur(); login(); }
+    });
+  }
   const tin = $('#tokin');
   if(tin){
     tin.addEventListener('keydown', e=>{
       if(e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); tin.blur(); connect(); }
     });
-    /* F8 — iOS does not resize the LAYOUT viewport for the keyboard in a standalone web
-       app (only visualViewport shrinks), and #app is fixed to the layout viewport, so
-       nothing reflowed and the Connect button sat ~30px under the keyboard. Lift the setup
-       block by the occluded height. */
-    const vv = window.visualViewport;
-    if(vv && !vv.__fitbookerBound){
-      vv.__fitbookerBound = true;
-      const fit = ()=>{
-        const el = $('.setup'); if(!el) return;
-        const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        el.style.paddingBottom = hidden ? (hidden + 12) + 'px' : '';
-        if(hidden) el.scrollIntoView({block:'end'});
-      };
-      vv.addEventListener('resize', fit);
-      vv.addEventListener('scroll', fit);
-    }
+  }
+  /* F8 — iOS does not resize the LAYOUT viewport for the keyboard in a standalone web
+     app (only visualViewport shrinks), and #app is fixed to the layout viewport, so
+     nothing reflowed and the Connect button sat ~30px under the keyboard. Lift the setup
+     block by the occluded height. Bound for BOTH screens — the login form has two fields
+     and a button, so it is occluded even more than the single token field was. */
+  const vv = window.visualViewport;
+  if(vv && !vv.__fitbookerBound){
+    vv.__fitbookerBound = true;
+    const fit = ()=>{
+      const el = $('.setup'); if(!el) return;
+      const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      el.style.paddingBottom = hidden ? (hidden + 12) + 'px' : '';
+      if(hidden) el.scrollIntoView({block:'end'});
+    };
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
   }
   $('#navTitle').style.opacity = 0;
 }
-function connect(){
-  const el = $('#tokin'); if(!el) return;
-  const v = el.value.trim();
-  if(!v){ toast('Paste a token first'); return; }
-  token = v;
-  try { localStorage.setItem('fitbooker_token', token); } catch(e){ toast('This browser blocked local storage'); }
+function doSignOut(){
+  signOut();
+  booted = false;
+  stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
+  clearFlight();
+  closeSheet();
+  /* Everything in memory belongs to the member who just left — blank it, or the next
+     person briefly sees the previous person's bookings behind the login screen. */
+  timetable = {updated:null, classes:[]};
+  bookings  = {updated:null, bookings:[]};
+  logdata = []; picks = []; picksSha = null; savedPicksJson = '[]';
+  renderSetup('');
+}
+
+function loginWarn(m){
+  const w = $('#loginwarn'); if(!w) return;
+  w.textContent = m || '';
+  w.style.display = m ? '' : 'none';
+}
+
+/* Real sign-in. The Worker attempts an actual login against the FIT portal with what was
+   typed: if the gym rejects it, the app rejects it. There is no local "password" to get
+   wrong, and no way in without a working FIT account. On success it returns which member
+   this is and the GitHub token, so the PAT screen is gone. */
+async function login(){
+  const em = $('#loginemail'), pw = $('#loginpass'), btn = $('#loginbtn');
+  if(!em || !pw) return;
+  const email = em.value.trim(), password = pw.value;
+  if(!email || !password){ loginWarn('Enter your email and password'); return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Signing in…'; }
+  loginWarn('');
+  /* A hung request must not leave the button stuck on "Signing in…" forever. */
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const kill = setTimeout(()=>{ try{ ctl && ctl.abort(); }catch(e){} }, 25000);
+  try {
+    const r = await fetch(WORKER_URL.replace(/\/+$/,'') + '/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password}),
+      signal: ctl ? ctl.signal : undefined
+    });
+    let d = null;
+    try { d = await r.json(); } catch(e){}
+    if(!d || !d.ok || !d.token){
+      loginWarn((d && d.error) || 'Could not sign in right now — try again');
+      return;
+    }
+    token = d.token;
+    USER = d.user || 'josh';
+    USERNAME = d.name || '';
+    try {
+      localStorage.setItem('fitbooker_token', token);
+      localStorage.setItem('fitbooker_user', USER);
+      localStorage.setItem('fitbooker_name', USERNAME);
+    } catch(e){ toast('This browser blocked local storage'); }
+    /* The password itself is never stored on the phone — only the Worker keeps it, and
+       only because it proved valid a moment ago. */
+    pw.value = '';
+    enterApp();
+  } catch(e){
+    loginWarn(String(e && e.name) === 'AbortError'
+      ? 'That took too long — check your connection and try again'
+      : 'Could not reach the sign-in service — check your connection');
+  } finally {
+    clearTimeout(kill);
+    if(btn){ btn.disabled = false; btn.textContent = 'Sign in'; }
+  }
+}
+
+function enterApp(){
   $('#tabbar').classList.remove('hidden');
   $('#tabfade').classList.remove('hidden');
   $('#app').classList.remove('setupmode');
   $('#w-book').innerHTML = '<div class="ltitle">Book</div><div class="emptystate"><div class="es">Connecting…</div></div>';
   loadAll().then(()=>{ startPolling(); if(isStale()) autoSync(); });
+}
+
+function connect(){
+  const el = $('#tokin'); if(!el) return;
+  const v = el.value.trim();
+  if(!v){ toast('Paste a token first'); return; }
+  token = v;
+  USER = 'josh';
+  try {
+    localStorage.setItem('fitbooker_token', token);
+    localStorage.setItem('fitbooker_user', USER);
+  } catch(e){ toast('This browser blocked local storage'); }
+  enterApp();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -2673,8 +2800,12 @@ function openInfoSheet(){
       '<div class="rulerow"><div class="ri" data-tone="bad">'+G.warn+'</div>'+
         '<div class="rt"><b>Strikes</b><span>A no-show, or a cancel inside the last hour, is a strike. Three in a rolling 7 days is a 7-day booking ban — cancel early instead.</span></div></div>'+
     '</div>'+
-    '<div class="sheet-actions"><button class="btn gray" data-act="close">Done</button></div>'+
-    '<div class="sheet-note">Data lives in your own GitHub repo. Your access token never leaves this device.</div>'+
+    '<div class="sheet-actions"><button class="btn gray" data-act="close">Done</button>'+
+      (WORKER_URL ? '<button class="btn gray" data-act="signout">Sign out'+
+        (USERNAME ? ' ('+esc(USERNAME)+')' : '')+'</button>' : '')+
+    '</div>'+
+    '<div class="sheet-note">Picks and bookings are kept separately for each person who signs in. '+
+      'Your FIT password is checked by the gym itself and is never stored on this phone.</div>'+
   '' + layoutDiag() + '</div></div>';
   openSheet(html);
 }
@@ -3159,6 +3290,8 @@ document.addEventListener('click', function(e){
     if(a === 'sync'){ if(sheetOpen()) closeSheet(); syncNow(); }
     else if(a === 'snipe') firePass();
     else if(a === 'connect') connect();
+    else if(a === 'login') login();
+    else if(a === 'signout') doSignOut();
     else if(a === 'reload') loadAll();
     else if(a === 'goBook') switchTab('book');
     else if(a === 'goPicks') switchTab('picks');

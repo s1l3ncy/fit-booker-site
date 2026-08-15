@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v1';
+const CACHE = 'fit-booker-v2';   // v2: FIT login + per-member data
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
