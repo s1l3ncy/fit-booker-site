@@ -9,8 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="FIT Booker">
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<!-- Deliberately ONE plain theme-color, no media attribute. A sibling web app on the
+     same device renders full height with exactly this shape; media-conditional
+     theme-color metas are the only head difference left between the two. -->
+<meta name="theme-color" content="#FFFFFF">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <script>
@@ -204,7 +206,7 @@ svg{display:block;flex:none}
   position:fixed;top:0;left:0;right:0;bottom:0;width:100%;max-width:100%;
   overflow:hidden;
 }
-@supports (height:100dvh){ html,body{height:100dvh} }
+/* plain height:100% — matching the sibling app; #app is fixed top/bottom anyway */
 
 /* ── nav bar (translucent material) ──────────────────────────── */
 .navbar{
