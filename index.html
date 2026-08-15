@@ -2,283 +2,1104 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FIT Booker">
+<meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F3F3F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0C0D" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>FIT Booker</title>
 <style>
-  :root {
-    --bg:#f7f6f3; --card:#fff; --ink:#1a1a1a; --soft:#6b6b6b; --line:#e6e3dd;
-    --accent:#0f6b5c; --accent-soft:#e3f0ed; --danger:#b3372c;
-    --exhale:#7c5cb8; --reformer:#0f6b5c; --run:#c25417; --cycle:#1f5fa8; --nurture:#a8842c;
+/* ══════════════════════════════════════════════════════════════════
+   FIT Booker — single-file iOS-native controller for the booking bot
+
+   Colour has one job each:
+     ink    → you act now      (Book, Save, selected day)
+     amber  → the bot acts later (picks, countdowns, windows)
+     green  → open / free
+     red    → full / blocked / destructive
+     studio hues → identification only, small and always labelled
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  /* safe-area insets, exposed as custom properties so they are testable */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+
+  --navh:44px;
+  --tabh:52px;
+  --gx:16px;
+  --pl: calc(var(--gx) + var(--sal));
+  --pr: calc(var(--gx) + var(--sar));
+
+  /* warm neutral scale */
+  --bg:#F3F3F0;
+  --bg0:rgba(243,243,240,0);
+  --card:#FFFFFF;
+  --card2:#EAEAE5;
+  --ink:#101113;
+  --ink2:#5B6067;
+  --ink3:#6E747C;
+  --hair:rgba(18,20,24,.15);
+  --hair2:rgba(18,20,24,.10);
+  --fill:rgba(18,20,24,.055);
+  --fill2:rgba(18,20,24,.10);
+  --barbg:rgba(243,243,240,.94);
+  --tabbg:rgba(243,243,240,.965);
+  --sheet:#FFFFFF;
+  --scrim:rgba(14,16,18,.34);
+  --shadow:0 1px 2px rgba(12,14,18,.05),0 8px 22px -14px rgba(12,14,18,.30);
+
+  /* the one variable pair that flips every primary button between themes */
+  --btn-ink:#141618;
+  --btn-on:#FFFFFF;
+
+  /* semantic */
+  --amber:#A76A00;      --amber-bg:#F8EFDB;   --amber-rail:#D08A11;
+  --go:#0B7A45;         --go-bg:#E1F2E8;
+  --bad:#B02318;        --bad-bg:#FAE6E3;
+
+  /* ink laid ON a saturated tile — never assume #fff, it fails on amber */
+  --tile-ink:#FFFFFF;   --on-amber:#26190A;
+
+  /* studios — identification only */
+  --s-exhale:#6D4BE0;
+  --s-reformer:#0E7C74;
+  --s-run:#C2410C;
+  --s-cycle:#2563C9;
+  --s-nurture:#A03A6E;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0B0C0D;
+    --bg0:rgba(11,12,13,0);
+    --card:#17191B;
+    --card2:#222528;
+    --ink:#F2F3F4;
+    --ink2:#A2A8B0;
+    --ink3:#767C85;
+    --hair:rgba(255,255,255,.13);
+    --hair2:rgba(255,255,255,.08);
+    --fill:rgba(255,255,255,.075);
+    --fill2:rgba(255,255,255,.14);
+    --barbg:rgba(12,13,15,.92);
+    --tabbg:rgba(10,11,13,.955);
+    --sheet:#1B1D20;
+    --scrim:rgba(0,0,0,.55);
+    --shadow:0 1px 2px rgba(0,0,0,.5);
+
+    --btn-ink:#F2F3F4;
+    --btn-on:#0B0C0D;
+
+    --amber:#F2B441;    --amber-bg:#2D2412;   --amber-rail:#F2B441;
+    --go:#3ED884;       --go-bg:#0F2A1C;
+    --bad:#FF7B6C;      --bad-bg:#2E1614;
+
+    /* dark semantics are BRIGHT fills — white glyphs on them read at ~1.9:1 */
+    --tile-ink:#0B0C0D; --on-amber:#26190A;
+
+    --s-exhale:#AF9CFF;
+    --s-reformer:#3ED8C6;
+    --s-run:#FF8C4B;
+    --s-cycle:#7FADFF;
+    --s-nurture:#E88ABF;
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#161513; --card:#21201d; --ink:#f0efec; --soft:#a5a29c; --line:#35332e;
-      --accent:#4ecdb4; --accent-soft:#1d3833; --danger:#e07666;
-      --exhale:#a98ae0; --reformer:#4ecdb4; --run:#ef8a4e; --cycle:#6ea8e8; --nurture:#d4b05e; }
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:90px}
-  header{padding:calc(14px + env(safe-area-inset-top)) 16px 8px;display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto}
-  header h1{font-size:1.1rem;font-weight:700;flex:1}
-  .syncbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:.78rem;color:var(--soft);cursor:pointer}
-  .updated{font-size:.68rem;color:var(--soft);padding:0 16px 6px;max-width:760px;margin:0 auto}
-  nav{display:flex;gap:6px;padding:6px 16px;position:sticky;top:0;background:var(--bg);z-index:9;max-width:760px;margin:0 auto}
-  nav button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 4px;font-size:.82rem;color:var(--soft);cursor:pointer;font-weight:600}
-  nav button.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  main{max-width:760px;margin:0 auto;padding:8px 16px}
-  .filters{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0}
-  .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:.75rem;cursor:pointer;color:var(--soft)}
-  .chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
-  h2.day{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin:16px 0 6px;font-weight:600}
-  .row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:5px}
-  .row.picked{border-color:var(--accent);background:var(--accent-soft)}
-  .row .t{font-variant-numeric:tabular-nums;font-weight:600;font-size:.86rem;width:46px;flex-shrink:0}
-  .row .info{flex:1;min-width:0}
-  .row .nm{font-weight:600;font-size:.88rem}
-  .row .meta{color:var(--soft);font-size:.72rem;margin-top:1px}
-  .row .full{color:var(--danger);font-weight:600}
-  .tick{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent;cursor:pointer}
-  .picked .tick{background:var(--accent);border-color:var(--accent);color:#fff}
-  .booknow{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:8px;padding:5px 9px;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0}
-  .cancelbtn{border:1px solid var(--danger);color:var(--danger);background:none;border-radius:8px;padding:5px 9px;font-size:.72rem;font-weight:600;cursor:pointer}
-  .savebar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:10}
-  .savebar-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px}
-  .savebar .n{font-size:.8rem;color:var(--soft);flex:1}
-  .primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:.88rem;font-weight:600;cursor:pointer}
-  .primary:disabled{opacity:.4}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}
-  .card .hd{font-weight:600;font-size:.9rem}
-  .card .sub{color:var(--soft);font-size:.75rem;margin-top:2px}
-  .logline{font-size:.74rem;padding:7px 2px;border-bottom:1px solid var(--line);color:var(--soft)}
-  .logline b{color:var(--ink)}
-  .note{font-size:.78rem;color:var(--soft);padding:10px 2px;line-height:1.5}
-  input[type=password],input[type=text]{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:.9rem;margin:8px 0}
-  .toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:10px;padding:9px 16px;font-size:.8rem;z-index:99;max-width:88vw;opacity:0;transition:opacity .25s;pointer-events:none}
-  .toast.show{opacity:1}
-  .pickline{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:.85rem}
-  .pickline .x{margin-left:auto;color:var(--danger);cursor:pointer;font-weight:700;padding:2px 8px}
-  .opens{font-size:.66rem;color:var(--soft);white-space:nowrap;flex-shrink:0}
+}
+@media (max-width:359px){ :root{ --gx:12px } }
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;max-width:100%;height:100%;overflow-x:hidden;background:var(--bg)}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+  color:var(--ink);font-size:17px;line-height:1.3;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
+  overscroll-behavior:none;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;font-family:inherit;-webkit-appearance:none;appearance:none}
+svg{display:block;flex:none}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.hidden{display:none !important}
+
+#app{position:fixed;inset:0;overflow:hidden;max-width:100%}
+
+/* ── nav bar (translucent material) ──────────────────────────── */
+.navbar{
+  position:absolute;top:0;left:0;right:0;z-index:60;
+  padding-top:var(--sat);
+  background:var(--barbg);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);
+  backdrop-filter:saturate(180%) blur(22px);
+}
+.navbar::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:.5px;
+  background:var(--hair);opacity:0;transition:opacity .2s ease;
+}
+#app.scrolled .navbar::after{opacity:1}
+.nav-inner{
+  height:var(--navh);display:flex;align-items:center;position:relative;
+  padding-left:calc(8px + var(--sal));padding-right:calc(8px + var(--sar));
+  max-width:592px;margin:0 auto;
+}
+.nav-title{
+  position:absolute;left:calc(56px + var(--sal));right:calc(56px + var(--sar));text-align:center;
+  font-size:16px;font-weight:650;letter-spacing:-.3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;transform:translateY(9px);
+  transition:opacity .22s ease,transform .22s ease;pointer-events:none;
+}
+.nav-title .cd{color:var(--amber);font-variant-numeric:tabular-nums}
+.nav-spacer{flex:1;min-width:0}
+.navbtn{
+  width:44px;height:44px;flex:none;border-radius:22px;
+  display:flex;align-items:center;justify-content:center;color:var(--ink2);
+}
+.navbtn:active{opacity:.4}
+.navbtn.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.flightbar{position:absolute;left:0;right:0;bottom:-2px;height:2px;overflow:hidden;display:none;pointer-events:none}
+.flightbar.on{display:block}
+.flightbar i{
+  position:absolute;inset:0;display:block;
+  background:linear-gradient(90deg,transparent,var(--amber-rail),transparent);
+  transform:translateX(-100%);animation:flight 1.5s cubic-bezier(.45,0,.25,1) infinite;
+}
+@keyframes flight{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* ── pages ───────────────────────────────────────────────────── */
+#pages{position:absolute;inset:0;overflow:hidden}
+.page{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+  display:none;
+}
+.page.active{display:block}
+.page::-webkit-scrollbar{width:0;height:0}
+#app.dirty .wrap{padding-bottom:calc(var(--sab) + var(--tabh) + 104px)}
+.wrap{
+  max-width:592px;margin:0 auto;width:100%;min-width:0;
+  padding-top:calc(var(--sat) + var(--navh));
+  padding-bottom:calc(var(--sab) + var(--tabh) + 58px);
+}
+
+.ltitle{
+  font-size:30px;line-height:35px;font-weight:760;letter-spacing:-.7px;
+  padding:0 var(--pr) 0 var(--pl);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.lsub{
+  font-size:13.5px;color:var(--ink2);letter-spacing:-.1px;font-weight:500;
+  padding:3px var(--pr) 0 var(--pl);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ── grouped inset lists (one list idiom everywhere) ─────────── */
+.ghead{
+  font-size:11.5px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);
+  padding:16px calc(var(--pr) + 4px) 7px calc(var(--pl) + 4px);min-width:0;
+  display:flex;align-items:baseline;gap:8px;
+}
+.ghead.tight{padding-top:9px}
+.ghead .gh-r{margin-left:auto;font-weight:600;letter-spacing:.04em;color:var(--ink3);flex:none}
+.group{
+  background:var(--card);border-radius:16px;overflow:hidden;
+  margin-left:var(--pl);margin-right:var(--pr);min-width:0;
+  box-shadow:var(--shadow);
+}
+.gfoot{
+  font-size:12.5px;line-height:17px;color:var(--ink3);letter-spacing:-.05px;
+  padding:8px calc(var(--pr) + 4px) 0 calc(var(--pl) + 4px);min-width:0;
+}
+.gfoot .ig{display:inline-flex;vertical-align:-2px;color:var(--amber)}
+.spacer{height:16px}
+
+/* generic row */
+.row{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  padding:10px 13px;min-height:60px;position:relative;min-width:0;
+}
+.row + .row::before,.row + .rulerow::before,.rulerow + .row::before{
+  content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2);
+}
+.row.tapme{transition:background-color .12s ease}
+.row.tapme:active{background:var(--fill)}
+.rbody{flex:1;min-width:0}
+.rtitle{font-size:16.5px;font-weight:600;letter-spacing:-.3px;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:13px;color:var(--ink2);margin-top:2px;min-width:0;
+  display:flex;align-items:center;gap:6px;letter-spacing:-.05px}
+.rsub .txt{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:var(--ink3);flex:none}
+
+/* ── countdown hero ──────────────────────────────────────────── */
+.hero{
+  display:block;width:100%;text-align:left;position:relative;min-width:0;overflow:hidden;
+  background:var(--card);border-radius:16px;box-shadow:var(--shadow);
+  padding:9px 40px 10px 17px;
+  transition:transform .15s ease;
+}
+.herowrap{padding:7px var(--pr) 0 var(--pl);min-width:0}
+.alertline{
+  display:flex;align-items:center;gap:9px;width:100%;min-width:0;margin-top:6px;
+  min-height:46px;padding:0 12px 0 14px;border-radius:14px;
+  background:var(--go-bg);color:var(--go);text-align:left;
+}
+.alertline > span:first-of-type{flex:1;min-width:0;font-size:13.5px;font-weight:650;letter-spacing:-.15px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alertline .ac{flex:none;opacity:.55}
+.alertline:active{opacity:.6}
+.hero:active{transform:scale(.99)}
+.hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber-rail)}
+.hero.go::before{background:var(--go)}
+.hero.none::before{background:var(--ink3);opacity:.5}
+.hk{display:block;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hbig{display:block;font-size:30px;line-height:34px;font-weight:780;letter-spacing:-.045em;color:var(--amber);
+  margin:2px 0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hero.go .hbig{color:var(--go)}
+.hero.none .hbig{color:var(--ink);font-size:22px;line-height:28px}
+.hsub{display:block;font-size:13px;line-height:17px;font-weight:500;color:var(--ink2);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero.none .hsub{white-space:normal}
+.hchev{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--ink3)}
+
+/* ── sticky date rail + studio chips ─────────────────────────── */
+.stickybar{
+  position:sticky;top:calc(var(--sat) + var(--navh));z-index:30;
+  margin-top:7px;min-width:0;
+  background:var(--barbg);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);
+  backdrop-filter:saturate(180%) blur(22px);
+}
+.stickybar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:.5px;background:var(--hair)}
+
+.rail{
+  display:flex;gap:6px;min-width:0;overflow-x:auto;overflow-y:hidden;
+  padding:5px calc(var(--pr) - 4px) 5px calc(var(--pl) - 4px);
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-behavior:smooth;
+}
+.rail::-webkit-scrollbar{width:0;height:0}
+.dcell{
+  flex:0 0 auto;width:50px;height:54px;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:var(--card);box-shadow:var(--shadow);overflow:hidden;padding:0 2px;
+  transition:background-color .2s ease,color .2s ease;
+}
+.dcell .dw{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.dcell .dn{font-size:19px;font-weight:720;letter-spacing:-.03em;line-height:21px;color:var(--ink);font-variant-numeric:tabular-nums}
+.dcell .pips{display:flex;gap:2.5px;height:4px;align-items:center}
+.dcell .pips i{width:4px;height:4px;border-radius:2px;display:block}
+.dcell.today .dw{color:var(--amber)}
+/* NOTE: the modifier is `noclass`, NOT `empty` — `.empty` is the empty-state block
+   below and an equal-specificity collision silently reshaped every class-free cell. */
+.dcell.noclass{opacity:.38}
+/* belt-and-braces: nothing bolted onto a date cell may change its box */
+.dcell[class]{width:50px;height:54px;gap:2px;padding:0 2px}
+
+.dcell.sel{background:var(--btn-ink)}
+.dcell.sel .dn{color:var(--btn-on)}
+.dcell.sel .dw{color:var(--btn-on);opacity:.62}
+.dcell.sel .pips i{opacity:.95;box-shadow:0 0 0 .5px rgba(255,255,255,.35)}
+.dcell:active{opacity:.6}
+
+.chips{
+  display:flex;gap:6px;min-width:0;overflow-x:auto;overflow-y:hidden;
+  padding:0 var(--pr) 8px var(--pl);
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.chips::-webkit-scrollbar{width:0;height:0}
+.chip{
+  flex:0 0 auto;height:44px;border-radius:12px;padding:0 13px;
+  display:flex;align-items:center;gap:7px;
+  background:var(--card);box-shadow:var(--shadow);
+  font-size:14px;font-weight:600;letter-spacing:-.2px;color:var(--ink2);
+}
+.chip .cd{width:8px;height:8px;border-radius:4px;flex:none}
+.chip .cd.all{width:14px;height:8px;border-radius:4px;
+  background:linear-gradient(90deg,var(--s-exhale),var(--s-reformer),var(--s-run),var(--s-cycle),var(--s-nurture))}
+.chip[aria-selected="true"]{background:var(--btn-ink);color:var(--btn-on)}
+.chip:active{opacity:.6}
+
+/* ── day header + agenda ─────────────────────────────────────── */
+.dayhead{display:flex;align-items:baseline;gap:8px;min-width:0;padding:10px var(--pr) 0 var(--pl)}
+.dayhead .dh{font-size:20px;font-weight:720;letter-spacing:-.45px;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dayhead .dc{font-size:12.5px;font-weight:600;color:var(--ink3);flex:none;margin-left:auto;white-space:nowrap}
+.dayhead .dc b{color:var(--go)}
+
+.dayslide{transition:opacity .2s ease,transform .2s ease;will-change:transform}
+.dayslide.out-l{opacity:0;transform:translateX(-26px)}
+.dayslide.out-r{opacity:0;transform:translateX(26px)}
+.dayslide.drag{transition:none}
+
+.nowrule{
+  display:flex;align-items:center;gap:8px;min-width:0;
+  padding:11px var(--pr) 0 var(--pl);
+}
+.nowrule i{width:7px;height:7px;border-radius:4px;background:var(--bad);flex:none}
+.nowrule s{flex:1;min-width:0;height:1px;background:var(--bad);opacity:.35;text-decoration:none}
+.nowrule span{font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--bad);
+  flex:none;white-space:nowrap}
+.nowrule em{font-style:normal;font-size:11.5px;font-weight:700;color:var(--bad);flex:none;white-space:nowrap;
+  font-variant-numeric:tabular-nums;margin-left:-3px}
+
+/* ── class row (2 lines, ~62px) ──────────────────────────────── */
+.crow{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:9px 9px 9px 12px;min-height:62px;position:relative;min-width:0;
+  transition:background-color .12s ease;
+}
+.crow + .crow::before{content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2)}
+.crow:active{background:var(--fill)}
+.crow.ispick{background:var(--amber-bg)}
+.crow.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,55%{background:var(--amber-bg)}100%{background:transparent}}
+.ctime{flex:none;width:45px;min-width:0}
+.ctime b{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.4px;line-height:18px;font-variant-numeric:tabular-nums}
+.ctime span{display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;color:var(--ink3);margin-top:1px}
+.cbody{flex:1;min-width:0}
+.cname{font-size:16px;font-weight:620;letter-spacing:-.32px;line-height:20px;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow.isfull .cname{color:var(--ink2)}
+.cmeta{display:flex;align-items:center;flex-wrap:wrap;gap:1px 8px;min-width:0;margin-top:2px;
+  font-size:12.5px;line-height:16px;letter-spacing:-.05px}
+/* text-overflow is inert on a flex box — the ellipsis has to live on the inner span */
+.cst{flex:0 1 auto;min-width:0;max-width:100%;display:flex;align-items:center;gap:4px;
+  font-weight:650;color:var(--ink2);overflow:hidden}
+.cst > span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cst.go{color:var(--go)}
+.cst.bad{color:var(--bad)}
+.cst.amb{color:var(--amber)}
+.cst svg{width:12px;height:12px;flex:none}
+/* no modifier bolted onto .cst may change its box (`.wrap` is the tab scroller — a
+   name collision here is exactly the bug that mangled .dcell) */
+.cst[class]{padding:0;margin:0}
+/* a warning that owns its own row wraps instead of truncating — the second half of
+   "FIT allows one per day" is the actionable half */
+.cst.longform{align-items:flex-start;overflow:visible}
+.cst.longform > span{white-space:normal;overflow:visible;text-overflow:clip}
+.cst.longform svg{margin-top:2px}
+.csep{flex:none;color:var(--ink3);opacity:.7}
+.ctail{flex:1 1 92px;min-width:0;color:var(--ink3);display:flex;align-items:center;gap:5px}
+.ctail .sdot{width:7px;height:7px;border-radius:4px;flex:none}
+.ctail span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cact{flex:none;display:flex;align-items:center;gap:4px;min-width:0}
+.bookpill{
+  height:44px;min-width:56px;padding:0 11px;border-radius:12px;flex:none;
+  background:var(--btn-ink);color:var(--btn-on);
+  font-size:14.5px;font-weight:700;letter-spacing:-.2px;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+}
+.bookpill:active{opacity:.6}
+/* bookable, but you already have that studio today — warn, never block */
+.bookpill.caution{background:var(--amber-bg);color:var(--amber);box-shadow:inset 0 0 0 1.5px var(--amber-rail)}
+.ptog{width:44px;height:44px;flex:none;border-radius:22px;display:flex;align-items:center;justify-content:center;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.ptog .pk{
+  width:30px;height:30px;border-radius:15px;border:1.6px solid var(--hair);
+  display:flex;align-items:center;justify-content:center;color:var(--ink3);
+  transition:background-color .2s ease,border-color .2s ease,color .2s ease;
+}
+.ptog[aria-pressed="true"] .pk{background:var(--amber-rail);border-color:var(--amber-rail);color:var(--on-amber)}
+.ptog:active{transform:scale(.86)}
+.ptog.rm .pk{border-color:transparent;background:var(--fill);color:var(--bad)}
+
+/* ── buttons ─────────────────────────────────────────────────── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  min-height:50px;border-radius:14px;font-size:16.5px;font-weight:650;letter-spacing:-.35px;
+  padding:0 18px;width:100%;min-width:0;transition:opacity .15s ease,transform .15s ease;
+}
+.btn:active{opacity:.7;transform:scale(.985)}
+.btn.filled{background:var(--btn-ink);color:var(--btn-on)}
+.btn.gray{background:var(--fill);color:var(--ink)}
+.btn[disabled]{pointer-events:none;background:var(--fill);color:var(--ink3);font-weight:600}
+.btn-sm{
+  min-height:44px;padding:0 14px;border-radius:12px;font-size:14.5px;font-weight:650;
+  width:auto;flex:none;letter-spacing:-.2px;display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.btn-sm.redtxt{color:var(--bad);background:var(--fill)}
+.btn-sm.ink{background:var(--btn-ink);color:var(--btn-on)}
+.btn-sm:active{opacity:.5}
+
+/* ── save bar (docked material) ──────────────────────────────── */
+.savebar{
+  position:absolute;left:0;right:0;z-index:55;bottom:calc(var(--sab) + var(--tabh));
+  padding:9px var(--pr) 9px var(--pl);
+  background:var(--barbg);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);
+  backdrop-filter:saturate(180%) blur(22px);
+  transform:translateY(140%);opacity:0;pointer-events:none;
+  transition:transform .42s cubic-bezier(.32,.9,.32,1),opacity .2s ease;
+}
+.savebar::before{content:'';position:absolute;left:0;right:0;top:0;height:.5px;background:var(--hair)}
+#app.dirty .savebar{transform:translateY(0);opacity:1;pointer-events:auto}
+.savebar-inner{display:flex;align-items:center;gap:12px;max-width:592px;margin:0 auto;min-width:0}
+.savebar .sn{flex:1;min-width:0;font-size:12.5px;line-height:16px;color:var(--ink3)}
+.savebar .sn b{display:block;color:var(--ink);font-size:14.5px;font-weight:680;letter-spacing:-.2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.savebar .sn i{display:block;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── tab bar ─────────────────────────────────────────────────── */
+.tabfade{
+  position:absolute;left:0;right:0;z-index:48;pointer-events:none;
+  bottom:calc(var(--sab) + var(--tabh));height:40px;
+  background:linear-gradient(to top,var(--bg),var(--bg0));
+  transition:opacity .2s ease;
+}
+#app.dirty .tabfade{opacity:0}
+.tabbar{
+  position:absolute;left:0;right:0;bottom:0;z-index:50;display:flex;min-width:0;
+  padding-bottom:var(--sab);padding-left:var(--sal);padding-right:var(--sar);
+  background:var(--tabbg);
+  -webkit-backdrop-filter:saturate(180%) blur(30px);
+  backdrop-filter:saturate(180%) blur(30px);
+}
+.tabbar::before{content:'';position:absolute;left:0;right:0;top:0;height:.5px;background:var(--hair)}
+.tabbtn{
+  flex:1 1 0;min-width:0;height:var(--tabh);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  color:var(--ink3);position:relative;padding-top:2px;
+}
+.tabbtn .tl{font-size:10px;font-weight:650;letter-spacing:.02px;line-height:12px;
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabbtn[aria-selected="true"]{color:var(--ink)}
+.tabbtn[aria-selected="true"] svg{stroke-width:2.3}
+.tabbtn:active{opacity:.5}
+.tabbtn .tbadge{
+  position:absolute;top:2px;left:50%;margin-left:5px;
+  min-width:17px;height:17px;padding:0 4px;border-radius:9px;
+  background:var(--ink3);color:var(--bg);
+  font-size:10.5px;font-weight:800;line-height:17px;text-align:center;
+  font-variant-numeric:tabular-nums;
+  transform:scale(0);transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.tabbtn .tbadge.on{transform:scale(1)}
+.tabbtn[aria-selected="true"] .tbadge{background:var(--ink);color:var(--bg)}
+#app.dirty .tabbtn[data-tab="picks"] .tbadge{background:var(--amber-rail);color:var(--on-amber)}
+
+/* ── empty state ─────────────────────────────────────────────── */
+/* deliberately NOT called `.empty`: that name is generic enough to collide with a
+   modifier on an unrelated component (it did — on .dcell). */
+.emptystate{
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;min-width:0;
+  padding:40px calc(26px + var(--sar)) 16px calc(26px + var(--sal));
+}
+.emptystate .eg{color:var(--ink3);opacity:.5;margin-bottom:2px}
+.emptystate .et{font-size:19px;font-weight:700;letter-spacing:-.45px}
+.emptystate .es{font-size:14.5px;color:var(--ink2);line-height:20px;letter-spacing:-.15px;max-width:300px}
+
+/* ── colour-tiled rule rows ──────────────────────────────────── */
+.rulerow{display:flex;gap:12px;padding:12px 13px;align-items:flex-start;min-width:0;position:relative}
+.rulerow + .rulerow::before{content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2)}
+.rulerow .ri{width:28px;height:28px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center}
+.rulerow .rt{flex:1;min-width:0;font-size:14.5px;letter-spacing:-.2px;line-height:19px}
+.rulerow .rt b{font-weight:680;display:block}
+.rulerow .rt span{color:var(--ink2);font-size:12.5px;line-height:17px;display:block;margin-top:2px}
+
+/* ── log rows ────────────────────────────────────────────────── */
+.logrow{display:flex;gap:11px;padding:10px 13px;align-items:center;min-width:0;position:relative;min-height:52px}
+.logrow + .logrow::before{content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2)}
+.logrow .li{width:26px;height:26px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center}
+
+/* ── tinted icon tiles: background + a legible ink, always as a pair ─── */
+.ri[data-tone],.li[data-tone]{color:var(--tile-ink)}
+.ri[data-tone="go"],.li[data-tone="go"]{background:var(--go)}
+.ri[data-tone="bad"],.li[data-tone="bad"]{background:var(--bad)}
+.ri[data-tone="n3"],.li[data-tone="n3"]{background:var(--ink3)}
+.ri[data-tone="n2"],.li[data-tone="n2"]{background:var(--ink2)}
+.ri[data-tone="amber"],.li[data-tone="amber"]{background:var(--amber-rail);color:var(--on-amber)}
+.logrow .lb{flex:1;min-width:0}
+.logrow .lt{font-size:14.5px;letter-spacing:-.2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logrow .ls{font-size:12.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.logrow .lw{font-size:12px;color:var(--ink3);flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ── iOS switch ──────────────────────────────────────────────── */
+.swrow{display:flex;align-items:center;gap:12px;padding:10px 18px;min-height:58px;min-width:0;position:relative}
+.swrow::before{content:'';position:absolute;left:18px;right:0;top:0;height:.5px;background:var(--hair2)}
+.sw{width:51px;height:31px;border-radius:16px;background:var(--fill2);flex:none;position:relative;
+  transition:background-color .28s cubic-bezier(.32,.9,.32,1)}
+.sw i{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:14px;background:#fff;
+  box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.06);
+  transition:transform .28s cubic-bezier(.32,.9,.32,1)}
+/* the accessible control IS the 44px hit area — role/state live on .swtap itself */
+.swtap{width:51px;min-height:44px;display:flex;align-items:center;justify-content:center;flex:none}
+.swtap[aria-checked="true"] .sw{background:var(--amber-rail)}
+.swtap[aria-checked="true"] .sw i{transform:translateX(20px)}
+
+/* ── sheets ──────────────────────────────────────────────────── */
+.scrim{position:fixed;inset:0;z-index:100;background:var(--scrim);opacity:0;transition:opacity .32s ease}
+.scrim.on{opacity:1}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:101;min-width:0;
+  padding-left:calc(8px + var(--sal));padding-right:calc(8px + var(--sar));
+  padding-bottom:calc(8px + var(--sab));
+  transform:translateY(110%);transition:transform .44s cubic-bezier(.32,.72,0,1);
+}
+.sheet.on{transform:translateY(0)}
+.sheet-card{background:var(--sheet);border-radius:18px;overflow:hidden;max-width:576px;margin:0 auto;min-width:0}
+.sheet-scroll{max-height:min(74vh,640px);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.sheet-scroll::-webkit-scrollbar{width:0;height:0}
+.grabber{width:36px;height:5px;border-radius:3px;background:var(--hair);margin:8px auto 2px}
+.detail-head{padding:8px 18px 14px;min-width:0}
+.detail-kicker{display:flex;align-items:center;gap:7px;min-width:0;margin-bottom:6px}
+.detail-kicker .k{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-title{font-size:25px;font-weight:750;letter-spacing:-.6px;line-height:30px;overflow-wrap:anywhere;min-width:0}
+.detail-when{font-size:14.5px;color:var(--ink2);letter-spacing:-.2px;margin-top:5px;overflow-wrap:anywhere;min-width:0}
+.factrow{display:flex;align-items:center;gap:10px;padding:11px 18px;min-width:0;position:relative;min-height:46px}
+.factrow::before{content:'';position:absolute;left:18px;right:0;top:0;height:.5px;background:var(--hair2)}
+.factrow .fk{font-size:14.5px;color:var(--ink2);letter-spacing:-.2px;flex:none}
+.factrow .fv{font-size:14.5px;font-weight:600;letter-spacing:-.2px;margin-left:auto;min-width:0;text-align:right;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-actions{padding:14px 18px 16px;display:flex;flex-direction:column;gap:9px;min-width:0}
+.sheet-note{font-size:11.5px;line-height:16px;color:var(--ink3);padding:0 18px 16px;min-width:0}
+
+/* UIAlertController-style action sheet */
+.asheet{padding-bottom:calc(8px + var(--sab))}
+.as-group{background:var(--sheet);border-radius:16px;overflow:hidden;max-width:576px;margin:0 auto 8px;min-width:0}
+.as-title{padding:16px 18px;text-align:center;font-size:12.5px;line-height:17px;color:var(--ink2);
+  white-space:pre-line;position:relative;min-width:0;overflow-wrap:anywhere}
+.as-title b{display:block;color:var(--ink);font-size:15px;font-weight:680;margin-bottom:3px}
+.as-btn{width:100%;min-height:57px;display:flex;align-items:center;justify-content:center;
+  font-size:19px;letter-spacing:-.4px;color:var(--ink);position:relative;padding:0 18px;text-align:center}
+.as-btn::before{content:'';position:absolute;left:0;right:0;top:0;height:.5px;background:var(--hair2)}
+.as-btn:active{background:var(--fill)}
+.as-btn.destructive{color:var(--bad)}
+.as-btn.bold{font-weight:680}
+.as-cancel{background:var(--sheet);border-radius:16px;max-width:576px;margin:0 auto;overflow:hidden}
+.as-cancel .as-btn{font-weight:680}
+.as-cancel .as-btn::before{display:none}
+
+/* ── toast ───────────────────────────────────────────────────── */
+#toast{position:fixed;z-index:200;left:12px;right:12px;top:calc(var(--sat) + 6px);
+  display:flex;justify-content:center;pointer-events:none}
+#toast .tt{
+  max-width:100%;min-width:0;background:var(--sheet);color:var(--ink);
+  border-radius:22px;padding:11px 18px;
+  font-size:13.5px;line-height:18px;font-weight:550;letter-spacing:-.15px;text-align:center;
+  box-shadow:0 10px 34px rgba(0,0,0,.22),0 1px 2px rgba(0,0,0,.10);
+  opacity:0;transform:translateY(-16px) scale(.94);overflow-wrap:anywhere;
+  transition:opacity .3s ease,transform .42s cubic-bezier(.32,.72,0,1);
+}
+#toast.on .tt{opacity:1;transform:translateY(0) scale(1)}
+
+/* ── setup ───────────────────────────────────────────────────── */
+#app.setupmode .wrap{min-height:100%;display:flex;flex-direction:column}
+#app.setupmode .wrap{padding-bottom:calc(var(--sab) + 20px)}
+#app.setupmode .navbtn{opacity:0;pointer-events:none}
+#app.setupmode .savebar,#app.setupmode .tabfade{display:none}
+.setup{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;
+  padding:0 calc(24px + var(--sar)) 30px calc(24px + var(--sal))}
+.setup .mark{
+  width:72px;height:72px;border-radius:20px;margin:0 auto 18px;
+  background:linear-gradient(160deg,var(--amber-rail),var(--s-run));
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 12px 30px -10px rgba(208,138,17,.55);
+}
+.setup h1{font-size:27px;font-weight:760;letter-spacing:-.7px;text-align:center}
+.setup p{font-size:14.5px;line-height:20px;color:var(--ink2);text-align:center;margin-top:8px;letter-spacing:-.2px}
+.setup input{
+  width:100%;min-width:0;font-size:17px;font-family:inherit;color:var(--ink);
+  background:var(--card);border:0;border-radius:14px;padding:15px 16px;margin-top:22px;min-height:52px;
+  box-shadow:var(--shadow);
+}
+.setup input::placeholder{color:var(--ink3)}
+.setup .btn{margin-top:12px}
+.setup .warn{font-size:12.5px;line-height:17px;color:var(--amber);text-align:center;margin-top:14px;overflow-wrap:anywhere}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important}
+}
+
+/* ── narrow phones (320) — last in the sheet so these actually win ───── */
+@media (max-width:359px){
+  /* buys back the few px that were eating the studio name in a booked/log row */
+  .cmeta{font-size:12px}
+  .logrow .ls{font-size:12px}
+  .logrow{gap:9px;padding:10px 11px}
+  .crow{gap:8px;padding-left:10px}
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>FIT Booker</h1>
-  <button class="syncbtn" onclick="syncNow()" id="syncBtn">↻ Sync</button>
-</header>
-<div class="updated" id="updated"></div>
-<nav id="nav" style="display:none">
-  <button data-tab="timetable" class="active" onclick="showTab('timetable')">Timetable</button>
-  <button data-tab="picks" onclick="showTab('picks')">Picks</button>
-  <button data-tab="bookings" onclick="showTab('bookings')">Booked</button>
-  <button data-tab="activity" onclick="showTab('activity')">Activity</button>
-</nav>
-<main id="main"></main>
-<div class="savebar" id="savebar" style="display:none">
-  <div class="savebar-inner">
-    <div class="n" id="savenote"></div>
-    <button class="primary" id="savebtn" onclick="savePicks()">Save picks</button>
+<div id="app">
+
+  <header class="navbar" id="navbar">
+    <div class="nav-inner">
+      <button class="navbtn" id="infoBtn" aria-label="How it works">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 11v5.5"/><circle cx="12" cy="7.9" r="1.05" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <div class="nav-spacer"></div>
+      <div class="nav-title" id="navTitle">Book</div>
+      <button class="navbtn" id="syncBtn" aria-label="Sync with FIT">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>
+      </button>
+    </div>
+    <div class="flightbar" id="flightbar"><i></i></div>
+  </header>
+
+  <main id="pages">
+    <section class="page active" id="page-book"><div class="wrap" id="w-book"></div></section>
+    <section class="page" id="page-booked"><div class="wrap" id="w-booked"></div></section>
+    <section class="page" id="page-picks"><div class="wrap" id="w-picks"></div></section>
+  </main>
+
+  <div class="tabfade" id="tabfade" aria-hidden="true"></div>
+
+  <div class="savebar" id="savebar">
+    <div class="savebar-inner">
+      <div class="sn"><b id="saveTitle">1 change</b><i id="saveSub">Not saved to the bot yet</i></div>
+      <button class="btn filled btn-sm" id="saveBtn" style="min-width:88px">Save picks</button>
+    </div>
   </div>
+
+  <nav class="tabbar" id="tabbar" role="tablist">
+    <button class="tabbtn" data-tab="book" role="tab" aria-selected="true">
+      <svg width="25" height="25" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.5" width="20.8" height="19" rx="4.6"/><path d="M3.6 11.2h20.8"/><path d="M9.2 3.2v4.2M18.8 3.2v4.2"/><circle cx="9.4" cy="16.4" r="1.25" fill="currentColor" stroke="none"/><circle cx="14" cy="16.4" r="1.25" fill="currentColor" stroke="none"/><circle cx="18.6" cy="16.4" r="1.25" fill="currentColor" stroke="none"/></svg>
+      <span class="tl">Book</span>
+    </button>
+    <button class="tabbtn" data-tab="booked" role="tab" aria-selected="false">
+      <svg width="25" height="25" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="14" r="10.6"/><path d="m9.4 14.3 3.2 3.2 6.1-6.6"/></svg>
+      <span class="tl">Booked</span>
+      <span class="tbadge" id="badgeBooked" aria-hidden="true">0</span>
+    </button>
+    <button class="tabbtn" data-tab="picks" role="tab" aria-selected="false">
+      <svg width="25" height="25" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 12.2v-1.4a4.4 4.4 0 0 1 4.4-4.4h9.4"/><path d="m15.9 3.2 3.6 3.2-3.6 3.2"/><path d="M22.6 15.8v1.4a4.4 4.4 0 0 1-4.4 4.4H8.8"/><path d="m12.1 24.8-3.6-3.2 3.6-3.2"/></svg>
+      <span class="tl">Picks</span>
+      <span class="tbadge" id="badgePicks" aria-hidden="true">0</span>
+    </button>
+  </nav>
 </div>
-<div class="toast" id="toast"></div>
+
+<div id="sheetRoot"></div>
+<div id="toast"><div class="tt" id="toastText"></div></div>
 
 <script>
+"use strict";
+/* ════════════════════════════════════════════════════════════════
+   Contract constants (§1)
+   ════════════════════════════════════════════════════════════════ */
 const OWNER = 's1l3ncy', REPO = 'fit-booker', API = 'https://api.github.com';
-const STUDIO_COLORS = {exhale:'var(--exhale)',reformer:'var(--reformer)',run:'var(--run)',cycle:'var(--cycle)',nurture:'var(--nurture)'};
 const DAY_ORDER = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
-let token = localStorage.getItem('fitbooker_token') || '';
-let timetable = null, bookings = null, logdata = [], picks = [], picksSha = null, savedPicksJson = '[]';
-let activeTab = 'timetable', studioFilter = 'all';
+const TZ = 'Australia/Sydney';
+const STUDIOS = ['exhale','reformer','run','cycle','nurture'];
+const SCOLOR = {exhale:'var(--s-exhale)',reformer:'var(--s-reformer)',run:'var(--s-run)',
+                cycle:'var(--s-cycle)',nurture:'var(--s-nurture)'};
+const SLABEL = {exhale:'Exhale',reformer:'Reformer',run:'Run',cycle:'Cycle',nurture:'Nurture'};
 
-function toast(msg, ms=2600){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
-function hdrs(){return {Authorization:'Bearer '+token, Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28'};}
+let token = '';
+try { token = localStorage.getItem('fitbooker_token') || ''; } catch(e){ token = ''; }
 
-async function apiGet(path, raw=false){
-  const h = hdrs(); if(raw) h.Accept='application/vnd.github.raw+json';
-  const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${path}?nocache=${Date.now()}`, {headers:h});
-  if(r.status===404) return null;
-  if(!r.ok) throw new Error(`${path}: ${r.status}`);
+let timetable = {updated:null, classes:[]};
+let bookings  = {updated:null, bookings:[]};
+let logdata   = [];
+let picks = [], picksSha = null, savedPicksJson = '[]';
+let loadError = null, booted = false;
+
+let activeTab = 'book';
+let studioFilter = 'all';
+let selDate = null;
+let allDates = [];
+let scrollMemo = {book:0, booked:0, picks:0};
+let railScroll = null;
+let inFlight = 0;
+let heroCache = null;
+
+/* ════════════════════════════════════════════════════════════════
+   Helpers
+   ════════════════════════════════════════════════════════════════ */
+const $  = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.prototype.slice.call((r||document).querySelectorAll(s));
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
+
+const SYD_PARTS = new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',
+  day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function sydParts(d){
+  const o = {};
+  try { SYD_PARTS.formatToParts(d||new Date()).forEach(p=>{ o[p.type]=p.value; }); }
+  catch(e){ const x=d||new Date(); o.year=String(x.getFullYear()); o.month=String(x.getMonth()+1).padStart(2,'0');
+            o.day=String(x.getDate()).padStart(2,'0'); o.hour=String(x.getHours()).padStart(2,'0'); o.minute='00'; }
+  return o;
+}
+function sydToday(){ const p = sydParts(new Date()); return p.year+'-'+p.month+'-'+p.day; }
+function sydNowClock(){ const p = sydParts(new Date()); return fmt12(p.hour+':'+p.minute).full; }
+
+function dstr(y,m,d){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+function toUTC(ds){ const a=String(ds).split('-').map(Number); return Date.UTC(a[0],a[1]-1,a[2]); }
+function fromUTC(ms){ const d=new Date(ms); return dstr(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate()); }
+function addDays(ds,n){ return fromUTC(toUTC(ds)+n*86400000); }
+function dowMon0(ds){ return (new Date(toUTC(ds)).getUTCDay()+6)%7; }
+const WD_LONG = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const WD_SHORT= ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MON_LONG= ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dayNum(ds){ return Number(String(ds).split('-')[2]); }
+function monIdx(ds){ return Number(String(ds).split('-')[1])-1; }
+function longDate(ds){ return WD_LONG[dowMon0(ds)]+' '+dayNum(ds)+' '+MON_LONG[monIdx(ds)]; }
+function shortDate(ds){ return WD_SHORT[dowMon0(ds)]+' '+dayNum(ds)+' '+MON_SHORT[monIdx(ds)]; }
+function relDayLabel(ds){
+  const t = sydToday();
+  if(ds === t) return 'Today';
+  if(ds === addDays(t,1)) return 'Tomorrow';
+  return longDate(ds);
+}
+
+function fmt12(t){
+  const a = String(t||'').split(':'); let h = Number(a[0])||0; const m = a[1]||'00';
+  const ap = h>=12 ? 'pm' : 'am'; h = h%12 || 12;
+  return {h:h+':'+m, ap:ap, full:h+':'+m+' '+ap};
+}
+function isoClock(iso){ const p = sydParts(new Date(iso)); return fmt12(p.hour+':'+p.minute).full; }
+function isoDateStr(iso){ const p = sydParts(new Date(iso)); return p.year+'-'+p.month+'-'+p.day; }
+
+/* coarse "3d 4h" */
+function relTime(ms){
+  if(ms < 0) ms = 0;
+  const s = Math.round(ms/1000);
+  if(s < 60) return s+'s';
+  const m = Math.round(s/60); if(m < 60) return m+'m';
+  const h = Math.floor(m/60), rm = m%60;
+  if(h < 24) return rm ? h+'h '+rm+'m' : h+'h';
+  const d = Math.floor(h/24), rh = h%24;
+  return rh ? d+'d '+rh+'h' : d+'d';
+}
+/* live hero countdown — seconds inside the hour */
+function cdText(ms){
+  if(ms <= 0) return 'Open now';
+  const s = Math.floor(ms/1000);
+  if(s < 3600){ return Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s'; }
+  const h = Math.floor(s/3600);
+  if(h < 24) return h+'h '+String(Math.floor((s%3600)/60)).padStart(2,'0')+'m';
+  return Math.floor(h/24)+'d '+(h%24)+'h';
+}
+function durationMins(c){
+  try{
+    const m = String(c.end||'').match(/(\d{1,2}):(\d{2})\s*([AaPp])/);
+    if(!m) return null;
+    let eh = Number(m[1])%12; if(m[3].toLowerCase()==='p') eh += 12;
+    const em = Number(m[2]);
+    const sa = String(c.time).split(':').map(Number);
+    let mins = (eh*60+em) - (sa[0]*60+sa[1]);
+    if(mins < 0) mins += 1440;
+    return (mins>0 && mins<300) ? mins : null;
+  }catch(e){ return null; }
+}
+function endLabel(c){
+  const d = durationMins(c); if(d === null) return '';
+  const a = String(c.time).split(':').map(Number);
+  const tot = (a[0]*60 + a[1] + d) % 1440;
+  return fmt12(String(Math.floor(tot/60)).padStart(2,'0')+':'+String(tot%60).padStart(2,'0')).full;
+}
+
+/* availability wording from `avail` + `notfull` */
+function availInfo(c){
+  const a = String(c.avail||'');
+  if(!c.notfull){
+    if(a.indexOf('waitlist')>=0 && a.indexOf('no_waitlist')<0)
+      return {full:true, label:'Full · waitlist', cls:'bad', long:'Full — waitlist open'};
+    return {full:true, label:'Full', cls:'bad', long:'Full'};
+  }
+  if(a==='less_than_100') return {full:false, label:'Almost full', cls:'', long:'Almost full'};
+  if(a==='less_than_90')  return {full:false, label:'Filling up',  cls:'', long:'Filling up'};
+  return {full:false, label:'Spaces', cls:'', long:'Spaces'};
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Glyphs
+   ════════════════════════════════════════════════════════════════ */
+const G = {
+  clock:  '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.4l3.4 2"/></svg>',
+  clockL: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.4l3.4 2"/></svg>',
+  bolt:   '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M13.4 2.2 4.8 13.1c-.4.5 0 1.3.6 1.3H10l-1.4 7.4c-.1.7.8 1.1 1.2.5l8.6-10.9c.4-.5 0-1.3-.6-1.3H14l1.4-7.4c.1-.7-.8-1.1-1.2-.5Z"/></svg>',
+  boltL:  '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M13.4 2.2 4.8 13.1c-.4.5 0 1.3.6 1.3H10l-1.4 7.4c-.1.7.8 1.1 1.2.5l8.6-10.9c.4-.5 0-1.3-.6-1.3H14l1.4-7.4c.1-.7-.8-1.1-1.2-.5Z"/></svg>',
+  check:  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.6 4.6 4.6L19 6.8"/></svg>',
+  repeat: '<svg viewBox="0 0 28 28" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 12.2v-1.4a4.4 4.4 0 0 1 4.4-4.4h9.4"/><path d="m15.9 3.2 3.6 3.2-3.6 3.2"/><path d="M22.6 15.8v1.4a4.4 4.4 0 0 1-4.4 4.4H8.8"/><path d="m12.1 24.8-3.6-3.2 3.6-3.2"/></svg>',
+  xmark:  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>',
+  chev:   '<svg class="chev" viewBox="0 0 9 15" width="9" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m1.6 1.6 5.6 5.9-5.6 5.9"/></svg>',
+  chevBig:'<svg viewBox="0 0 9 15" width="10" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m1.6 1.6 5.6 5.9-5.6 5.9"/></svg>',
+  warn:   '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.6 2.9 19.4h18.2L12 4.6Z"/><path d="M12 10.2v4"/><circle cx="12" cy="16.9" r=".9" fill="currentColor" stroke="none"/></svg>',
+  warnS:  '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.6 2.9 19.4h18.2L12 4.6Z"/><path d="M12 10.2v4"/><circle cx="12" cy="16.9" r=".9" fill="currentColor" stroke="none"/></svg>',
+  cal:    '<svg viewBox="0 0 28 28" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.5" width="20.8" height="19" rx="4.6"/><path d="M3.6 11.2h20.8"/><path d="M9.2 3.2v4.2M18.8 3.2v4.2"/></svg>',
+  lock:   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3.4"/><path d="M8.2 10.2V7.8a3.8 3.8 0 0 1 7.6 0v2.4"/></svg>',
+  trash:  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.8h15"/><path d="M9.4 6.6V4.9a1.6 1.6 0 0 1 1.6-1.6h2a1.6 1.6 0 0 1 1.6 1.6v1.7"/><path d="M6.6 6.8 7.5 19a1.8 1.8 0 0 0 1.8 1.7h5.4a1.8 1.8 0 0 0 1.8-1.7l.9-12.2"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>',
+  big_cal:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.5" width="20.8" height="19" rx="4.6"/><path d="M3.6 11.2h20.8"/><path d="M9.2 3.2v4.2M18.8 3.2v4.2"/></svg>',
+  big_chk:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="14" r="10.6"/><path d="m9.4 14.3 3.2 3.2 6.1-6.6"/></svg>',
+  big_rep:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 12.2v-1.4a4.4 4.4 0 0 1 4.4-4.4h9.4"/><path d="m15.9 3.2 3.6 3.2-3.6 3.2"/><path d="M22.6 15.8v1.4a4.4 4.4 0 0 1-4.4 4.4H8.8"/><path d="m12.1 24.8-3.6-3.2 3.6-3.2"/></svg>',
+  mark:   '<svg viewBox="0 0 28 28" width="38" height="38" fill="none" stroke="currentColor"><path d="M14 3.4 5 14.6h6.2l-1.4 9.6L23 12.2h-6.6L18 3.4Z" fill="currentColor" stroke="none"/></svg>'
+};
+
+/* ════════════════════════════════════════════════════════════════
+   Toast + sheets
+   ════════════════════════════════════════════════════════════════ */
+let toastTimer = null;
+function toast(msg, ms){
+  const t = $('#toast'); $('#toastText').textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('on'), ms || 2800);
+}
+function sheetOpen(){ return !!$('#sheetRoot').innerHTML; }
+function closeSheet(){
+  const root = $('#sheetRoot');
+  const sc = $('.scrim', root), sh = $('.sheet', root);
+  if(sc) sc.classList.remove('on');
+  if(sh) sh.classList.remove('on');
+  setTimeout(()=>{ root.innerHTML = ''; }, 460);
+}
+function openSheet(innerHTML, extraClass){
+  const root = $('#sheetRoot');
+  root.innerHTML = '<div class="scrim"></div><div class="sheet '+(extraClass||'')+'">'+innerHTML+'</div>';
+  const sc = $('.scrim', root), sh = $('.sheet', root);
+  sc.addEventListener('click', ()=> closeSheet());
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ sc.classList.add('on'); sh.classList.add('on'); }); });
+  return root;
+}
+/* UIAlertController-style action sheet — never window.confirm() */
+function actionSheet(opts){
+  return new Promise(resolve=>{
+    const acts = opts.actions || [];
+    let html = '<div class="as-group">';
+    if(opts.title || opts.message){
+      html += '<div class="as-title">'+(opts.title?'<b>'+esc(opts.title)+'</b>':'')+
+              (opts.message?esc(opts.message):'')+'</div>';
+    }
+    acts.forEach((a,i)=>{
+      html += '<button class="as-btn '+(a.style==='destructive'?'destructive':'')+' '+
+              (a.style==='default'?'bold':'')+'" data-as="'+i+'">'+esc(a.label)+'</button>';
+    });
+    html += '</div><div class="as-cancel"><button class="as-btn" data-as="-1">'+
+            esc(opts.cancelLabel||'Cancel')+'</button></div>';
+    const root = openSheet(html, 'asheet');
+    let done = false;
+    const finish = v => { if(done) return; done = true; closeSheet(); resolve(v); };
+    root.addEventListener('click', e=>{
+      const b = e.target.closest('[data-as]');
+      if(b) finish(Number(b.dataset.as));
+      else if(e.target.classList.contains('scrim')) finish(-1);
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   GitHub API (contract §2–§4)
+   ════════════════════════════════════════════════════════════════ */
+function hdrs(){
+  return {Authorization:'Bearer '+token, Accept:'application/vnd.github+json',
+          'X-GitHub-Api-Version':'2022-11-28'};
+}
+async function apiGet(path, raw){
+  const h = hdrs(); if(raw) h.Accept = 'application/vnd.github.raw+json';
+  const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?nocache='+Date.now(), {headers:h});
+  if(r.status === 404) return null;
+  if(!r.ok) throw new Error(path+': '+r.status);
   return raw ? r.text() : r.json();
 }
+async function dispatch(workflow, inputs){
+  const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/actions/workflows/'+workflow+'/dispatches', {
+    method:'POST', headers:hdrs(), body: JSON.stringify({ref:'main', inputs: inputs||{}})});
+  if(r.status !== 204) throw new Error(workflow+' dispatch failed: '+r.status);
+}
+function isAuthErr(e){ const s = String(e && e.message || e); return s.indexOf('401')>=0 || s.indexOf('403')>=0; }
+/* CONTRACT §2: ANY 401/403 clears the token and returns to setup — not just the
+   initial load, or an expired PAT leaves the user tapping Save forever. */
+function bailToSetup(msg){
+  try { localStorage.removeItem('fitbooker_token'); } catch(x){}
+  token = ''; booted = false;
+  closeSheet();
+  renderSetup(msg || 'That token was rejected. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
+}
+function handleApiErr(e){
+  if(isAuthErr(e)){ bailToSetup(); return true; }
+  return false;
+}
+function safeParse(txt, fallback){ try { return txt ? JSON.parse(txt) : fallback; } catch(e){ return fallback; } }
+function b64(str){
+  try { return btoa(unescape(encodeURIComponent(str))); }
+  catch(e){ return btoa(str); }
+}
 
-async function loadAll(){
+async function loadAll(silent){
+  let failed = 0;
+  /* a background refresh must never silently eat pick edits the user hasn't saved */
+  const keepLocalPicks = !!(silent && isDirty());
   try{
-    const [tt, bk, lg, pk] = await Promise.all([
-      apiGet('data/timetable.json', true),
-      apiGet('data/bookings.json', true),
-      apiGet('data/log.json', true),
-      apiGet('data/picks.json'),
+    const soft = pr => pr.catch(e=>{ if(isAuthErr(e)) throw e; failed++; return null; });
+    const res = await Promise.all([
+      soft(apiGet('data/timetable.json', true)),
+      soft(apiGet('data/bookings.json', true)),
+      soft(apiGet('data/log.json', true)),
+      soft(apiGet('data/picks.json'))
     ]);
-    timetable = tt ? JSON.parse(tt) : {updated:null, classes:[]};
-    bookings = bk ? JSON.parse(bk) : {updated:null, bookings:[]};
-    logdata = lg ? JSON.parse(lg) : [];
-    if(pk){ picksSha = pk.sha; picks = JSON.parse(atob(pk.content.replace(/\n/g,''))); }
-    savedPicksJson = JSON.stringify(picks);
-    document.getElementById('nav').style.display='flex';
-    render();
-  }catch(e){
-    if(String(e).includes('401')||String(e).includes('403')){ localStorage.removeItem('fitbooker_token'); token=''; renderTokenSetup('That token was rejected — try again.'); }
-    else toast('Load failed: '+e.message, 4000);
-  }
-}
-
-function renderTokenSetup(msg){
-  document.getElementById('nav').style.display='none';
-  document.getElementById('savebar').style.display='none';
-  document.getElementById('main').innerHTML = `
-    <div class="card" style="margin-top:24px">
-      <div class="hd">One-time setup</div>
-      <div class="note">${msg||'Paste your GitHub access token to connect. It stays in this browser only.'}</div>
-      <input type="password" id="tokin" placeholder="github_pat_...">
-      <button class="primary" style="width:100%" onclick="saveToken()">Connect</button>
-    </div>`;
-}
-function saveToken(){
-  token = document.getElementById('tokin').value.trim();
-  if(!token) return;
-  localStorage.setItem('fitbooker_token', token);
-  document.getElementById('main').innerHTML='<div class="note">Loading…</div>';
-  loadAll();
-}
-
-function showTab(t){ activeTab=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t)); render(); }
-
-function pickKey(p){ return `${p.day}|${p.time}|${p.studio}|${p.name||''}`; }
-function isPicked(c){ return picks.some(p=>p.day===c.day&&p.time===c.time&&p.studio===c.studio); }
-function togglePick(day,time,studio,name){
-  const i = picks.findIndex(p=>p.day===day&&p.time===time&&p.studio===studio);
-  if(i>=0) picks.splice(i,1); else picks.push({day,time,studio,name});
-  render();
-}
-
-function fmt12(t){let[h,m]=t.split(':').map(Number);const ap=h>=12?'pm':'am';h=h%12||12;return h+':'+String(m).padStart(2,'0')+ap;}
-function opensLabel(iso){
-  const d=new Date(iso), now=new Date();
-  if(d<=now) return 'open now';
-  return 'opens '+d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});
-}
-
-function render(){
-  const main=document.getElementById('main');
-  const upd = timetable?.updated ? new Date(timetable.updated).toLocaleString('en-AU',{weekday:'short',hour:'numeric',minute:'2-digit'}) : '—';
-  document.getElementById('updated').textContent = 'Timetable updated '+upd;
-  document.getElementById('savebar').style.display = 'none';
-  if(activeTab==='timetable') renderTimetable(main);
-  else if(activeTab==='picks') renderPicks(main);
-  else if(activeTab==='bookings') renderBookings(main);
-  else renderActivity(main);
-  const dirty = JSON.stringify(picks)!==savedPicksJson;
-  if(dirty && (activeTab==='timetable'||activeTab==='picks')){
-    document.getElementById('savebar').style.display='block';
-    document.getElementById('savenote').textContent = `${picks.length} weekly pick${picks.length===1?'':'s'} — unsaved changes`;
-  }
-}
-
-function renderTimetable(main){
-  const now = new Date();
-  const classes = (timetable.classes||[]).filter(c=> new Date(c.start_iso) > now && (studioFilter==='all'||c.studio===studioFilter));
-  let html = `<div class="filters">
-    <div class="chip ${studioFilter==='all'?'active':''}" onclick="studioFilter='all';render()">All</div>
-    ${Object.keys(STUDIO_COLORS).map(s=>`<div class="chip ${studioFilter===s?'active':''}" onclick="studioFilter='${s}';render()"><span class="dot" style="background:${STUDIO_COLORS[s]}"></span>${s}</div>`).join('')}
-  </div>`;
-  const byDate = {};
-  classes.forEach(c=>{(byDate[c.date]=byDate[c.date]||[]).push(c);});
-  for(const date of Object.keys(byDate).sort()){
-    const d = new Date(date+'T12:00:00');
-    html += `<h2 class="day">${d.toLocaleDateString('en-AU',{weekday:'long', day:'numeric', month:'short'})}</h2>`;
-    for(const c of byDate[date].sort((a,b)=>a.time.localeCompare(b.time)||a.studio.localeCompare(b.studio))){
-      const picked = isPicked(c);
-      const windowOpen = new Date(c.opens_iso) <= now;
-      html += `<div class="row ${picked?'picked':''}">
-        <div class="t">${fmt12(c.time)}</div>
-        <div class="info">
-          <div class="nm"><span class="dot" style="background:${STUDIO_COLORS[c.studio]}"></span>${c.name||c.studio}</div>
-          <div class="meta">${c.staff||''} ${c.notfull?'':'· <span class="full">FULL</span>'}</div>
-        </div>
-        <div class="opens">${opensLabel(c.opens_iso)}</div>
-        ${windowOpen && c.notfull ? `<button class="booknow" onclick="bookNow('${c.day}','${c.time}','${c.studio}')">Book</button>`:''}
-        <div class="tick" onclick="togglePick('${c.day}','${c.time}','${c.studio}',${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">✓</div>
-      </div>`;
+    const tt = safeParse(res[0], null);
+    if(tt && Array.isArray(tt.classes)) timetable = tt;
+    const bk = safeParse(res[1], null);
+    if(bk && Array.isArray(bk.bookings)) bookings = bk;
+    const lg = safeParse(res[2], null);
+    /* only replace the activity list when log.json actually came back — a partial
+       failure must not blank it while the banner claims a cached view */
+    if(Array.isArray(lg)) logdata = lg;
+    else if(res[2] === null && !failed) logdata = [];   // genuine 404 → really empty
+    if(res[3]){
+      /* capture the sha even for a byte-empty file, or every later PUT 422s */
+      if(res[3].sha) picksSha = res[3].sha;
+      let decoded = [];
+      const raw = String(res[3].content||'').replace(/\s/g,'');
+      if(raw){
+        try { decoded = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+        catch(e){ try { decoded = JSON.parse(atob(raw)); } catch(e2){ decoded = []; } }
+      }
+      if(Array.isArray(decoded)){
+        if(keepLocalPicks) savedPicksJson = JSON.stringify(decoded);   // keep the edits, rebase "saved"
+        else picks = decoded;
+      }
+    } else if(res[3] === null){
+      picksSha = null;                                   // 404: no file yet, PUT without a sha
     }
+    if(!keepLocalPicks) savedPicksJson = JSON.stringify(picks);
+    if(failed){
+      loadError = failed >= 4
+        ? 'Couldn’t reach GitHub. Showing whatever this device loaded last — pull to sync when you’re back online.'
+        : 'Some data couldn’t be refreshed. Showing the last copy this device loaded.';
+      if(!silent) toast('Offline — showing the cached view', 3200);
+    } else {
+      loadError = null;
+    }
+  }catch(e){
+    if(isAuthErr(e)){ bailToSetup(); return; }
+    loadError = 'Couldn’t reach GitHub. Showing the last data this device loaded.';
+    if(!silent) toast('Offline — showing the cached view', 3200);
   }
-  html += `<div class="note">Tick = book this class automatically every week (the bot fires the moment its window opens). “Book” = book this one right now.</div>`;
-  main.innerHTML = html;
+  indexDates();
+  booted = true;
+  renderAll();
 }
 
-function renderPicks(main){
-  let html = '<div class="card"><div class="hd">Weekly auto-book picks</div>';
-  if(!picks.length) html += '<div class="note">No picks yet — tick classes on the Timetable tab.</div>';
-  for(const p of [...picks].sort((a,b)=>DAY_ORDER.indexOf(a.day)-DAY_ORDER.indexOf(b.day)||a.time.localeCompare(b.time))){
-    html += `<div class="pickline"><span class="dot" style="background:${STUDIO_COLORS[p.studio]}"></span>
-      <b>${p.day}</b> ${fmt12(p.time)} — ${p.name||p.studio}
-      <span class="x" onclick="togglePick('${p.day}','${p.time}','${p.studio}','')">✕</span></div>`;
+function indexDates(){
+  const set = {};
+  (timetable.classes||[]).forEach(c=>{ if(c && c.date) set[c.date] = true; });
+  const all = Object.keys(set).sort();
+  const today = sydToday();
+  /* days already gone can never be booked — keeping them only pushed the strip's
+     scroll offset around and made "today" hard to find */
+  allDates = all.filter(d => d >= today);
+  if(!allDates.length) allDates = all;
+  if(!selDate || allDates.indexOf(selDate) < 0){
+    if(allDates.indexOf(today) >= 0 && dayHasClasses(today)) selDate = today;
+    else selDate = allDates.filter(dayHasClasses)[0] || allDates[0] || today;
   }
-  html += '</div><div class="note">Saved picks are booked automatically every week: the bot wakes just before each class’s window opens (7 days + 1 hour before class) and books instantly. Remember FIT’s rules: one class per studio per day, and no-shows earn strikes — cancel in the FIT app if you can’t make it (free up to 1 hour before).</div>';
-  main.innerHTML = html;
 }
 
-function renderBookings(main){
-  const bks = bookings?.bookings || [];
-  let html = `<div class="updated" style="padding:6px 0">Bookings updated ${bookings?.updated?new Date(bookings.updated).toLocaleString('en-AU',{weekday:'short',hour:'numeric',minute:'2-digit'}):'—'}</div>`;
-  if(!bks.length) html += '<div class="note">No upcoming bookings on your FIT account. (Tap ↻ Sync to refresh from the portal.)</div>';
-  for(const b of bks){
-    const label = b.name || 'Class';
-    const when = (b.date_raw||b.date||'') + ' · ' + (b.time_raw||b.time||'');
-    const studio = studioFromBooking(b);
-    const canCancel = b.date && b.time;
-    html += `<div class="card" style="display:flex;align-items:center;gap:10px">
-      <div style="flex:1"><div class="hd">${label}</div><div class="sub">${when}${b.location?' · '+b.location:''}</div></div>
-      ${canCancel?`<button class="cancelbtn" onclick="cancelBooking('${b.date}','${b.time}','${studio}',${JSON.stringify(label).replace(/"/g,'&quot;')})">Cancel</button>`:''}
-    </div>`;
-  }
-  html += '<div class="note">Cancel here or in the FIT app — both are free more than 1 hour before class. No-shows and late cancels (within 1 hour) earn strikes — 3 in a rolling week = a 7-day booking suspension.</div>';
-  main.innerHTML = html;
+/* ════════════════════════════════════════════════════════════════
+   Picks
+   ════════════════════════════════════════════════════════════════ */
+function pickIndex(day,time,studio){
+  return picks.findIndex(p => p.day===day && p.time===time && p.studio===studio);
 }
-
-function renderActivity(main){
-  let html = '';
-  const items = [...logdata].reverse().slice(0,60);
-  if(!items.length) html = '<div class="note">No bot activity yet.</div>';
-  for(const e of items){
-    const t = new Date(e.ts).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
-    const desc = {booked:'✅ Booked', waitlisted:'⏳ Waitlisted', snipe_failed:'❌ Booking failed',
-      snipe_waiting:'…waiting for window', book_attempt:'attempt', refresh:'↻ data refreshed',
-      booknow:'⚡ instant book', cancelled:'🗑 cancelled', snipe_nothing_due:'checked — nothing due',
-      snipe_notfound:'⚠️ class not found', snipe_nopicks:'no picks configured'}[e.kind] || e.kind;
-    const detail = e.pick ? ` — ${e.pick.day} ${e.pick.time} ${e.pick.name||e.pick.studio}` :
-                   e.target ? ` — ${e.target.name} ${e.target.date} ${e.target.time}` :
-                   e.classes!==undefined ? ` (${e.classes} classes, ${e.bookings} bookings)` : '';
-    html += `<div class="logline"><b>${desc}</b>${detail}<br>${t}</div>`;
+function isPicked(c){ return pickIndex(c.day,c.time,c.studio) >= 0; }
+function togglePick(day,time,studio,name){
+  const i = pickIndex(day,time,studio);
+  if(i >= 0) picks.splice(i,1);
+  else picks.push({day:day, time:time, studio:studio, name:name||''});
+  heroCache = null;
+  syncDirty();
+  return i < 0;
+}
+function isDirty(){ return JSON.stringify(picks) !== savedPicksJson; }
+function syncDirty(){
+  const app = $('#app'), d = isDirty();
+  app.classList.toggle('dirty', d);
+  if(d){
+    const saved = safeParse(savedPicksJson, []);
+    const added = picks.filter(p => !saved.some(q=>q.day===p.day&&q.time===p.time&&q.studio===p.studio)).length;
+    const removed = saved.filter(q => !picks.some(p=>p.day===q.day&&p.time===q.time&&p.studio===q.studio)).length;
+    const bits = [];
+    if(added) bits.push(added+' added');
+    if(removed) bits.push(removed+' removed');
+    $('#saveTitle').textContent = bits.join(', ') || 'Picks changed';
+    $('#saveSub').textContent = picks.length + (picks.length===1?' weekly pick':' weekly picks') + ' after saving';
   }
-  main.innerHTML = html;
+  updateBadges();
+}
+function updateBadges(){
+  const nb = ((bookings&&bookings.bookings)||[]).length;
+  const bb = $('#badgeBooked');
+  bb.textContent = nb > 99 ? '99+' : String(nb);
+  bb.classList.toggle('on', nb > 0);
+  const np = picks.length;
+  const pb = $('#badgePicks');
+  pb.textContent = np > 99 ? '99+' : String(np);
+  pb.classList.toggle('on', np > 0 || isDirty());
+  if(np === 0 && isDirty()) pb.textContent = '0';
 }
 
 async function savePicks(){
-  const btn=document.getElementById('savebtn'); btn.disabled=true;
+  const btn = $('#saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
   try{
-    const body = {message:'update picks', content: btoa(JSON.stringify(picks, null, 1)), branch:'main'};
+    const body = {message:'update picks', content: b64(JSON.stringify(picks, null, 1)), branch:'main'};
     if(picksSha) body.sha = picksSha;
-    const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/data/picks.json`,{method:'PUT',headers:hdrs(),body:JSON.stringify(body)});
-    if(!r.ok) throw new Error('save failed: '+r.status);
+    const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/data/picks.json',
+      {method:'PUT', headers:hdrs(), body: JSON.stringify(body)});
+    if(r.status === 401 || r.status === 403){
+      bailToSetup('Your token no longer has write access. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
+      return;
+    }
+    if(r.status === 409 || r.status === 422){
+      /* stale or missing sha — re-read the file and let the user hit Save again */
+      try{
+        const cur = await apiGet('data/picks.json');
+        picksSha = (cur && cur.sha) || null;
+      }catch(e2){}
+      throw new Error('Picks changed on GitHub — tap Save picks again');
+    }
+    if(!r.ok) throw new Error('Save failed ('+r.status+')');
     const j = await r.json();
-    picksSha = j.content.sha; savedPicksJson = JSON.stringify(picks);
-    toast('Picks saved — booking schedule updating itself now.');
-    render();
+    if(j && j.content && j.content.sha) picksSha = j.content.sha;
+    savedPicksJson = JSON.stringify(picks);
+    syncDirty();
+    heroCache = null;
+    renderPicks(); renderBook();
+    toast('Picks saved — the bot will book them automatically');
     maybeKickSnipe();
-  }catch(e){ toast(String(e.message||e),4000); }
-  btn.disabled=false;
+  }catch(e){
+    toast(String(e.message || e), 4200);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save picks';
+  }
 }
 
-// Mirror of the bot's bookable_occurrence: opens time (ms) of the ~7-days-out
-// occurrence whose booking window is opening now (>= now - 20min grace).
+/* Mirror of the bot's bookable_occurrence (contract §4). Do not change. */
 function bookableOpensMs(p){
-  const now = new Date();
-  const wd = DAY_ORDER.indexOf(p.day);            // MON=0..SUN=6
-  const [h,m] = p.time.split(':').map(Number);
+  const now = new Date(), wd = DAY_ORDER.indexOf(p.day);
+  const parts = String(p.time).split(':').map(Number), h = parts[0], m = parts[1];
   for(let i=0;i<10;i++){
     const d = new Date(now); d.setDate(now.getDate()+i);
-    if(((d.getDay()+6)%7) === wd){                 // JS Sun=0 -> MON=0 mapping
+    if(((d.getDay()+6)%7) === wd){
+      const start = new Date(d); start.setHours(h,m,0,0);
+      const opens = start.getTime() - (7*24*60+60)*60000;
+      if(opens >= now.getTime() - 20*60000) return opens;
+    }
+  }
+  return null;
+}
+/* display-only: identical maths, longer horizon, so a countdown always exists */
+function nextWindowMs(p){
+  const now = new Date(), wd = DAY_ORDER.indexOf(p.day);
+  const parts = String(p.time).split(':').map(Number), h = parts[0], m = parts[1];
+  for(let i=0;i<21;i++){
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    if(((d.getDay()+6)%7) === wd){
       const start = new Date(d); start.setHours(h,m,0,0);
       const opens = start.getTime() - (7*24*60+60)*60000;
       if(opens >= now.getTime() - 20*60000) return opens;
@@ -287,56 +1108,1029 @@ function bookableOpensMs(p){
   return null;
 }
 
-// If any saved pick's window opens within the next 45 min (or just opened),
-// fire a booking run immediately — no waiting on GitHub's cron activation.
 async function maybeKickSnipe(){
   const now = Date.now();
-  const imminent = picks.some(p => { const o = bookableOpensMs(p); return o!==null && (o-now) <= 45*60000; });
+  const imminent = picks.some(p => { const o = bookableOpensMs(p); return o !== null && (o - now) <= 45*60000; });
   if(imminent){
-    try{ await dispatch('snipe.yml');
-      toast('A pick opens soon — booking run started now; it will book on the second.',5000);
+    try{
+      await dispatch('snipe.yml');
+      beginFlight('A pick opens within the hour — booking run started now.');
     }catch(e){}
   }
 }
 
-async function dispatch(workflow, inputs){
-  const r = await fetch(`${API}/repos/${OWNER}/${REPO}/actions/workflows/${workflow}/dispatches`,{
-    method:'POST', headers:hdrs(), body: JSON.stringify({ref:'main', inputs: inputs||{}})});
-  if(r.status!==204) throw new Error(`${workflow} dispatch failed: ${r.status}`);
+/* ════════════════════════════════════════════════════════════════
+   In-flight feedback
+   ════════════════════════════════════════════════════════════════ */
+function beginFlight(msg, ms){
+  inFlight++;
+  $('#flightbar').classList.add('on');
+  if(msg) toast(msg, 4200);
+  const wait = ms || 75000;
+  setTimeout(()=>{
+    inFlight = Math.max(0, inFlight-1);
+    if(!inFlight) $('#flightbar').classList.remove('on');
+  }, wait);
+  setTimeout(()=> loadAll(true), wait);
 }
 
+/* ════════════════════════════════════════════════════════════════
+   Derived data
+   ════════════════════════════════════════════════════════════════ */
+function futureClasses(){
+  const now = Date.now();
+  return (timetable.classes||[]).filter(c => c && c.start_iso && new Date(c.start_iso).getTime() > now);
+}
+function classesFor(date){
+  const now = Date.now();
+  return (timetable.classes||[])
+    .filter(c => c && c.date===date && new Date(c.start_iso).getTime() > now)
+    .filter(c => studioFilter==='all' || c.studio===studioFilter)
+    .sort((a,b)=> String(a.time).localeCompare(String(b.time)) || String(a.studio).localeCompare(String(b.studio)));
+}
+function dayHasClasses(date){
+  const now = Date.now();
+  return (timetable.classes||[]).some(c => c && c.date===date && new Date(c.start_iso).getTime() > now);
+}
+function studiosOn(date){
+  const now = Date.now(), seen = {};
+  (timetable.classes||[]).forEach(c=>{
+    if(c && c.date===date && new Date(c.start_iso).getTime() > now) seen[c.studio] = 1;
+  });
+  return STUDIOS.filter(s => seen[s]);
+}
+/* studio already booked on this calendar date (one class per studio per day) */
+function bookedStudiosOn(date){
+  const out = {};
+  ((bookings&&bookings.bookings)||[]).forEach(b=>{ if(b && b.date===date) out[studioFromBooking(b)] = b; });
+  return out;
+}
+/* another saved pick in the same studio on the same weekday */
+function pickClash(c){
+  return picks.find(p => p.studio===c.studio && p.day===c.day && p.time!==c.time) || null;
+}
+
+/* Every future timetable occurrence of a saved pick, soonest first. */
+function pickOccurrences(p){
+  const now = Date.now();
+  return (timetable.classes||[])
+    .filter(c => c && c.day===p.day && c.time===p.time && c.studio===p.studio &&
+                 new Date(c.start_iso).getTime() > now)
+    .sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+}
+/* Single source of truth shared by the hero and the Picks list, so the two can
+   never disagree about the same pick. */
+function pickState(p){
+  const now = Date.now();
+  const occ = pickOccurrences(p);
+  const bookedKey = {};
+  ((bookings&&bookings.bookings)||[]).forEach(b=>{ if(b&&b.date) bookedKey[b.date+'|'+studioFromBooking(b)] = 1; });
+  for(let i=0;i<occ.length;i++){
+    const c = occ[i];
+    if(bookedKey[c.date+'|'+c.studio]) continue;          // the bot already won this one
+    const o = new Date(c.opens_iso).getTime();
+    if(!isFinite(o)) continue;
+    return {kind: o <= now ? 'open' : 'waiting', opens:o, cls:c};
+  }
+  if(occ.length) return {kind:'booked', opens:null, cls:occ[0]};
+  return {kind:'missing', opens:null, cls:null};
+}
+
+/* the soonest booking window among the OWNER'S PICKS — the hero */
+function nextPickWindow(){
+  if(heroCache && heroCache.at > Date.now() - 5000) return heroCache.v;
+  const now = Date.now();
+  let best = null;
+  picks.forEach(p=>{
+    let hit = null;
+    pickOccurrences(p).forEach(c=>{
+      const o = new Date(c.opens_iso).getTime();
+      if(isFinite(o) && o > now && (!hit || o < hit.opens)) hit = {opens:o, cls:c, pick:p};
+    });
+    if(!hit){
+      const o = nextWindowMs(p);
+      if(o !== null && o > now) hit = {opens:o, cls:null, pick:p};
+    }
+    if(hit && (!best || hit.opens < best.opens)) best = hit;
+  });
+  heroCache = {at:Date.now(), v:best};
+  return best;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Rendering — shell
+   ════════════════════════════════════════════════════════════════ */
+const NAV_TITLES = {book:'Book', booked:'Booked', picks:'Picks'};
+
+function renderAll(){
+  safeRender('book', renderBook);
+  safeRender('booked', renderBooked);
+  safeRender('picks', renderPicks);
+  try{ syncDirty(); updateNav(); }catch(e){}
+}
+function safeRender(tab, fn){
+  try{ fn(); }
+  catch(e){
+    try{ $('#w-'+tab).innerHTML = errorBlock(e); }catch(x){}
+    if(window.console && console.warn) console.warn(e);
+  }
+}
+function errorBlock(e){
+  return '<div class="ltitle">Something broke</div>'+
+    '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
+    '<div class="et">Couldn’t draw this screen</div>'+
+    '<div class="es">'+esc(String(e && e.message || e))+'</div></div>'+
+    '<div class="group" style="margin-top:8px"><button class="row tapme" data-act="reload">'+
+    '<div class="rbody"><div class="rtitle">Reload data</div></div>'+G.chev+'</button></div>';
+}
+function offlineBanner(){
+  if(!loadError) return '';
+  return '<div class="group" style="margin-top:12px"><div class="rulerow">'+
+    '<div class="ri" data-tone="amber">'+G.warn+'</div>'+
+    '<div class="rt"><b>Offline</b><span>'+esc(loadError)+'</span></div></div></div>';
+}
+
+/* ── hero ───────────────────────────────────────────────────── */
+function heroHTML(){ return '<div class="herowrap">'+heroInner()+openPicksHTML()+'</div>'; }
+function openPicksHTML(){
+  const open = picks.filter(p => pickState(p).kind === 'open');
+  if(!open.length) return '';
+  return '<button class="alertline" data-act="snipe">'+G.boltL+
+    '<span>'+open.length+(open.length===1?' open pick':' open picks')+' · run a pass</span>'+
+    '<span class="ac">'+G.chevBig+'</span></button>';
+}
+function heroInner(){
+  const nw = nextPickWindow();
+  if(!nw){
+    return '<button class="hero none" data-act="goPicks">'+
+      '<span class="hk">Auto-booking</span>'+
+      '<span class="hbig">No picks yet</span>'+
+      '<span class="hsub">Tap the '+
+      '<span style="display:inline-flex;vertical-align:-3px;color:var(--amber)">'+G.repeat+'</span> '+
+      'on any class and the bot grabs that slot every week.</span>'+
+      '<span class="hchev">'+G.chevBig+'</span></button>';
+  }
+  const left = nw.opens - Date.now();
+  const c = nw.cls, p = nw.pick;
+  const day = c ? c.day : p.day;
+  const time = c ? c.time : p.time;
+  const studio = c ? c.studio : p.studio;
+  const name = (c ? (c.name||c.studio) : (p.name||p.studio));
+  /* no matching class means this is a projected window, not a real one — say so,
+     otherwise the hero contradicts the "Not on the current timetable" row below it */
+  const sub = name + ' · ' + WD_SHORT[DAY_ORDER.indexOf(day)] + ' ' + fmt12(time).full +
+              ' · ' + (c ? (SLABEL[studio]||studio) : 'not on timetable');
+  const jump = c ? (' data-act="jump" data-date="'+esc(c.date)+'" data-bid="'+esc(c.bid)+'"') : ' data-act="goPicks"';
+  return '<button class="hero"'+jump+'>'+
+    '<span class="hk">Next window opens</span>'+
+    '<span class="hbig tnum" data-cd="'+nw.opens+'">'+esc(cdText(left))+'</span>'+
+    '<span class="hsub">'+esc(sub)+'</span>'+
+    '<span class="hchev">'+G.chevBig+'</span></button>';
+}
+
+/* ── date rail ──────────────────────────────────────────────── */
+function railHTML(){
+  const today = sydToday();
+  let h = '';
+  allDates.forEach(d=>{
+    const st = studiosOn(d);
+    const cls = ['dcell'];
+    if(d === selDate) cls.push('sel');
+    if(d === today) cls.push('today');
+    if(!st.length) cls.push('noclass');
+    const pips = st.slice(0,5).map(s=>'<i style="background:'+SCOLOR[s]+'"></i>').join('');
+    h += '<button class="'+cls.join(' ')+'" data-date="'+d+'" aria-label="'+esc(longDate(d))+'">'+
+         '<span class="dw">'+(d===today?'TODAY':WD_SHORT[dowMon0(d)].toUpperCase())+'</span>'+
+         '<span class="dn">'+dayNum(d)+'</span>'+
+         '<span class="pips">'+pips+'</span></button>';
+  });
+  return h;
+}
+function chipsHTML(){
+  const items = [{k:'all',label:'All'}].concat(STUDIOS.map(s=>({k:s,label:SLABEL[s]})));
+  return items.map(it=>{
+    const dot = it.k==='all' ? '<span class="cd all"></span>'
+                             : '<span class="cd" style="background:'+SCOLOR[it.k]+'"></span>';
+    return '<button class="chip" data-studio="'+it.k+'" role="tab" aria-selected="'+(studioFilter===it.k)+'">'+
+           dot+'<span>'+esc(it.label)+'</span></button>';
+  }).join('');
+}
+
+/* ── class row ──────────────────────────────────────────────── */
+function classRowHTML(c, bookedStudios){
+  const t = fmt12(c.time);
+  const av = availInfo(c);
+  const opensMs = new Date(c.opens_iso).getTime();
+  const open = opensMs <= Date.now();
+  const picked = isPicked(c);
+  const conflict = bookedStudios[c.studio];
+  const clash = (picked || conflict || av.full) ? null : pickClash(c);
+
+  let stTxt, stCls = '', stG = '';
+  if(av.full){
+    stTxt = av.label + (open ? '' : ' · opens ' + relTime(opensMs - Date.now()));
+    stCls = 'bad';
+  } else if(open){
+    stTxt = 'Open now'; stCls = 'go'; stG = G.bolt;
+  } else {
+    const dt = opensMs - Date.now();
+    stTxt = dt < 36*3600000 ? 'Opens in '+relTime(dt)
+                            : 'Opens '+WD_SHORT[dowMon0(isoDateStr(c.opens_iso))]+' '+isoClock(c.opens_iso);
+    stCls = 'amb'; stG = G.clock;
+  }
+
+  const staff = c.staff && String(c.staff).trim() ? String(c.staff).trim() : '';
+  const tail = (SLABEL[c.studio]||c.studio) + (staff ? ' · ' + staff : '');
+  /* CONTRACT §5 gates Book on window-open + not-full only. A same-day booking in the
+     same studio is a WARNING (bookings.json can be up to 8 hours stale), never a block. */
+  const canBook = open && !av.full;
+
+  return '<div class="crow'+(picked?' ispick':'')+(av.full?' isfull':'')+'" data-bid="'+esc(c.bid)+'" id="row-'+esc(c.bid)+'">'+
+    '<div class="ctime"><b>'+esc(t.h)+'</b><span>'+t.ap.toUpperCase()+'</span></div>'+
+    '<div class="cbody">'+
+      '<div class="cname">'+esc(c.name || c.studio)+'</div>'+
+      '<div class="cmeta">'+
+        '<span class="cst '+stCls+'">'+stG+'<span>'+esc(stTxt)+'</span></span>'+
+        '<span class="ctail"><i class="sdot" style="background:'+(SCOLOR[c.studio]||'var(--ink3)')+'"></i>'+
+          '<span>'+esc(tail)+'</span></span>'+
+      '</div>'+
+      /* a warning gets its own full-width line so it can wrap instead of truncate */
+      (conflict ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
+        '<span>'+esc(SLABEL[c.studio]||c.studio)+' already booked today — FIT allows one per day</span></span></div>' : '')+
+      (clash ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
+        '<span>Clashes with your '+esc(fmt12(clash.time).full)+' pick</span></span></div>' : '')+
+    '</div>'+
+    '<div class="cact">'+
+      (canBook ? '<button class="bookpill'+(conflict?' caution':'')+'" data-book="'+esc(c.bid)+'" '+
+        'aria-label="'+(conflict?'Book anyway — you already have this studio today':'Book this class now')+'">Book</button>' : '')+
+      '<button class="ptog" data-pick="'+esc(c.bid)+'" aria-pressed="'+picked+'" '+
+        'aria-label="Auto-book this class every week"><span class="pk">'+G.repeat+'</span></button>'+
+    '</div>'+
+  '</div>';
+}
+
+/* ── Book screen ────────────────────────────────────────────── */
+function renderBook(){
+  const w = $('#w-book');
+  if(!allDates.length){
+    w.innerHTML = '<div class="ltitle">Book</div>'+ offlineBanner() +
+      '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
+      '<div class="et">'+(loadError?'No timetable on this device':'No timetable yet')+'</div>'+
+      '<div class="es">'+(loadError
+        ? 'Nothing has been cached here yet and GitHub is unreachable. Try again once you have a connection.'
+        : 'Tap sync at the top right to pull the latest FIT timetable.')+'</div>'+
+      '<div style="width:100%;max-width:280px;margin-top:14px">'+
+      '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT</button></div></div>';
+    return;
+  }
+  const list = classesFor(selDate);
+  const bookedStudios = bookedStudiosOn(selDate);
+  const openNow = list.filter(c => !availInfo(c).full && new Date(c.opens_iso).getTime() <= Date.now()).length;
+
+  const buckets = [
+    {k:'Morning',   f:c=>Number(String(c.time).split(':')[0]) < 12},
+    {k:'Afternoon', f:c=>{const h=Number(String(c.time).split(':')[0]); return h>=12 && h<17;}},
+    {k:'Evening',   f:c=>Number(String(c.time).split(':')[0]) >= 17}
+  ];
+  let listHTML = '';
+  if(!list.length){
+    listHTML = '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
+      '<div class="et">Nothing left here</div><div class="es">'+
+      (studioFilter==='all' ? 'Every class on this day has already started.'
+        : 'No '+esc(SLABEL[studioFilter]||studioFilter)+' classes left on this day — try All.')+'</div></div>';
+  } else {
+    buckets.forEach(b=>{
+      const rows = list.filter(b.f);
+      if(!rows.length) return;
+      listHTML += '<div class="ghead tight">'+b.k+'<span class="gh-r">'+rows.length+'</span></div>'+
+                  '<div class="group">'+rows.map(c=>classRowHTML(c,bookedStudios)).join('')+'</div>';
+    });
+    listHTML += '<div class="gfoot">'+
+      '<span class="ig">'+G.repeat+'</span> saves the slot as a weekly pick — the bot takes it the second the '+
+      'window opens, 7 days + 1 hour ahead. <b>Book</b> takes this one class now. Tap a row for detail.</div>';
+  }
+
+  const nowRule = (selDate === sydToday())
+    ? '<div class="nowrule"><i></i><span>Now</span><em>'+esc(sydNowClock())+'</em><s></s></div>' : '';
+
+  const cnt = list.length + ' left' + (openNow ? ' · <b>'+openNow+' open</b>' : '');
+
+  w.innerHTML =
+    '<div class="ltitle">Book</div>'+
+    offlineBanner()+
+    heroHTML()+
+    '<div class="stickybar">'+
+      '<div class="rail" id="rail">'+railHTML()+'</div>'+
+      '<div class="chips" id="chips">'+chipsHTML()+'</div>'+
+    '</div>'+
+    '<div class="dayslide" id="dayslide">'+
+      '<div class="dayhead"><div class="dh">'+esc(relDayLabel(selDate))+'</div>'+
+        '<div class="dc">'+cnt+'</div></div>'+
+      nowRule+
+      listHTML+
+      '<div class="spacer"></div>'+
+    '</div>';
+
+  syncRail(railScroll === null);
+}
+
+function syncRail(instant){
+  const rail = $('#rail'); if(!rail) return;
+  const sel = $('.dcell.sel', rail);
+  if(!sel) return;
+  const target = clamp(sel.offsetLeft - (rail.clientWidth - sel.offsetWidth)/2, 0,
+                       Math.max(0, rail.scrollWidth - rail.clientWidth));
+  if(instant){
+    const prev = rail.style.scrollBehavior;
+    rail.style.scrollBehavior = 'auto';
+    rail.scrollLeft = target;
+    rail.style.scrollBehavior = prev || '';
+  } else {
+    rail.scrollLeft = railScroll !== null ? railScroll : target;
+    requestAnimationFrame(()=>{ try{ rail.scrollLeft = target; }catch(e){} });
+  }
+  railScroll = target;
+}
+
+/* ── Booked screen ──────────────────────────────────────────── */
 function studioFromBooking(b){
   const s = ((b.name||'')+' '+(b.location||'')).toLowerCase();
-  if(s.includes('reformer')) return 'reformer';
-  if(s.includes('sauna')||s.includes('nurture')) return 'nurture';
-  if(s.includes('cycle')) return 'cycle';
-  if(s.includes('bolt')||s.includes('afterburner')||s.includes('run')||s.includes('wod')) return 'run';
+  if(s.indexOf('reformer')>=0) return 'reformer';
+  if(s.indexOf('sauna')>=0 || s.indexOf('nurture')>=0) return 'nurture';
+  if(s.indexOf('cycle')>=0) return 'cycle';
+  /* word-start match so a future class called "Core Crunch" isn't mapped to run */
+  if(s.indexOf('bolt')>=0 || s.indexOf('afterburner')>=0 || /\brun/.test(s) || /\bwod\b/.test(s)) return 'run';
   return 'exhale';
 }
-
-async function cancelBooking(date,time,studio,label){
-  if(!confirm(`Cancel ${label} on ${date} at ${fmt12(time)}?`)) return;
-  try{ await dispatch('booknow.yml',{day:'MON',time,studio,action:'cancel',date});
-    toast('Cancelling — the Booked list refreshes in about a minute.',4000);
-    setTimeout(loadAll, 75000);
-  }catch(e){ toast(String(e.message||e),4000); }
+/* Resolve a Sydney wall-clock date+time to a real instant.
+   A hard-coded +10:00 is wrong for half the year (AEDT is +11:00) and that error
+   lands squarely on the free-cancel / strike boundary, so solve it against the same
+   Intl formatter everything else uses instead of guessing the offset. */
+function sydWallToMs(dateStr, hhmm){
+  const a = String(dateStr).split('-').map(Number);
+  const b = String(hhmm).split(':').map(Number);
+  if(a.length < 3 || b.length < 2 || a.some(isNaN) || b.some(isNaN)) return null;
+  let ms = Date.UTC(a[0], a[1]-1, a[2], b[0]-10, b[1]);   // seed at AEST, then correct
+  for(let k=0;k<3;k++){
+    const p = sydParts(new Date(ms));
+    const drift = (Number(p.hour)*60 + Number(p.minute)) - (b[0]*60 + b[1]);
+    if(!drift) break;
+    /* wrap a drift that crossed midnight (±23h) back into ±12h */
+    const d = drift > 720 ? drift - 1440 : (drift < -720 ? drift + 1440 : drift);
+    ms -= d * 60000;
+  }
+  return isFinite(ms) ? ms : null;
+}
+function bookingStartMs(b){
+  if(!b.date || !b.time) return null;
+  const c = (timetable.classes||[]).find(x => x.date===b.date && x.time===b.time);
+  if(c && c.start_iso) return new Date(c.start_iso).getTime();
+  /* no timetable match (e.g. half-hourly sauna slots) — resolve the offset properly */
+  const sameDay = (timetable.classes||[]).find(x => x.date===b.date && x.start_iso);
+  if(sameDay){
+    const off = String(sameDay.start_iso).slice(-6);
+    if(/^[+-]\d\d:\d\d$/.test(off)){
+      const t = Date.parse(b.date+'T'+b.time+':00'+off);
+      if(isFinite(t)) return t;
+    }
+  }
+  return sydWallToMs(b.date, b.time);
 }
 
-async function bookNow(day,time,studio){
-  if(!confirm(`Book ${day} ${fmt12(time)} (${studio}) now?`)) return;
-  try{ await dispatch('booknow.yml',{day,time,studio}); toast('Booking started — check Booked tab in ~1 min.',4000);
-    setTimeout(loadAll, 75000);
-  }catch(e){ toast(String(e.message||e),4000); }
+function renderBooked(){
+  const w = $('#w-booked');
+  const bks = ((bookings && bookings.bookings) || []).slice()
+    .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
+  const upd = bookings && bookings.updated
+    ? 'Synced ' + shortDate(isoDateStr(bookings.updated)) + ', ' + isoClock(bookings.updated)
+    : 'Not synced yet';
+
+  let rows = '';
+  if(bks.length){
+    rows = '<div class="ghead">On your FIT account<span class="gh-r">'+bks.length+'</span></div><div class="group">' +
+      bks.map((b,i)=>{
+      const st = studioFromBooking(b);
+      // shortDate drops the redundant year so studio still fits at 320px
+      const when = (b.date ? shortDate(b.date) : (b.date_raw||'')) + ' · ' +
+                   (b.time_raw || (b.time ? fmt12(b.time).full : ''));
+      const startMs = bookingStartMs(b);
+      let free = '', freeCls = 'go', freeAt = null;
+      if(startMs){
+        const freeUntil = startMs - 3600000, dt = freeUntil - Date.now();
+        if(dt > 0){ free = 'Free cancel for ' + relTime(dt); freeAt = freeUntil; }
+        else { free = 'Late cancel = a strike'; freeCls = 'bad'; }
+      }
+      return '<div class="crow">'+
+        '<div class="cbody">'+
+          '<div class="cname">'+esc(b.name||'Class')+'</div>'+
+          '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(SCOLOR[st]||'var(--ink3)')+'"></i>'+
+            '<span>'+esc(when)+' · '+esc(SLABEL[st]||st)+'</span></span></div>'+
+          (free ? '<div class="cmeta"><span class="cst '+freeCls+'"'+
+                  (freeAt?' data-cd="'+freeAt+'" data-cdmode="free"':'')+'>'+
+                  (freeCls==='bad'?G.warnS:G.clock)+'<span>'+esc(free)+'</span></span></div>' : '')+
+        '</div>'+
+        '<div class="cact">'+
+          (b.date && b.time ? '<button class="btn-sm redtxt" data-cancel="'+i+'">Cancel</button>' : '')+
+        '</div>'+
+      '</div>';
+    }).join('') + '</div>'+
+    '<div class="gfoot">Cancelling here runs the bot against your FIT account and takes about a minute. '+
+    'You can also cancel in the FIT app.</div>';
+  } else {
+    rows = '<div class="emptystate"><div class="eg">'+G.big_chk+'</div>'+
+      '<div class="et">Nothing booked</div>'+
+      '<div class="es">Classes on your FIT account — booked by you or by the bot — show up here.</div>'+
+      '<div style="width:100%;max-width:280px;margin-top:14px">'+
+      '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT</button></div></div>';
+  }
+
+  w.innerHTML =
+    '<div class="ltitle">Booked</div>'+
+    '<div class="lsub">'+esc(upd)+'</div>'+
+    offlineBanner()+
+    '<div style="height:2px"></div>'+
+    rows+
+    '<div class="ghead">Cancellation rules</div>'+
+    '<div class="group">'+
+      '<div class="rulerow"><div class="ri" data-tone="go">'+G.check+'</div>'+
+        '<div class="rt"><b>More than 1 hour before</b><span>Cancelling is free. No strike, no penalty.</span></div></div>'+
+      '<div class="rulerow"><div class="ri" data-tone="amber">'+G.clockL+'</div>'+
+        '<div class="rt"><b>Within 1 hour, or a no-show</b><span>Counts as one strike against your account.</span></div></div>'+
+      '<div class="rulerow"><div class="ri" data-tone="bad">'+G.warn+'</div>'+
+        '<div class="rt"><b>3 strikes in a rolling 7 days</b><span>7-day booking ban. If you can’t make a class, cancel it here — never just skip it.</span></div></div>'+
+    '</div>'+
+    '<div class="spacer"></div>';
+}
+
+/* ── Picks screen ───────────────────────────────────────────── */
+const LOG_META = {
+  booked:            {t:'Booked',                 c:'go',        g:G.check},
+  waitlisted:        {t:'Added to waitlist',      c:'amber',g:G.clockL},
+  snipe_failed:      {t:'Booking failed',         c:'bad',       g:G.xmark},
+  snipe_waiting:     {t:'Waiting for the window', c:'n3',      g:G.clockL},
+  book_attempt:      {t:'Booking attempt',        c:'amber',g:G.boltL},
+  refresh:           {t:'Timetable synced',       c:'n3',      g:G.refresh},
+  booknow:           {t:'Instant book',           c:'amber',g:G.boltL},
+  cancelled:         {t:'Cancelled',              c:'bad',       g:G.trash},
+  cancel_notfound:   {t:'Cancel — no match',      c:'amber',g:G.warn},
+  snipe_nothing_due: {t:'Checked — nothing due',  c:'n3',      g:G.check},
+  snipe_notfound:    {t:'Class not on timetable', c:'amber',g:G.warn},
+  snipe_nopicks:     {t:'No picks saved',         c:'n3',      g:G.repeat}
+};
+function logDetail(e){
+  if(e.pick) return e.pick.day+' '+fmt12(e.pick.time).full+' · '+(e.pick.name||SLABEL[e.pick.studio]||e.pick.studio||'');
+  if(e.target){
+    const parts = [e.target.name];
+    if(e.target.date) parts.push(shortDate(e.target.date));
+    if(e.target.time) parts.push(fmt12(e.target.time).full);
+    return parts.filter(Boolean).join(' · ');
+  }
+  if(e.classes !== undefined) return e.classes+' classes · '+(e.bookings||0)+' bookings';
+  if(e.result && e.result.verified !== undefined) return e.result.verified ? 'Verified' : 'Not verified';
+  return '';
+}
+function logWhen(iso){
+  const ds = isoDateStr(iso), today = sydToday();
+  if(ds === today) return isoClock(iso);
+  if(ds === addDays(today,-1)) return 'Yest';
+  return WD_SHORT[dowMon0(ds)]+' '+dayNum(ds);
+}
+
+function renderPicks(){
+  const w = $('#w-picks');
+  const sorted = picks.slice().sort((a,b)=>
+    (DAY_ORDER.indexOf(a.day)-DAY_ORDER.indexOf(b.day)) || String(a.time).localeCompare(String(b.time)));
+
+  let pickHTML;
+  if(!sorted.length){
+    pickHTML = '<div class="emptystate"><div class="eg">'+G.big_rep+'</div>'+
+      '<div class="et">No weekly picks</div>'+
+      '<div class="es">Pick a class on the Book tab and the bot grabs that slot every week, the instant its window opens.</div>'+
+      '<div style="width:100%;max-width:280px;margin-top:14px">'+
+      '<button class="btn gray" data-act="goBook">Browse classes</button></div></div>';
+  } else {
+    const seenStudioDay = {};
+    pickHTML = '<div class="ghead">Every week<span class="gh-r">'+sorted.length+'</span></div><div class="group">' +
+      sorted.map(p=>{
+      const key = p.day+'|'+p.studio;
+      const dupe = !!seenStudioDay[key]; seenStudioDay[key] = true;
+      const st = pickState(p);
+      let nextTxt, nextCls = 'amb', g = G.clock, opens = null;
+      if(st.kind === 'open'){ nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt; }
+      else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
+      else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
+      else { nextTxt = 'Not on the timetable'; nextCls = 'bad'; g = G.warnS; }
+      return '<div class="crow">'+
+        '<div class="ctime"><b style="font-size:13.5px">'+esc(p.day)+'</b>'+
+          '<span style="letter-spacing:0;text-transform:none;font-size:11px">'+esc(fmt12(p.time).full)+'</span></div>'+
+        '<div class="cbody">'+
+          '<div class="cname">'+esc(p.name || SLABEL[p.studio] || p.studio)+'</div>'+
+          '<div class="cmeta">'+
+            '<span class="cst '+nextCls+'"'+(opens?' data-cd="'+opens+'" data-cdmode="pick"':'')+'>'+
+              g+'<span>'+esc(nextTxt)+'</span></span>'+
+            '<span class="ctail"><i class="sdot" style="background:'+(SCOLOR[p.studio]||'var(--ink3)')+'"></i>'+
+              '<span>'+esc(SLABEL[p.studio]||p.studio)+'</span></span>'+
+          '</div>'+
+          (dupe ? '<div class="cmeta"><span class="cst bad longform">'+G.warnS+
+            '<span>Two '+esc(SLABEL[p.studio]||p.studio)+' picks on '+esc(p.day)+' — FIT allows one per day</span></span></div>' : '')+
+        '</div>'+
+        '<div class="cact"><button class="ptog rm" data-remove="'+esc(p.day+'|'+p.time+'|'+p.studio)+'" '+
+          'aria-label="Remove this pick"><span class="pk">'+G.xmark+'</span></button></div>'+
+      '</div>';
+    }).join('') + '</div>'+
+    '<div class="gfoot">Bookings open 7 days + 1 hour before class starts. Saving a pick whose window is '+
+    'within 45 minutes fires a booking run straight away.</div>';
+  }
+
+  const items = logdata.slice().reverse().slice(0,60);
+  let logHTML;
+  if(!items.length){
+    logHTML = '<div class="group"><div class="rulerow"><div class="ri" data-tone="n3">'+G.clockL+'</div>'+
+      '<div class="rt"><b>No activity yet</b><span>Every booking, cancel and sync the bot performs is listed here.</span></div></div></div>';
+  } else {
+    logHTML = '<div class="group">' + items.map(e=>{
+      const m = LOG_META[e.kind] || {t:String(e.kind||'Event'), c:'n3', g:G.clockL};
+      const d = logDetail(e);
+      return '<div class="logrow"><div class="li" data-tone="'+m.c+'">'+m.g+'</div>'+
+        '<div class="lb"><div class="lt">'+esc(m.t)+'</div>'+
+        (d ? '<div class="ls">'+esc(d)+'</div>' : '')+'</div>'+
+        '<div class="lw">'+esc(logWhen(e.ts))+'</div></div>';
+    }).join('') + '</div>'+
+    '<div class="gfoot">Newest first, Sydney time.</div>';
+  }
+
+  w.innerHTML =
+    '<div class="ltitle">Picks</div>'+
+    '<div class="lsub">'+picks.length+(picks.length===1?' class':' classes')+' booked automatically each week</div>'+
+    offlineBanner()+
+    heroHTML()+
+    pickHTML+
+    '<div class="ghead">Run the bot now</div>'+
+    '<div class="group">'+
+      '<button class="row tapme" data-act="snipe">'+
+        '<span style="color:var(--amber);flex:none;width:22px;display:flex;justify-content:center">'+G.boltL+'</span>'+
+        '<div class="rbody"><div class="rtitle">Fire a booking pass</div>'+
+        '<div class="rsub"><span class="txt">Check every pick and book anything due</span></div></div>'+G.chev+'</button>'+
+      '<button class="row tapme" data-act="sync">'+
+        '<span style="color:var(--ink2);flex:none;width:22px;display:flex;justify-content:center">'+G.refresh+'</span>'+
+        '<div class="rbody"><div class="rtitle">Sync timetable &amp; bookings</div>'+
+        '<div class="rsub"><span class="txt">Pull fresh data from the FIT portal</span></div></div>'+G.chev+'</button>'+
+    '</div>'+
+    '<div class="ghead">Bot activity</div>'+
+    logHTML+
+    '<div class="spacer"></div>';
+}
+
+/* ── Setup ──────────────────────────────────────────────────── */
+function renderSetup(msg){
+  $('#tabbar').classList.add('hidden');
+  $('#tabfade').classList.add('hidden');
+  $('#app').classList.add('setupmode');
+  $('#app').classList.remove('dirty');
+  $$('.page').forEach(p=>p.classList.remove('active'));
+  $('#page-book').classList.add('active');
+  $('#w-book').innerHTML =
+    '<div class="setup">'+
+      '<div class="mark">'+G.mark+'</div>'+
+      '<h1>FIT Booker</h1>'+
+      '<p>Paste your GitHub access token to connect this phone to the booking bot. It is stored only on this device.</p>'+
+      '<input type="password" id="tokin" placeholder="github_pat_…" autocomplete="off" '+
+        'autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">'+
+      '<button class="btn filled" data-act="connect" style="margin-top:12px">Connect</button>'+
+      (msg ? '<div class="warn">'+esc(msg)+'</div>' : '')+
+    '</div>';
+  $('#navTitle').style.opacity = 0;
+}
+function connect(){
+  const el = $('#tokin'); if(!el) return;
+  const v = el.value.trim();
+  if(!v){ toast('Paste a token first'); return; }
+  token = v;
+  try { localStorage.setItem('fitbooker_token', token); } catch(e){ toast('This browser blocked local storage'); }
+  $('#tabbar').classList.remove('hidden');
+  $('#tabfade').classList.remove('hidden');
+  $('#app').classList.remove('setupmode');
+  $('#w-book').innerHTML = '<div class="ltitle">Book</div><div class="emptystate"><div class="es">Connecting…</div></div>';
+  loadAll();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Sheets: class detail, info
+   ════════════════════════════════════════════════════════════════ */
+function findClass(bid){ return (timetable.classes||[]).find(c => String(c.bid)===String(bid)); }
+
+function openClassSheet(bid){
+  const c = findClass(bid); if(!c) return;
+  const av = availInfo(c);
+  const opensMs = new Date(c.opens_iso).getTime();
+  const open = opensMs <= Date.now();
+  const picked = isPicked(c);
+  const dur = durationMins(c);
+  const t = fmt12(c.time);
+  const conflict = bookedStudiosOn(c.date)[c.studio];
+
+  const windowVal = open
+    ? '<span style="color:var(--go)">Open now</span>'
+    : ((opensMs - Date.now() < 36*3600000)
+        ? '<span style="color:var(--amber)">In ' + esc(relTime(opensMs - Date.now())) + '</span>'
+        : esc(shortDate(isoDateStr(c.opens_iso)) + ', ' + isoClock(c.opens_iso)));
+
+  let primary;
+  if(av.full){
+    primary = '<button class="btn" disabled>'+esc(av.long)+'</button>';
+  } else if(!open){
+    const lockTxt = (opensMs - Date.now() < 36*3600000)
+      ? 'Opens in ' + relTime(opensMs - Date.now())
+      : 'Opens ' + shortDate(isoDateStr(c.opens_iso)) + ', ' + isoClock(c.opens_iso);
+    primary = '<button class="btn" disabled>'+G.lock+' '+esc(lockTxt)+'</button>';
+  } else {
+    /* a same-day booking in this studio is a caution, not a lock — bookings.json can be
+       hours stale and FIT, not this app, is the authority on what is allowed */
+    primary = '<button class="btn filled" data-act="booknow" data-bid="'+esc(c.bid)+'">'+G.boltL+' '+
+      (conflict ? 'Book anyway' : 'Book this class now')+'</button>';
+  }
+  const conflictNote = conflict
+    ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
+      '<div class="rt"><b>'+esc(SLABEL[c.studio]||c.studio)+' already booked today</b><span>'+
+      esc((conflict.name||'A class')+' at '+(conflict.time_raw || (conflict.time?fmt12(conflict.time).full:'')))+
+      '. FIT allows one class per studio per day — cancel that one first, or this booking may be refused.'+
+      '</span></div></div></div>'
+    : '';
+
+  const html =
+  '<div class="sheet-card"><div class="grabber"></div><div class="sheet-scroll">'+
+    '<div class="detail-head">'+
+      '<div class="detail-kicker"><span class="sdot" style="width:8px;height:8px;border-radius:4px;flex:none;background:'+(SCOLOR[c.studio]||'var(--ink3)')+'"></span>'+
+        '<span class="k" style="color:'+(SCOLOR[c.studio]||'var(--ink2)')+'">'+esc(SLABEL[c.studio]||c.studio)+'</span></div>'+
+      '<div class="detail-title">'+esc(c.name || c.studio)+'</div>'+
+      '<div class="detail-when">'+esc(longDate(c.date))+' · '+esc(t.full)+
+        (dur ? ' – '+esc(endLabel(c)) : '')+'</div>'+
+    '</div>'+
+    '<div>'+
+      (c.staff && String(c.staff).trim() ? factRow('Instructor', esc(String(c.staff).trim())) : '')+
+      factRow('Availability', '<span style="color:'+(av.full?'var(--bad)':'var(--ink)')+'">'+esc(av.long)+'</span>')+
+      factRow('Booking window', windowVal)+
+      (dur ? factRow('Duration', dur+' minutes') : '')+
+    '</div>'+
+    '<div class="swrow">'+
+      '<div class="rbody"><div class="rtitle">Auto-book every week</div>'+
+      '<div class="rsub"><span class="txt">'+esc(c.day+' '+t.full+' · '+(SLABEL[c.studio]||c.studio))+'</span></div></div>'+
+      '<button class="swtap" role="switch" aria-checked="'+picked+'" data-act="togglepick" data-bid="'+esc(c.bid)+'" '+
+        'aria-label="Auto-book every week">'+
+        '<span class="sw" aria-hidden="true"><i></i></span></button>'+
+    '</div>'+
+    '<div class="sheet-actions">'+ conflictNote + primary +
+      '<button class="btn gray" data-act="close">Done</button>'+
+    '</div>'+
+    '<div class="sheet-note">Bookings open 7 days + 1 hour before the class starts. One class per studio per day, and no '+
+      'back-to-back bookings in the same studio. Booking now runs the bot against your FIT account and takes about a minute.</div>'+
+  '</div></div>';
+  openSheet(html);
+}
+function factRow(k,v){
+  return '<div class="factrow"><span class="fk">'+k+'</span><span class="fv">'+v+'</span></div>';
+}
+
+function openInfoSheet(){
+  const html =
+  '<div class="sheet-card"><div class="grabber"></div><div class="sheet-scroll">'+
+    '<div class="detail-head">'+
+      '<div class="detail-title">How this works</div>'+
+      '<div class="detail-when">FIT Booker drives a bot that logs into your FIT account for you.</div>'+
+    '</div>'+
+    '<div>'+
+      '<div class="rulerow"><div class="ri" data-tone="amber">'+G.clockL+'</div>'+
+        '<div class="rt"><b>7 days + 1 hour</b><span>A class becomes bookable exactly 7 days and 1 hour before it starts, Sydney time.</span></div></div>'+
+      '<div class="rulerow"><div class="ri" data-tone="amber">'+G.repeat+'</div>'+
+        '<div class="rt"><b>Picks are recurring</b><span>A pick is a weekday + time + studio. The bot wakes just before each window and books on the second.</span></div></div>'+
+      '<div class="rulerow"><div class="ri" data-tone="n2">'+G.cal+'</div>'+
+        '<div class="rt"><b>One class per studio per day</b><span>FIT rejects a second booking in the same studio on the same day.</span></div></div>'+
+      '<div class="rulerow"><div class="ri" data-tone="bad">'+G.warn+'</div>'+
+        '<div class="rt"><b>Strikes</b><span>A no-show, or a cancel inside the last hour, is a strike. Three in a rolling 7 days is a 7-day booking ban — cancel early instead.</span></div></div>'+
+    '</div>'+
+    '<div class="sheet-actions"><button class="btn gray" data-act="close">Done</button></div>'+
+    '<div class="sheet-note">Data lives in your own GitHub repo. Your access token never leaves this device.</div>'+
+  '</div></div>';
+  openSheet(html);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Actions (every destructive/committing action confirms)
+   ════════════════════════════════════════════════════════════════ */
+async function bookNow(bid, fromSheet){
+  const c = findClass(bid); if(!c) return;
+  const t = fmt12(c.time);
+  const conflict = bookedStudiosOn(c.date)[c.studio];
+  const choice = await actionSheet({
+    title: 'Book ' + (c.name || c.studio) + '?',
+    message: longDate(c.date) + ' at ' + t.full + ' · ' + (SLABEL[c.studio]||c.studio) +
+             '\nThis books immediately on your FIT account.' +
+             (conflict ? '\nHeads up: you already have ' + (SLABEL[c.studio]||c.studio) +
+                         ' booked that day. FIT allows one class per studio per day, so this may be refused.' : ''),
+    actions: [{label: conflict ? 'Book Anyway' : 'Book Now', style:'default'}]
+  });
+  if(choice !== 0){ if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
+  try{
+    await dispatch('booknow.yml', {day:c.day, time:c.time, studio:c.studio});
+    beginFlight('Booking… the Booked tab updates in about a minute.');
+  }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
+}
+
+async function cancelBooking(i){
+  const list = ((bookings&&bookings.bookings)||[]).slice()
+    .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
+  const b = list[i]; if(!b) return;
+  const startMs = bookingStartMs(b);
+  const late = startMs ? (startMs - Date.now()) < 3600000 : false;
+  const choice = await actionSheet({
+    title: 'Cancel ' + (b.name||'this booking') + '?',
+    message: (b.date_raw || shortDate(b.date)) + ' at ' + (b.time_raw || fmt12(b.time).full) +
+      (startMs === null
+        ? '\nCancelling within 1 hour of the class counts as a strike. 3 strikes in 7 days = a 7-day ban.'
+        : (late ? '\nThis is within 1 hour of the class — it counts as a strike. 3 strikes in 7 days = a 7-day ban.'
+                : '\nFree cancel: this is more than 1 hour before the class.')),
+    actions: [{label:'Cancel Booking', style:'destructive'}],
+    cancelLabel:'Keep Booking'
+  });
+  if(choice !== 0) return;
+  try{
+    await dispatch('booknow.yml', {day:'MON', time:b.time, studio:studioFromBooking(b), action:'cancel', date:b.date});
+    beginFlight('Cancelling… this list refreshes in about a minute.');
+  }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
 }
 
 async function syncNow(){
-  const b=document.getElementById('syncBtn'); b.textContent='↻ …';
-  try{ await dispatch('refresh.yml'); toast('Sync started — data refreshes in about a minute.'); setTimeout(()=>{loadAll(); b.textContent='↻ Sync';}, 70000);}
-  catch(e){ toast(String(e.message||e),4000); b.textContent='↻ Sync'; }
+  const b = $('#syncBtn');
+  b.classList.add('spin');
+  try{
+    await dispatch('refresh.yml');
+    beginFlight('Syncing with FIT — new data in about a minute.', 70000);
+  }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
+  setTimeout(()=> b.classList.remove('spin'), 70000);
 }
 
-if(!token) renderTokenSetup();
-else { document.getElementById('main').innerHTML='<div class="note">Loading…</div>'; loadAll(); }
+async function firePass(){
+  const choice = await actionSheet({
+    title:'Fire a booking pass?',
+    message:'The bot checks every saved pick and books anything whose window is open.',
+    actions:[{label:'Run Now', style:'default'}]
+  });
+  if(choice !== 0) return;
+  try{ await dispatch('snipe.yml'); beginFlight('Booking pass running — check back in a minute.'); }
+  catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Navigation, scroll memory, gestures
+   ════════════════════════════════════════════════════════════════ */
+function switchTab(t){
+  if(t === activeTab) return;
+  const cur = $('#page-'+activeTab);
+  if(cur) scrollMemo[activeTab] = cur.scrollTop;
+  $$('.page').forEach(p=>p.classList.remove('active'));
+  $$('.tabbtn').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.tab===t)));
+  activeTab = t;
+  const next = $('#page-'+activeTab);
+  next.classList.add('active');
+  void next.offsetHeight;
+  next.scrollTop = scrollMemo[activeTab] || 0;
+  updateNav();
+  if(t === 'book') syncRail(true);
+}
+
+function updateNav(){
+  const page = $('#page-'+activeTab);
+  const st = page ? page.scrollTop : 0;
+  const p = clamp((st - 8) / 30, 0, 1);
+  const el = $('#navTitle');
+  el.style.opacity = p;
+  el.style.transform = 'translateY('+(9*(1-p))+'px)';
+  el.textContent = (activeTab==='book' && selDate) ? relDayLabel(selDate) : NAV_TITLES[activeTab];
+  $('#app').classList.toggle('scrolled', st > 8);
+}
+
+let navTick = false;
+$$('.page').forEach(p=>{
+  p.addEventListener('scroll', ()=>{
+    if(navTick) return; navTick = true;
+    requestAnimationFrame(()=>{ navTick = false; if(p.classList.contains('active')) updateNav(); });
+  }, {passive:true});
+});
+
+function setDay(date, dir){
+  if(!date || date === selDate) return;
+  const slide = $('#dayslide');
+  if(slide && dir) slide.classList.add(dir > 0 ? 'out-l' : 'out-r');
+  selDate = date;
+  railScroll = null;
+  setTimeout(()=>{
+    renderBook();
+    const s2 = $('#dayslide');
+    if(s2 && dir){
+      s2.classList.add(dir > 0 ? 'out-r' : 'out-l');
+      requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ s2.classList.remove('out-r','out-l'); }); });
+    }
+    updateNav();
+  }, dir ? 165 : 0);
+}
+function stepDay(delta){
+  if(!allDates.length) return;
+  const i = allDates.indexOf(selDate);
+  if(i < 0) return;
+  const j = i + delta;
+  if(j < 0 || j >= allDates.length){
+    const s = $('#dayslide');
+    if(s){ s.style.transition='transform .3s cubic-bezier(.32,.72,0,1)';
+           s.style.transform='translateX('+(delta>0?-12:12)+'px)';
+           setTimeout(()=>{ s.style.transform=''; setTimeout(()=>{ s.style.transition=''; },320); },130); }
+    return;
+  }
+  setDay(allDates[j], delta);
+}
+
+/* rubber-band, finger-tracking day swipe */
+(function(){
+  const page = $('#page-book');
+  let sx=0, sy=0, locked=null, active=false;
+  page.addEventListener('touchstart', e=>{
+    if(e.touches.length !== 1 || sheetOpen()){ active=false; return; }
+    if(e.target.closest('.rail') || e.target.closest('.chips')){ active=false; return; }
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; locked = null; active = true;
+  }, {passive:true});
+  page.addEventListener('touchmove', e=>{
+    if(!active) return;
+    const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if(locked === null){
+      if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.6) locked = 'x';
+      else if(Math.abs(dy) > 8) locked = 'y';
+    }
+    if(locked === 'x'){
+      if(e.cancelable) e.preventDefault();
+      const s = $('#dayslide');
+      if(s){
+        s.classList.add('drag');
+        s.style.transform = 'translateX('+(dx*0.32)+'px)';
+        s.style.opacity = String(1 - Math.min(0.5, Math.abs(dx)/420));
+      }
+    }
+  }, {passive:false});
+  const end = e=>{
+    if(!active) return; active = false;
+    const s = $('#dayslide');
+    if(s){ s.classList.remove('drag'); s.style.transform = ''; s.style.opacity = ''; }
+    if(locked !== 'x') return;
+    const t = (e.changedTouches && e.changedTouches[0]) || null;
+    if(!t) return;
+    const dx = t.clientX - sx;
+    if(dx < -56) stepDay(1);
+    else if(dx > 56) stepDay(-1);
+  };
+  page.addEventListener('touchend', end, {passive:true});
+  page.addEventListener('touchcancel', end, {passive:true});
+})();
+
+function jumpToClass(date, bid){
+  const go = ()=>{
+    const row = document.getElementById('row-'+bid);
+    const page = $('#page-book');
+    if(row && page){
+      const y = row.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop;
+      page.scrollTop = Math.max(0, y - 200);
+      row.classList.add('flash');
+      setTimeout(()=>row.classList.remove('flash'), 1700);
+    }
+  };
+  switchTab('book');
+  if(studioFilter !== 'all'){ studioFilter = 'all'; }
+  if(date !== selDate){ selDate = date; railScroll = null; renderBook(); setTimeout(go, 60); }
+  else { renderBook(); setTimeout(go, 60); }
+}
+
+/* ── delegated events ───────────────────────────────────────── */
+document.addEventListener('click', function(e){
+  const T = sel => e.target.closest(sel);
+
+  const tab = T('.tabbtn'); if(tab){ switchTab(tab.dataset.tab); return; }
+
+  const dcell = T('[data-date][data-act="jump"]');
+  if(dcell){ jumpToClass(dcell.dataset.date, dcell.dataset.bid); return; }
+
+  const dc = T('.dcell[data-date]');
+  if(dc){ const d = dc.dataset.date; setDay(d, d > selDate ? 1 : -1); return; }
+
+  const chip = T('[data-studio]'); if(chip){
+    studioFilter = chip.dataset.studio;
+    $$('.chip').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.studio===studioFilter)));
+    const slide = $('#dayslide');
+    if(slide) slide.style.opacity = '.3';
+    const chips = $('#chips'); const cs = chips ? chips.scrollLeft : 0;
+    setTimeout(()=>{ renderBook(); const c2 = $('#chips'); if(c2) c2.scrollLeft = cs; }, 100);
+    return;
+  }
+
+  const bk = T('[data-book]'); if(bk){ bookNow(bk.dataset.book, false); return; }
+
+  const pt = T('[data-pick]'); if(pt){
+    const c = findClass(pt.dataset.pick);
+    if(c){
+      const on = togglePick(c.day, c.time, c.studio, c.name);
+      pt.setAttribute('aria-pressed', String(on));
+      const row = pt.closest('.crow'); if(row) row.classList.toggle('ispick', on);
+      const clash = on ? picks.find(p => p.studio===c.studio && p.day===c.day && p.time!==c.time) : null;
+      if(clash) toast('Heads up: you already pick '+fmt12(clash.time).full+' '+(SLABEL[c.studio]||c.studio)+' on '+c.day+' — FIT allows one per studio per day', 4200);
+      safeRender('picks', renderPicks);
+    }
+    return;
+  }
+  const rm = T('[data-remove]'); if(rm){
+    const a = rm.dataset.remove.split('|');
+    togglePick(a[0], a[1], a[2], '');
+    safeRender('picks', renderPicks);
+    safeRender('book', renderBook);
+    return;
+  }
+  const cn = T('[data-cancel]'); if(cn){ cancelBooking(Number(cn.dataset.cancel)); return; }
+
+  const act = T('[data-act]');
+  if(act){
+    const a = act.dataset.act;
+    if(a === 'sync') syncNow();
+    else if(a === 'snipe') firePass();
+    else if(a === 'connect') connect();
+    else if(a === 'reload') loadAll();
+    else if(a === 'goBook') switchTab('book');
+    else if(a === 'goPicks') switchTab('picks');
+    else if(a === 'close') closeSheet();
+    else if(a === 'booknow'){ closeSheet(); setTimeout(()=>bookNow(act.dataset.bid, true), 200); }
+    else if(a === 'togglepick'){
+      const c = findClass(act.dataset.bid);
+      if(c){
+        const on = togglePick(c.day, c.time, c.studio, c.name);
+        act.setAttribute('aria-checked', String(on));
+        safeRender('picks', renderPicks);
+        safeRender('book', renderBook);
+      }
+    }
+    return;
+  }
+
+  const row = T('.crow[data-bid]'); if(row){ openClassSheet(row.dataset.bid); return; }
+}, false);
+
+$('#syncBtn').addEventListener('click', syncNow);
+$('#infoBtn').addEventListener('click', openInfoSheet);
+$('#saveBtn').addEventListener('click', savePicks);
+window.addEventListener('resize', ()=>{ try{ syncRail(true); }catch(e){} }, {passive:true});
+$$('.page').forEach(p=>{
+  p.addEventListener('scroll', ()=>{ const r = $('#rail'); if(r) railScroll = r.scrollLeft; }, {passive:true});
+});
+
+/* ── live countdowns (hero ticks every second) ──────────────── */
+let flipQueued = false;
+setInterval(function(){
+  try{
+    if(!booted) return;
+    const now = Date.now();
+    let flip = false;
+    const nodes = document.querySelectorAll('[data-cd]');
+    for(let i=0;i<nodes.length;i++){
+      const el = nodes[i], at = Number(el.dataset.cd), mode = el.dataset.cdmode || 'hero';
+      const left = at - now;
+      if(left <= 0){ flip = true; continue; }
+      if(mode === 'hero'){ el.textContent = cdText(left); }
+      else if(mode === 'pick'){ const s = el.lastElementChild; if(s) s.textContent = 'Books in '+relTime(left); }
+      else if(mode === 'free'){ const s = el.lastElementChild; if(s) s.textContent = 'Free cancel for '+relTime(left); }
+    }
+    if(flip && !flipQueued){
+      flipQueued = true;
+      setTimeout(()=>{ flipQueued = false; heroCache = null; renderAll(); }, 500);
+    }
+  }catch(e){}
+}, 1000);
+
+/* keep the lists honest as classes fall into the past */
+setInterval(function(){
+  try{
+    if(!booted || sheetOpen()) return;
+    heroCache = null;
+    indexDates();
+    const p = $('#page-'+activeTab), s = p ? p.scrollTop : 0;
+    renderAll();
+    if(p) p.scrollTop = s;
+  }catch(e){}
+}, 300000);
+
+/* ── boot ───────────────────────────────────────────────────── */
+(function boot(){
+  try{
+    if(!token){ renderSetup(''); return; }
+    $('#w-book').innerHTML = '<div class="ltitle">Book</div>'+
+      '<div class="emptystate"><div class="es">Loading your timetable…</div></div>';
+    loadAll();
+  }catch(e){
+    try{ $('#w-book').innerHTML = errorBlock(e); }catch(x){}
+  }
+})();
 </script>
 </body>
 </html>
