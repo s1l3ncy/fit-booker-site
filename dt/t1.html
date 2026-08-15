@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>t1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="T1 control">
+<meta name="theme-color" content="#0000FF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#FFFF00" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="t1.webmanifest">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;width:100%;overflow:hidden;background:#1B2430;color:#fff;
+  font:600 14px/1.3 -apple-system,system-ui,sans-serif;-webkit-text-size-adjust:100%}
+
+#et,#eb{position:fixed;left:0;right:0;height:22px;z-index:9;font:800 12px/22px -apple-system,system-ui,sans-serif;
+  text-align:center;letter-spacing:.06em;color:#000}
+#et{top:0;background:#FF2D2D}
+#eb{bottom:0;background:#2D7BFF;color:#fff}
+#w{position:fixed;inset:22px 0;overflow:auto;-webkit-overflow-scrolling:touch;padding:6px 10px}
+#v{font:900 28px/1.05 -apple-system,system-ui,sans-serif;padding:6px 0 2px;letter-spacing:-.02em}
+#n{font-size:11px;font-weight:600;opacity:.75;padding-bottom:6px}
+table{width:100%;border-collapse:collapse;font:500 12px/1.35 ui-monospace,Menlo,monospace}
+td{padding:2px 0;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.12)}
+td:first-child{opacity:.7;white-space:nowrap;padding-right:8px}
+td:last-child{text-align:right;font-weight:800;white-space:nowrap}
+b.big{font-size:15px}
+.pr{position:fixed;left:0;width:1px;visibility:hidden;pointer-events:none}
+#pt{top:0;height:env(safe-area-inset-top,0px)}
+#pb{bottom:0;height:env(safe-area-inset-bottom,0px)}
+</style>
+</head>
+<body>
+<div id="pt" class="pr"></div><div id="pb" class="pr"></div>
+<div id="et">&#9650; TOP EDGE OF WEB VIEW</div>
+<div id="eb">&#9660; BOTTOM EDGE OF WEB VIEW</div>
+<div id="w"><div id="v">&hellip;</div><div id="n">t1 &mdash; CONTROL - exact current app config</div><table id="o"></table></div>
+<script>
+function px(css){var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:0;left:0;width:1px;visibility:hidden;pointer-events:none;height:'+css;
+  document.body.appendChild(d);var h=d.getBoundingClientRect().height;d.remove();return Math.round(h*100)/100;}
+function ins(id){return Math.round(document.getElementById(id).getBoundingClientRect().height*100)/100;}
+function mode(){var m=['fullscreen','standalone','minimal-ui','browser'];
+  for(var i=0;i<m.length;i++){if(matchMedia('(display-mode: '+m[i]+')').matches)return m[i];}return 'unknown';}
+function run(){
+  var ih=window.innerHeight, sh=screen.height, d=sh-ih, vv=window.visualViewport;
+  var pass=(d===0);
+  var v=document.getElementById('v');
+  v.textContent=(pass?'PASS':'FAIL')+'  '+ih+' / '+sh;
+  v.style.color=pass?'#3DFF9E':'#FF6B5E';
+  var r=[['VERDICT',pass?'PASS full height':'FAIL short by '+d+'px'],
+    ['screen',screen.width+' x '+sh],['innerHeight',ih],['screen.height - innerHeight',d],
+    ['visualViewport h',vv?Math.round(vv.height):'n/a'],['visualViewport offsetTop',vv?Math.round(vv.offsetTop):'n/a'],
+    ['visualViewport pageTop',vv?Math.round(vv.pageTop||0):'n/a'],
+    ['window.screenY / screenTop',(window.screenY!==undefined?window.screenY:'-')+' / '+(window.screenTop!==undefined?window.screenTop:'-')],
+    ['doc clientHeight',document.documentElement.clientHeight],['outerHeight',window.outerHeight],
+    ['100dvh',px('100dvh')],['100svh',px('100svh')],['100lvh',px('100lvh')],['100vh',px('100vh')],
+    ['-webkit-fill-available',px('-webkit-fill-available')],
+    ['safe-area-inset-TOP (probe)',ins('pt')],['safe-area-inset-BOTTOM (probe)',ins('pb')],
+    ['display-mode',mode()],['navigator.standalone',String(navigator.standalone)],
+    ['devicePixelRatio',window.devicePixelRatio],['colour scheme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'],
+    ['orientation',(screen.orientation&&screen.orientation.type)||'n/a'],
+    ['UA iOS',(navigator.userAgent.match(/OS [0-9_]+/)||['?'])[0]]];
+  document.getElementById('o').innerHTML=r.map(function(x,i){
+    return '<tr><td>'+x[0]+'</td><td>'+(i<4?'<b class="big">'+x[1]+'</b>':x[1])+'</td></tr>';}).join('');
+}
+run();addEventListener('resize',run);addEventListener('orientationchange',function(){setTimeout(run,400)});
+if(window.visualViewport)visualViewport.addEventListener('resize',run);
+setTimeout(run,600);setTimeout(run,2000);
+</script>
+</body>
+</html>
