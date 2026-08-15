@@ -223,12 +223,11 @@ function renderBookings(main){
   let html = `<div class="updated" style="padding:6px 0">Bookings updated ${bookings?.updated?new Date(bookings.updated).toLocaleString('en-AU',{weekday:'short',hour:'numeric',minute:'2-digit'}):'—'}</div>`;
   if(!bks.length) html += '<div class="note">No upcoming bookings on your FIT account. (Tap ↻ Sync to refresh from the portal.)</div>';
   for(const b of bks){
-    const label = b.name || b.classname || b.class_name || JSON.stringify(b).slice(0,60);
-    const when = b.arrival || b.date || b.starttime || '';
-    const time = b.starttime || b.time || '';
-    html += `<div class="card"><div class="hd">${label}</div><div class="sub">${when} ${time}</div></div>`;
+    const label = b.name || 'Class';
+    const when = (b.date_raw||b.date||'') + ' · ' + (b.time_raw||b.time||'');
+    html += `<div class="card"><div class="hd">${label}</div><div class="sub">${when}${b.location?' · '+b.location:''}</div></div>`;
   }
-  html += '<div class="note">Cancelling: quickest is the FIT app (free more than 1 hour before class). In-site cancel buttons arrive in v2 once we see the real booking data shape.</div>';
+  html += '<div class="note">Cancelling: quickest is the FIT app (free more than 1 hour before class). No-shows and late cancels (within 1 hour) earn strikes — 3 in a rolling week = a 7-day booking suspension.</div>';
   main.innerHTML = html;
 }
 
