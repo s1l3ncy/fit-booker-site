@@ -225,9 +225,14 @@ function renderBookings(main){
   for(const b of bks){
     const label = b.name || 'Class';
     const when = (b.date_raw||b.date||'') + ' · ' + (b.time_raw||b.time||'');
-    html += `<div class="card"><div class="hd">${label}</div><div class="sub">${when}${b.location?' · '+b.location:''}</div></div>`;
+    const studio = studioFromBooking(b);
+    const canCancel = b.date && b.time;
+    html += `<div class="card" style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1"><div class="hd">${label}</div><div class="sub">${when}${b.location?' · '+b.location:''}</div></div>
+      ${canCancel?`<button class="cancelbtn" onclick="cancelBooking('${b.date}','${b.time}','${studio}',${JSON.stringify(label).replace(/"/g,'&quot;')})">Cancel</button>`:''}
+    </div>`;
   }
-  html += '<div class="note">Cancelling: quickest is the FIT app (free more than 1 hour before class). No-shows and late cancels (within 1 hour) earn strikes — 3 in a rolling week = a 7-day booking suspension.</div>';
+  html += '<div class="note">Cancel here or in the FIT app — both are free more than 1 hour before class. No-shows and late cancels (within 1 hour) earn strikes — 3 in a rolling week = a 7-day booking suspension.</div>';
   main.innerHTML = html;
 }
 
@@ -268,6 +273,23 @@ async function dispatch(workflow, inputs){
   const r = await fetch(`${API}/repos/${OWNER}/${REPO}/actions/workflows/${workflow}/dispatches`,{
     method:'POST', headers:hdrs(), body: JSON.stringify({ref:'main', inputs: inputs||{}})});
   if(r.status!==204) throw new Error(`${workflow} dispatch failed: ${r.status}`);
+}
+
+function studioFromBooking(b){
+  const s = ((b.name||'')+' '+(b.location||'')).toLowerCase();
+  if(s.includes('reformer')) return 'reformer';
+  if(s.includes('sauna')||s.includes('nurture')) return 'nurture';
+  if(s.includes('cycle')) return 'cycle';
+  if(s.includes('bolt')||s.includes('afterburner')||s.includes('run')||s.includes('wod')) return 'run';
+  return 'exhale';
+}
+
+async function cancelBooking(date,time,studio,label){
+  if(!confirm(`Cancel ${label} on ${date} at ${fmt12(time)}?`)) return;
+  try{ await dispatch('booknow.yml',{day:'MON',time,studio,action:'cancel',date});
+    toast('Cancelling — the Booked list refreshes in about a minute.',4000);
+    setTimeout(loadAll, 75000);
+  }catch(e){ toast(String(e.message||e),4000); }
 }
 
 async function bookNow(day,time,studio){
