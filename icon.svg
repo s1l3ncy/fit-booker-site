@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"
+     role="img" aria-label="FIT Booker">
+  <title>FIT Booker</title>
+
+  <!-- Full-bleed square background. No corner rounding: iOS applies its own mask. -->
+  <rect x="0" y="0" width="512" height="512" fill="#0f6b5c"/>
+
+  <!-- "FIT" monogram: geometric slab-built letterforms, 48px stems (25% of cap height),
+       pure white on brand green for maximum contrast at small sizes. -->
+  <g fill="#ffffff" shape-rendering="crispEdges">
+    <!-- F -->
+    <rect x="66"  y="161" width="48"  height="190"/>
+    <rect x="66"  y="161" width="128" height="48"/>
+    <rect x="66"  y="224" width="104" height="48"/>
+
+    <!-- I -->
+    <rect x="226" y="161" width="48"  height="190"/>
+
+    <!-- T -->
+    <rect x="306" y="161" width="140" height="48"/>
+    <rect x="352" y="161" width="48"  height="190"/>
+  </g>
+</svg>
