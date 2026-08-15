@@ -892,7 +892,6 @@ svg{display:block;flex:none}
 /* ════════════════════════════════════════════════════════════════
    Contract constants (§1)
    ════════════════════════════════════════════════════════════════ */
-const OWNER = 's1l3ncy', REPO = 'fit-booker', API = 'https://api.github.com';
 const DAY_ORDER = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 const TZ = 'Australia/Sydney';
 const STUDIOS = ['exhale','reformer','run','cycle','nurture'];
@@ -900,30 +899,31 @@ const SCOLOR = {exhale:'var(--s-exhale)',reformer:'var(--s-reformer)',run:'var(-
                 cycle:'var(--s-cycle)',nurture:'var(--s-nurture)'};
 const SLABEL = {exhale:'Exhale',reformer:'Reformer',run:'Run',cycle:'Cycle',nurture:'Nurture'};
 
-/* The login Worker. It is the only thing that can verify a FIT password (the gym portal
-   sends no CORS headers, so the browser cannot ask it directly) and it hands back the
-   GitHub token on success, so nobody ever pastes a PAT again. WORKER_URL='' falls back to
-   the old paste-a-token screen. */
+/* The Worker is the ONLY back end this app talks to. It verifies a FIT password (the gym
+   portal sends no CORS headers, so the browser cannot ask it directly), and it holds the
+   repo credentials server-side, scoping every read and write to the folder of whoever is
+   signed in. The app itself has no repo credential of any kind — it only ever holds an
+   opaque session string, and a session can only touch its own member's data. */
 const WORKER_URL = 'https://fit-login.joshrandall182.workers.dev';
 
-let token = '';
-/* Which member is signed in. Selects data/<user>/… — everything except the timetable,
-   which is the same for everybody. Defaults to josh so an existing install that already
-   holds a token keeps working without a re-login. */
+/* Opaque session handle from POST /login. Meaningless to this app: it is passed back to
+   the Worker on every call and is the only thing that identifies the member. */
+let session = '';
+/* Which member is signed in. Display/state only now — the Worker decides which folder a
+   session may read and write, so nothing here can widen access. */
 let USER = 'josh', USERNAME = '';
 try {
-  token    = localStorage.getItem('fitbooker_token') || '';
+  session  = localStorage.getItem('fitbooker_session') || '';
   USER     = localStorage.getItem('fitbooker_user')  || 'josh';
   USERNAME = localStorage.getItem('fitbooker_name')  || '';
-} catch(e){ token = ''; }
-const dpath = f => 'data/' + USER + '/' + f;   // per-member data file
+} catch(e){ session = ''; }
 function signOut(){
   try {
-    localStorage.removeItem('fitbooker_token');
+    localStorage.removeItem('fitbooker_session');
     localStorage.removeItem('fitbooker_user');
     localStorage.removeItem('fitbooker_name');
   } catch(x){}
-  token = ''; USERNAME = '';
+  session = ''; USERNAME = '';
 }
 
 let timetable = {updated:null, classes:[]};
@@ -1224,51 +1224,47 @@ function actionSheet(opts){
 }
 
 /* ════════════════════════════════════════════════════════════════
-   GitHub API (contract §2–§4)
+   Worker API (contract §2–§4)
    ════════════════════════════════════════════════════════════════ */
-function hdrs(){
-  return {Authorization:'Bearer '+token, Accept:'application/vnd.github+json',
-          'X-GitHub-Api-Version':'2022-11-28'};
-}
-/* F18 — GitHub: "Making a conditional request does not count against your primary rate
-   limit if a 304 response is returned." The old ?nocache= buster changed the URL on every
-   call, so a 45s poll was 320 BILLED 200s an hour, each re-decoding ~185 KB of timetable
-   JSON that had not changed. Cache the ETag and the parsed body; a 304 replays the cached
-   body for free. cache:'no-store' replaces the URL buster at the HTTP layer.
+/* Every call is the same shape: POST JSON to WORKER_URL + path with the session folded in,
+   get JSON back with an `ok` flag. The Worker resolves the session to a member and scopes
+   the read/write itself, so a path can never name someone else's data.
+
    F22 — the 12s abort stops one hung cell pinning `loadingNow` for iOS's full network
-   timeout, during which every poll and every pull-to-refresh was a silent no-op. */
-const etags = {}, etagBody = {};
-async function apiGet(path, raw){
-  const h = hdrs(); if(raw) h.Accept = 'application/vnd.github.raw+json';
-  const k = path + (raw ? ':raw' : ':json');
-  if(etags[k] && Object.prototype.hasOwnProperty.call(etagBody, k)) h['If-None-Match'] = etags[k];
+   timeout, during which every poll and every pull-to-refresh was a silent no-op.
+
+   Errors are thrown with the HTTP status IN THE MESSAGE, because isAuthErr() (and every
+   caller that funnels through handleApiErr) recognises an expired session by finding
+   '401' in the text. The raw response is attached as `.res` so the 409 merge path in
+   savePicks() can read the server's copy of the list. */
+async function wapi(path, payload){
   const ac = ('AbortController' in window) ? new AbortController() : null;
   const kill = ac ? setTimeout(()=>{ try{ ac.abort(); }catch(e){} }, 12000) : null;
   try{
-    const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,
-                          {headers:h, cache:'no-store', signal: ac ? ac.signal : undefined});
-    /* 304 → the cached body, which is byte-identical to what a 200 would have given */
-    if(r.status === 304) return etagBody[k];
-    if(r.status === 404){ delete etags[k]; delete etagBody[k]; return null; }
-    if(!r.ok) throw new Error(path+': '+r.status);
-    const body = raw ? await r.text() : await r.json();
-    const et = r.headers.get && r.headers.get('etag');
-    if(et){ etags[k] = et; etagBody[k] = body; }
-    return body;
+    const r = await fetch(WORKER_URL.replace(/\/+$/,'') + path, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({session: session}, payload || {})),
+      cache:'no-store', signal: ac ? ac.signal : undefined});
+    let d = null;
+    try{ d = await r.json(); }catch(e){}
+    if(!d || !d.ok){
+      const err = new Error(((d && d.error) || (path+' failed')) + ' ('+r.status+')');
+      err.status = r.status;
+      err.res = d || null;
+      throw err;
+    }
+    return d;
   } finally { if(kill) clearTimeout(kill); }
 }
 async function dispatch(workflow, inputs){
-  /* booknow acts on ONE member's account, so it always carries who is signed in — a
-     dispatch without it would book on the default account, i.e. take the wrong person's
-     spot. snipe/refresh cover every member and take no user input. */
-  if(inputs && workflow === 'booknow.yml') inputs = Object.assign({user: USER}, inputs);
-  const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/actions/workflows/'+workflow+'/dispatches', {
-    method:'POST', headers:hdrs(), body: JSON.stringify({ref:'main', inputs: inputs||{}})});
-  if(r.status !== 204) throw new Error(workflow+' dispatch failed: '+r.status);
+  /* booknow acts on ONE member's account. The Worker stamps the member from the session,
+     so sending a `user` input is both pointless and ignored — and that is the whole point
+     of the change: a client can no longer ask to act as somebody else. */
+  await wapi('/dispatch', {workflow: workflow, inputs: inputs || {}});
 }
 function isAuthErr(e){ const s = String(e && e.message || e); return s.indexOf('401')>=0 || s.indexOf('403')>=0; }
-/* CONTRACT §2: ANY 401/403 clears the token and returns to setup — not just the
-   initial load, or an expired PAT leaves the user tapping Save forever. */
+/* CONTRACT §2: ANY 401/403 clears the session and returns to setup — not just the
+   initial load, or an expired session leaves the user tapping Save forever. */
 function bailToSetup(msg){
   signOut();
   booted = false;
@@ -1276,17 +1272,13 @@ function bailToSetup(msg){
   /* F24 — the in-flight hairline was left animating behind the setup screen forever */
   clearFlight();
   closeSheet();
-  renderSetup(msg || (WORKER_URL ? 'Your session expired. Sign in again.' : 'That token was rejected. Generate a new fine-grained token with Contents + Actions write access and paste it again.'));
+  renderSetup(msg || 'Your session expired. Sign in again.');
 }
 function handleApiErr(e){
   if(isAuthErr(e)){ bailToSetup(); return true; }
   return false;
 }
 function safeParse(txt, fallback){ try { return txt ? JSON.parse(txt) : fallback; } catch(e){ return fallback; } }
-function b64(str){
-  try { return btoa(unescape(encodeURIComponent(str))); }
-  catch(e){ return btoa(str); }
-}
 
 /* F22 — returns true when this call actually did the work, false when it was debounced
    away. Pull-to-refresh needs to know, or it tells the user "Up to date" having done
@@ -1296,62 +1288,57 @@ async function loadAll(silent){
   loadingNow = true;
   try{ await loadAllInner(silent); return true; } finally { loadingNow = false; }
 }
-/* correctness #12 — a failed fetch must be distinguishable from a genuine 404. apiGet
-   returns null for 404 and soft() used to return null for a network error too, so one
-   dropped request nulled picksSha and the next Save 422'd for a file that never changed. */
-const FETCH_FAILED = {failed:true};
+/* F18 — the old four-file read used ETags so a 45s poll that found nothing new was free
+   and, more importantly, did not re-render. POST /data is a single unconditional call, so
+   the cheap check moves up a layer: stringify what came back and compare it with the last
+   payload. Identical ⇒ nothing on screen can legitimately differ, so skip renderAll() and
+   leave scroll positions, the chip rail and any open sheet exactly as they were. */
+let lastDataJson = null;
 async function loadAllInner(silent){
-  let failed = 0;
+  let unchanged = false;
+  /* an identical payload only means "nothing to redraw" if the screen was not showing an
+     offline banner a moment ago — clearing that banner IS a change */
+  const hadError = loadError !== null;
   /* a background refresh must never silently eat pick edits the user hasn't saved */
   const keepLocalPicks = !!(silent && isDirty());
   try{
-    const soft = pr => pr.catch(e=>{ if(isAuthErr(e)) throw e; failed++; return FETCH_FAILED; });
-    const res = await Promise.all([
-      soft(apiGet('data/timetable.json', true)),
-      soft(apiGet(dpath('bookings.json'), true)),
-      soft(apiGet(dpath('log.json'), true)),
-      soft(apiGet(dpath('picks.json')))
-    ]);
-    const ok = v => (v === FETCH_FAILED ? null : v);
-    const tt = safeParse(ok(res[0]), null);
+    /* ONE call replaces the four file reads. The Worker picks the member from the session,
+       so there is no per-member path to get wrong here any more. */
+    const d = await wapi('/data', {});
+    const fresh = JSON.stringify([d.timetable, d.bookings, d.log, d.picks, d.picksSha]);
+    unchanged = (lastDataJson !== null && fresh === lastDataJson);
+    lastDataJson = fresh;
+
+    /* the Worker is authoritative about who this session is — keep the local copy in step
+       so the Sign out label and the boot-time defaults never drift */
+    if(d.user) USER = d.user;
+    if(typeof d.name === 'string') USERNAME = d.name;
+    try {
+      localStorage.setItem('fitbooker_user', USER);
+      localStorage.setItem('fitbooker_name', USERNAME);
+    } catch(e){}
+
+    const tt = d.timetable;
     if(tt && Array.isArray(tt.classes)) timetable = tt;
-    const bk = safeParse(ok(res[1]), null);
+    const bk = d.bookings;
     if(bk && Array.isArray(bk.bookings)) bookings = bk;
-    const lg = safeParse(ok(res[2]), null);
-    /* only replace the activity list when log.json actually came back — a partial
-       failure must not blank it while the banner claims a cached view */
-    if(Array.isArray(lg)) logdata = lg;
-    else if(res[2] === null) logdata = [];              // genuine 404 → really empty
-    if(res[3] && res[3] !== FETCH_FAILED){
-      /* capture the sha even for a byte-empty file, or every later PUT 422s */
-      if(res[3].sha) picksSha = res[3].sha;
-      let decoded = [];
-      const raw = String(res[3].content||'').replace(/\s/g,'');
-      if(raw){
-        try { decoded = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
-        catch(e){ try { decoded = JSON.parse(atob(raw)); } catch(e2){ decoded = []; } }
-      }
-      if(Array.isArray(decoded)){
-        if(keepLocalPicks) savedPicksJson = JSON.stringify(decoded);   // keep the edits, rebase "saved"
-        else picks = decoded;
-      }
-    } else if(res[3] === null){
-      picksSha = null;                                   // genuine 404: PUT without a sha
+    /* only replace the activity list when the log actually came back as a list — a
+       malformed payload must not blank it while the banner claims a cached view */
+    if(Array.isArray(d.log)) logdata = d.log;
+    /* correctness #12 — the sha is captured even for an empty list, or every later save
+       is rejected as a conflict for a file that never changed. null is legitimate: it
+       means this member has never saved, and /picks takes sha:null for that case. */
+    picksSha = (typeof d.picksSha === 'string' && d.picksSha) ? d.picksSha : null;
+    if(Array.isArray(d.picks)){
+      if(keepLocalPicks) savedPicksJson = JSON.stringify(d.picks);   // keep the edits, rebase "saved"
+      else picks = d.picks;
     }
-    /* res[3] === FETCH_FAILED: keep the sha we already have. A dropped request is NOT a
-       deleted file, and nulling the sha makes the next Save 422 for no reason. */
     if(!keepLocalPicks) savedPicksJson = JSON.stringify(picks);
-    if(failed){
-      loadError = failed >= 4
-        ? 'Couldn’t reach GitHub. Showing whatever this device loaded last — pull to sync when you’re back online.'
-        : 'Some data couldn’t be refreshed. Showing the last copy this device loaded.';
-      if(!silent) toast('Offline — showing the cached view', 3200);
-    } else {
-      loadError = null;
-    }
+    loadError = null;
   }catch(e){
+    unchanged = false;
     if(isAuthErr(e)){ bailToSetup(); return; }
-    loadError = 'Couldn’t reach GitHub. Showing the last data this device loaded.';
+    loadError = 'Couldn’t reach the booking service. Showing the last data this device loaded.';
     if(!silent) toast('Offline — showing the cached view', 3200);
   }
   /* F7 — first load after a cold launch: if this device was killed mid-edit, put the draft
@@ -1377,7 +1364,11 @@ async function loadAllInner(silent){
     }
   }
   reapSync();                       // F2 — a sync past its deadline is not in flight
-  renderAll();
+  /* the poll's cheap path: byte-identical data and no banner to clear ⇒ nothing on screen
+     can legitimately differ, so don't rebuild it. The freshness line still ticks, since
+     that is a function of the clock rather than of the data. */
+  if(unchanged && !hadError){ try{ updateFresh(); updateNav(); }catch(e){} }
+  else renderAll();
 }
 
 function indexDates(){
@@ -1505,47 +1496,48 @@ async function savePicks(){
   const btn = $('#saveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
-    const body = {message:'update picks', content: b64(JSON.stringify(picks, null, 1)), branch:'main'};
-    if(picksSha) body.sha = picksSha;
-    const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+dpath('picks.json'),
-      {method:'PUT', headers:hdrs(), body: JSON.stringify(body)});
-    if(r.status === 401 || r.status === 403){
-      bailToSetup(WORKER_URL ? 'This app has lost write access to the booking repo. Sign in again — if it keeps happening the stored GitHub token needs renewing.' : 'Your token no longer has write access. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
-      return;
-    }
-    if(r.status === 409 || r.status === 422){
+    let res;
+    try{
+      res = await wapi('/picks', {picks: picks, sha: picksSha});
+    }catch(e1){
+      if(e1 && (e1.status === 401 || e1.status === 403)){
+        bailToSetup('This app has lost write access to your bookings. Sign in again.');
+        return;
+      }
+      if(!(e1 && e1.status === 409)) throw e1;
       /* correctness #12 — the app KNEW the remote had changed, then invited the user to
          press a button that uploads his in-memory list verbatim over it. (The bot removes
-         a one-off the moment it books it; "tap Save again" resurrected it.) Re-read and
-         MERGE instead: keep everything he added, keep everything they added, and honour
-         his removals only. Nothing the user typed is ever discarded silently. */
+         a one-off the moment it books it; "tap Save again" resurrected it.) MERGE instead:
+         keep everything he added, keep everything they added, and honour his removals
+         only. Nothing the user typed is ever discarded silently. The Worker hands back the
+         current list and sha with the 409, so no extra read is needed. */
+      const cur = e1.res || {};
+      picksSha = (typeof cur.sha === 'string' && cur.sha) ? cur.sha : null;
+      const theirs = Array.isArray(cur.picks) ? cur.picks : null;
       let merged = null;
+      if(theirs){
+        const base = safeParse(savedPicksJson, []);
+        const iAdded   = picks.filter(p => !base.some(q=>samePick(q,p)));
+        const iRemoved = base.filter(q => !picks.some(p=>samePick(p,q)));
+        merged = theirs.filter(t => !iRemoved.some(q=>samePick(q,t)))
+                       .concat(iAdded.filter(p => !theirs.some(t=>samePick(t,p))));
+      }
+      if(!merged) throw new Error('Picks changed elsewhere — tap Save picks again');
+      picks = merged; heroCache = null; syncDirty(); renderPicks(); renderBook();
+      /* retry ONCE, against the sha the conflict just handed us. If that also conflicts
+         the list is being edited from two places right now — stop and let the user look. */
       try{
-        const cur = await apiGet(dpath('picks.json'));
-        picksSha = (cur && cur.sha) || null;
-        let theirs = [];
-        const raw = String((cur && cur.content) || '').replace(/\s/g,'');
-        if(raw){
-          try { theirs = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
-          catch(e3){ try { theirs = JSON.parse(atob(raw)); } catch(e4){ theirs = []; } }
+        res = await wapi('/picks', {picks: picks, sha: picksSha});
+      }catch(e2){
+        if(e2 && (e2.status === 401 || e2.status === 403)){
+          bailToSetup('This app has lost write access to your bookings. Sign in again.');
+          return;
         }
-        if(Array.isArray(theirs)){
-          const base = safeParse(savedPicksJson, []);
-          const iAdded   = picks.filter(p => !base.some(q=>samePick(q,p)));
-          const iRemoved = base.filter(q => !picks.some(p=>samePick(p,q)));
-          merged = theirs.filter(t => !iRemoved.some(q=>samePick(q,t)))
-                         .concat(iAdded.filter(p => !theirs.some(t=>samePick(t,p))));
-        }
-      }catch(e2){}
-      if(merged){
-        picks = merged; heroCache = null; syncDirty(); renderPicks(); renderBook();
+        if(e2 && e2.status === 409 && e2.res && typeof e2.res.sha === 'string') picksSha = e2.res.sha;
         throw new Error('Picks had also changed elsewhere — merged. Check the list, then Save again.');
       }
-      throw new Error('Picks changed on GitHub — tap Save picks again');
     }
-    if(!r.ok) throw new Error('Save failed ('+r.status+')');
-    const j = await r.json();
-    if(j && j.content && j.content.sha) picksSha = j.content.sha;
+    if(res && typeof res.sha === 'string' && res.sha) picksSha = res.sha;
     savedPicksJson = JSON.stringify(picks);
     syncDirty();
     heroCache = null;
@@ -1631,7 +1623,7 @@ async function maybeKickSnipe(){
    ════════════════════════════════════════════════════════════════ */
 /* F24 — these timers were untracked and the reload did not check document.hidden, so a
    backgrounded app still burnt four requests on a screen nobody was looking at, and a
-   token bail-out mid-booking left the amber hairline animating forever. */
+   session bail-out mid-booking left the amber hairline animating forever. */
 let flightTimers = [];
 function clearFlight(){
   flightTimers.forEach(clearTimeout); flightTimers = [];
@@ -1721,7 +1713,7 @@ function pollAfterDispatch(){
    refresh.yml dispatch per DISPATCH_MIN however many triggers pile up. */
 async function autoSync(force){
   reapSync();                            // F2 — never bail out behind a stale latch
-  if(!token || !booted || autoBusy || syncing) return false;
+  if(!session || !booted || autoBusy || syncing) return false;
   if(!force && !isStale()) return false;
   const now = Date.now();
   if(now - lastDispatchMs() < DISPATCH_MIN){
@@ -1747,7 +1739,7 @@ async function autoSync(force){
 function startPolling(){
   stopPolling();
   pollTimer = setInterval(()=>{
-    if(document.hidden || !token || !booted) return;
+    if(document.hidden || !session || !booted) return;
     reapSync();
     loadAll(true);
     if(isStale()) autoSync();
@@ -1766,7 +1758,7 @@ document.addEventListener('visibilitychange', function(){
   reapSync();                      // F2 — hours may have passed; an "in flight" sync expired
   startPolling();
   updateFresh();
-  if(!token || !booted) return;
+  if(!session || !booted) return;
   loadAll(true).then(()=>{ if(isStale()) autoSync(); });
 });
 /* iOS fires pagehide, not always visibilitychange, when a home-screen web app is put away
@@ -1775,7 +1767,7 @@ window.addEventListener('pagehide', function(){ stopPolling(); clearPostPoll(); 
 window.addEventListener('pageshow', function(e){
   if(!e.persisted) return;         // a bfcache restore resumes a page whose timers are gone
   reapSync(); startPolling(); updateFresh();
-  if(token && booted) loadAll(true);
+  if(session && booted) loadAll(true);
 });
 
 /* ════════════════════════════════════════════════════════════════
@@ -2081,7 +2073,7 @@ function renderBook(){
       '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
       '<div class="et">'+(loadError?'No timetable on this device':'No timetable yet')+'</div>'+
       '<div class="es">'+(loadError
-        ? 'Nothing has been cached here yet and GitHub is unreachable. Try again once you have a connection.'
+        ? 'Nothing has been cached here yet and the booking service is unreachable. Try again once you have a connection.'
         : 'The app is syncing with FIT by itself — pull down, or tap below, to fetch the timetable now.')+'</div>'+
       '<div style="width:100%;max-width:280px;margin-top:14px">'+
       '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT</button></div></div>';
@@ -2508,31 +2500,25 @@ function renderSetup(msg){
   $('#app').classList.remove('dirty');
   $$('.page').forEach(p=>p.classList.remove('active'));
   $('#page-book').classList.add('active');
-  /* Two screens share this shell. With a Worker configured it is a real FIT login —
-     email + password, verified against the gym, refused if the gym refuses. Without one
-     it falls back to the original paste-a-PAT screen so the app is never bricked by the
-     Worker being down or unconfigured. */
+  /* One screen: a real FIT login — email + password, verified against the gym, refused if
+     the gym refuses. There is no other way in. The paste-a-PAT fallback was removed when
+     the app stopped holding any repo credential: a shared credential let anyone who had it
+     write to anyone else's data, which is exactly what the Worker now prevents.
+     F8 — enterkeyhint on both fields turns the generic iOS "return" key into next/Go; the
+     keydown handlers below make them actually move on and submit. Without them the only
+     way to submit was a button the keyboard was covering. */
   $('#w-book').innerHTML =
     '<div class="setup">'+
       '<div class="mark">'+G.mark+'</div>'+
       '<h1>FIT Booker</h1>'+
-      (WORKER_URL
-        ? '<p>Sign in with the email and password you use for the FIT app.</p>'+
-          '<input type="email" id="loginemail" name="fitbooker-email" placeholder="Email" '+
-            'autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" '+
-            'inputmode="email" enterkeyhint="next">'+
-          '<input type="password" id="loginpass" name="fitbooker-pass" placeholder="Password" '+
-            'autocomplete="current-password" autocapitalize="off" autocorrect="off" '+
-            'spellcheck="false" enterkeyhint="go">'+
-          '<button class="btn filled" id="loginbtn" data-act="login" style="margin-top:12px">Sign in</button>'
-        : '<p>Paste your GitHub access token to connect this phone to the booking bot. It is stored only on this device.</p>'+
-          /* F8 — enterkeyhint="go" turns the generic iOS "return" key into "Go"; the keydown
-             handler below makes it actually connect. Without it the only way to submit was a
-             button the keyboard was covering. */
-          '<input type="password" id="tokin" name="fitbooker-token" placeholder="github_pat_…" '+
-            'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" '+
-            'inputmode="text" enterkeyhint="go">'+
-          '<button class="btn filled" data-act="connect" style="margin-top:12px">Connect</button>')+
+      '<p>Sign in with the email and password you use for the FIT app.</p>'+
+      '<input type="email" id="loginemail" name="fitbooker-email" placeholder="Email" '+
+        'autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" '+
+        'inputmode="email" enterkeyhint="next">'+
+      '<input type="password" id="loginpass" name="fitbooker-pass" placeholder="Password" '+
+        'autocomplete="current-password" autocapitalize="off" autocorrect="off" '+
+        'spellcheck="false" enterkeyhint="go">'+
+      '<button class="btn filled" id="loginbtn" data-act="login" style="margin-top:12px">Sign in</button>'+
       '<div class="warn" id="loginwarn"'+(msg ? '' : ' style="display:none"')+'>'+
         (msg ? esc(msg) : '')+'</div>'+
     '</div>';
@@ -2545,17 +2531,11 @@ function renderSetup(msg){
       if(e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); pw.blur(); login(); }
     });
   }
-  const tin = $('#tokin');
-  if(tin){
-    tin.addEventListener('keydown', e=>{
-      if(e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); tin.blur(); connect(); }
-    });
-  }
   /* F8 — iOS does not resize the LAYOUT viewport for the keyboard in a standalone web
      app (only visualViewport shrinks), and #app is fixed to the layout viewport, so
-     nothing reflowed and the Connect button sat ~30px under the keyboard. Lift the setup
-     block by the occluded height. Bound for BOTH screens — the login form has two fields
-     and a button, so it is occluded even more than the single token field was. */
+     nothing reflowed and the submit button sat ~30px under the keyboard. Lift the setup
+     block by the occluded height — the login form is two fields and a button, so it is
+     occluded generously. */
   const vv = window.visualViewport;
   if(vv && !vv.__fitbookerBound){
     vv.__fitbookerBound = true;
@@ -2571,7 +2551,12 @@ function renderSetup(msg){
   $('#navTitle').style.opacity = 0;
 }
 function doSignOut(){
+  /* Tell the Worker to forget the session so a copied string is dead the moment the user
+     signs out. Fire-and-forget on purpose: the local state must clear instantly even with
+     no connection, and a failure here changes nothing this app can see. */
+  try{ wapi('/logout', {}).catch(()=>{}); }catch(e){}
   signOut();
+  lastDataJson = null;
   booted = false;
   stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
   clearFlight();
@@ -2593,7 +2578,7 @@ function loginWarn(m){
 /* Real sign-in. The Worker attempts an actual login against the FIT portal with what was
    typed: if the gym rejects it, the app rejects it. There is no local "password" to get
    wrong, and no way in without a working FIT account. On success it returns which member
-   this is and the GitHub token, so the PAT screen is gone. */
+   this is plus an opaque session — never a credential this app could misuse. */
 async function login(){
   const em = $('#loginemail'), pw = $('#loginpass'), btn = $('#loginbtn');
   if(!em || !pw) return;
@@ -2612,15 +2597,17 @@ async function login(){
     });
     let d = null;
     try { d = await r.json(); } catch(e){}
-    if(!d || !d.ok || !d.token){
+    if(!d || !d.ok || !d.session){
       loginWarn((d && d.error) || 'Could not sign in right now — try again');
       return;
     }
-    token = d.token;
+    session = d.session;
     USER = d.user || 'josh';
     USERNAME = d.name || '';
+    /* a fresh sign-in must not inherit the last member's cached payload */
+    lastDataJson = null;
     try {
-      localStorage.setItem('fitbooker_token', token);
+      localStorage.setItem('fitbooker_session', session);
       localStorage.setItem('fitbooker_user', USER);
       localStorage.setItem('fitbooker_name', USERNAME);
     } catch(e){ toast('This browser blocked local storage'); }
@@ -2644,19 +2631,6 @@ function enterApp(){
   $('#app').classList.remove('setupmode');
   $('#w-book').innerHTML = '<div class="ltitle">Book</div><div class="emptystate"><div class="es">Connecting…</div></div>';
   loadAll().then(()=>{ startPolling(); if(isStale()) autoSync(); });
-}
-
-function connect(){
-  const el = $('#tokin'); if(!el) return;
-  const v = el.value.trim();
-  if(!v){ toast('Paste a token first'); return; }
-  token = v;
-  USER = 'josh';
-  try {
-    localStorage.setItem('fitbooker_token', token);
-    localStorage.setItem('fitbooker_user', USER);
-  } catch(e){ toast('This browser blocked local storage'); }
-  enterApp();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -2801,10 +2775,11 @@ function openInfoSheet(){
         '<div class="rt"><b>Strikes</b><span>A no-show, or a cancel inside the last hour, is a strike. Three in a rolling 7 days is a 7-day booking ban — cancel early instead.</span></div></div>'+
     '</div>'+
     '<div class="sheet-actions"><button class="btn gray" data-act="close">Done</button>'+
-      (WORKER_URL ? '<button class="btn gray" data-act="signout">Sign out'+
-        (USERNAME ? ' ('+esc(USERNAME)+')' : '')+'</button>' : '')+
+      '<button class="btn gray" data-act="signout">Sign out'+
+        (USERNAME ? ' ('+esc(USERNAME)+')' : '')+'</button>'+
     '</div>'+
-    '<div class="sheet-note">Picks and bookings are kept separately for each person who signs in. '+
+    '<div class="sheet-note">Picks and bookings are kept separately for each person who signs in, '+
+      'and signing in only ever gives this phone access to your own. '+
       'Your FIT password is checked by the gym itself and is never stored on this phone.</div>'+
   '' + layoutDiag() + '</div></div>';
   openSheet(html);
@@ -3289,7 +3264,6 @@ document.addEventListener('click', function(e){
     const a = act.dataset.act;
     if(a === 'sync'){ if(sheetOpen()) closeSheet(); syncNow(); }
     else if(a === 'snipe') firePass();
-    else if(a === 'connect') connect();
     else if(a === 'login') login();
     else if(a === 'signout') doSignOut();
     else if(a === 'reload') loadAll();
@@ -3419,7 +3393,7 @@ window.addEventListener('orientationchange', ()=> setTimeout(fixSafeAreaTop, 250
 /* ── boot ───────────────────────────────────────────────────── */
 (function boot(){
   try{
-    if(!token){ renderSetup(''); return; }
+    if(!session){ renderSetup(''); return; }
     $('#w-book').innerHTML = '<div class="ltitle">Book</div>'+
       '<div class="emptystate"><div class="es">Loading your timetable…</div></div>';
     /* §3: load, then let the staleness check dispatch a real FIT sync by itself */
