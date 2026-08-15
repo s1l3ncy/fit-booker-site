@@ -13,7 +13,22 @@
 <meta name="theme-color" content="#0B0C0D" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
+<script>
+/* WebKit 301994: on iOS 26.1+/27 a home-screen web app is laid out ~62px shorter than the
+   screen and apple-mobile-web-app-status-bar-style:black-translucent is ignored. The leading
+   theory is that a linked manifest's display:standalone supersedes the Apple meta. iOS reads
+   the manifest at Add-to-Home-Screen time, and needs none of it (apple-touch-icon and
+   apple-mobile-web-app-title cover icon and name), so link it for everyone EXCEPT iOS. */
+(function(){
+  var ua = navigator.userAgent || '';
+  var iOS = /iPad|iPhone|iPod/.test(ua) ||
+            (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
+  if(iOS) return;
+  var l = document.createElement('link');
+  l.rel = 'manifest'; l.href = 'manifest.webmanifest';
+  document.head.appendChild(l);
+})();
+</script>
 <!-- F21 — iOS paints the launch screen with the manifest background_color, which cannot
      be media-queried, so every dark-mode cold launch flashed white before the app painted
      #0B0C0D. apple-touch-startup-image CAN be media-queried. These are 1-bit palette PNGs
@@ -3236,10 +3251,28 @@ function fixSafeAreaTop(){
     if(missing >= 40 && missing <= 200) root.style.setProperty('--sat', missing + 'px');
   }catch(e){}
 }
+
+/* Under the same regression the web view ends ~62px above the physical bottom, which means
+   the home indicator sits in the dead strip OUTSIDE the viewport — so reserving room for it
+   inside the tab bar strands the icons even higher for no benefit. Reclaim it. Self-undoing:
+   the property is removed and re-decided on every call. */
+function fixBottomInset(){
+  try{
+    const root = document.documentElement;
+    root.style.removeProperty('--tabpadref');
+    const standalone = (window.navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if(!standalone) return;
+    const missing = (window.screen && window.screen.height ? window.screen.height : 0) -
+                    window.innerHeight;
+    if(missing >= 40 && missing <= 200) root.style.setProperty('--tabpadref', '6px');
+  }catch(e){}
+}
+fixBottomInset();
 /* Re-run rather than latch: every call first REMOVES its own inline value and re-measures,
    so the moment env() starts reporting a real inset the override is dropped again. Run once
    now (before first paint) and again after load, in case styles resolve late. */
-fixSafeAreaTop();
+fixSafeAreaTop(); fixBottomInset();
 window.addEventListener('load', fixSafeAreaTop);
 setTimeout(fixSafeAreaTop, 400);
 window.addEventListener('resize', fixSafeAreaTop);
