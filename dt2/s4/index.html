@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang=en><head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="S4">
+<meta name="theme-color" content="#061029">
+<link rel="apple-touch-icon" sizes="180x180" href="../../apple-touch-icon.png">
+<title>S4</title>
+<style>html{background:#F3F3F0}body{margin:0;padding:0 16px 60px}
+#bar{position:fixed;left:0;right:0;bottom:0;height:52px;background:#c00;color:#fff;
+ font:800 15px -apple-system;display:flex;align-items:center;justify-content:center;
+ padding-bottom:env(safe-area-inset-bottom,0px)}
+#top{position:fixed;left:0;right:0;top:0;height:6px;background:#00f}
+</style></head><body>
+<div id=top></div>
+<div style="padding-top:70px">
+<script>var NAME="S4 full NRL clone (natural scroll + dark + SW)";</script>
+<div id=out></div>
+<script>
+function probe(prop){var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:0;left:0;width:1px;height:'+prop+';visibility:hidden';
+  document.body.appendChild(d);var h=Math.round(d.getBoundingClientRect().height);d.remove();return h;}
+function go(){
+  var missing=screen.height-innerHeight;
+  var pass=missing===0;
+  var sw=('serviceWorker' in navigator)&&navigator.serviceWorker.controller?'ACTIVE':'no';
+  var rows=[['VERDICT',pass?'PASS - full height':'FAIL - short by '+missing+'px'],
+    ['screen.height',screen.height],['innerHeight',innerHeight],
+    ['100dvh',probe('100dvh')],['100lvh',probe('100lvh')],
+    ['safe-area top',probe('env(safe-area-inset-top,0px)')],
+    ['safe-area bottom',probe('env(safe-area-inset-bottom,0px)')],
+    ['service worker',sw],
+    ['display-mode',matchMedia('(display-mode: standalone)').matches?'standalone':'browser']];
+  document.getElementById('out').innerHTML='<h1 style="font:800 30px -apple-system;margin:0 0 6px">'+
+    NAME+'</h1><div style="font:800 26px -apple-system;color:'+(pass?'#0a0':'#c00')+
+    ';margin-bottom:10px">'+(pass?'PASS':'FAIL +'+missing)+'</div>'+
+    rows.map(function(r){return '<div style="font:600 17px ui-monospace,Menlo">'+r[0]+': <b>'+r[1]+'</b></div>';}).join('');
+}
+addEventListener('load',function(){ setTimeout(go,400); });
+</script>
+</div>
+<div id=bar>BOTTOM BAR — red should touch the screen edge</div>
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+</body></html>
