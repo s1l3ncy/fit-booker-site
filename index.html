@@ -2199,7 +2199,11 @@ function layoutDiag(){
       d.remove();
       return h + 'px' + (h !== window.innerHeight ? '  <-- MISMATCH' : '');
     })()],
+    ['safe-area TOP', cs.getPropertyValue('--sat').trim() || '0px'],
     ['safe-area bottom', cs.getPropertyValue('--sab').trim() || '0px'],
+    ['doc clientHeight', String(document.documentElement.clientHeight)],
+    ['outerHeight', String(window.outerHeight)],
+    ['missing vs screen', (screen.height - window.innerHeight) + 'px'],
     ['reserved (--tabpadref)', cs.getPropertyValue('--tabpadref').trim() || 'n/a'],
     ['tab bar top', r ? Math.round(r.top) + 'px' : 'n/a'],
     ['tab bar bottom', r ? Math.round(r.bottom) + 'px' : 'n/a'],
