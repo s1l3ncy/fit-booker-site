@@ -14,6 +14,24 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
+<!-- F21 — iOS paints the launch screen with the manifest background_color, which cannot
+     be media-queried, so every dark-mode cold launch flashed white before the app painted
+     #0B0C0D. apple-touch-startup-image CAN be media-queried. These are 1-bit palette PNGs
+     of one flat colour (~600 B each, inline, no extra request). If a device ignores
+     prefers-color-scheme here the queries simply fail and the manifest colour is used,
+     i.e. exactly today's behaviour — never worse. -->
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABSgAAAs0AQMAAACxdBB2AAAABlBMVEXz8/Dz8/CKPWO5AAAB5ElEQVR42u3BMQEAAADCoPVPbQlPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeBpEIQABIVSHEwAAAABJRU5ErkJggg==">
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABSgAAAs0AQMAAACxdBB2AAAABlBMVEULDA0LDA0ma6CAAAAB5ElEQVR42u3BMQEAAADCoPVPbQlPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeBpEIQABIVSHEwAAAABJRU5ErkJggg==">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABQoAAArsAQMAAACixlZtAAAABlBMVEXz8/Dz8/CKPWO5AAAB0ElEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBj9J4AAQGVr6wAAAAASUVORK5CYII=">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABQoAAArsAQMAAACixlZtAAAABlBMVEULDA0LDA0ma6CAAAAB0ElEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBj9J4AAQGVr6wAAAAASUVORK5CYII=">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABLYAAAo+AQMAAACodF8+AAAABlBMVEXz8/Dz8/CKPWO5AAABmUlEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvg0VKgABPgOSGQAAAABJRU5ErkJggg==">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABLYAAAo+AQMAAACodF8+AAAABlBMVEULDA0LDA0ma6CAAAABmUlEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvg0VKgABPgOSGQAAAABJRU5ErkJggg==">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABJsAAAn8AQMAAAB/H3J8AAAABlBMVEXz8/Dz8/CKPWO5AAABiElEQVR42u3BgQAAAADDoPlTH+ECVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHwDz/cAAUSCqzIAAAAASUVORK5CYII=">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABJsAAAn8AQMAAAB/H3J8AAAABlBMVEULDA0LDA0ma6CAAAABiElEQVR42u3BgQAAAADDoPlTH+ECVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHwDz/cAAUSCqzIAAAAASUVORK5CYII=">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABJIAAAnkAQMAAABsj9lAAAAABlBMVEXz8/Dz8/CKPWO5AAABgklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4GuBsAAQJB1P4AAAAASUVORK5CYII=">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABJIAAAnkAQMAAABsj9lAAAAABlBMVEULDA0LDA0ma6CAAAABgklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4GuBsAAQJB1P4AAAAASUVORK5CYII=">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABGUAAAmEAQMAAACW60H6AAAABlBMVEXz8/Dz8/CKPWO5AAABZklEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvg1HgwABhufKEQAAAABJRU5ErkJggg==">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABGUAAAmEAQMAAACW60H6AAAABlBMVEULDA0LDA0ma6CAAAABZklEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvg1HgwABhufKEQAAAABJRU5ErkJggg==">
 <title>FIT Booker</title>
 <style>
 /* ══════════════════════════════════════════════════════════════════
@@ -117,6 +135,19 @@
 @media (max-width:359px){ :root{ --gx:12px } }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* F11 — a long press is what happens when a thumb rests before a swipe. Without these,
+   iOS pops the loupe magnifier and blue selection handles on every class row (.crow is a
+   <div>, so it is selectable by default) and cancels the in-progress gesture. No native
+   list behaves that way. Prose inside sheets stays selectable, where copying is a real
+   thing to want. */
+.crow,.row,.rulerow,.logrow,.factrow,.swrow,.dcell,.chip,.tabbtn,.navbtn,.freshbtn,
+.wknav,.hero,.alertline,.bookpill,.ptog,.btn,.btn-sm,.as-btn,.grabber,.ghead,.gfoot,
+.dayhead,.weekhead,.nowrule,.ltitle,.lsub,.onceTag,#toast{
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
+.detail-title,.detail-when,.sheet-note,.as-title,.setup p,.emptystate .es{
+  -webkit-user-select:text;user-select:text;
+}
 /* nothing outside #app ever scrolls: the shell owns the viewport, each tab owns its
    own scroller. This is also what stops Safari's toolbar from resizing under us. */
 html,body{width:100%;max-width:100%;height:100%;overflow:hidden;background:var(--bg)}
@@ -164,9 +195,13 @@ svg{display:block;flex:none}
 .navbar{
   position:absolute;top:0;left:0;right:0;z-index:60;
   padding-top:var(--sat);
+  /* F15 — no backdrop-filter. At alpha .94/.965 the blurred backdrop contributes under 6%
+     of the final pixel and diffed to a MAXIMUM of 7-8/255 across the whole bar (measured,
+     both themes) — invisible — while forcing a full-screen backdrop sample every frame.
+     That construct over a momentum-scrolling layer is the known source of the iOS "fixed
+     bar flashes transparent for a frame during a fling" artifact, and it also makes the
+     bar a containing block for fixed descendants. Paying nothing for nothing instead. */
   background:var(--barbg);
-  -webkit-backdrop-filter:saturate(180%) blur(22px);
-  backdrop-filter:saturate(180%) blur(22px);
 }
 .navbar::after{
   content:'';position:absolute;left:0;right:0;bottom:0;height:.5px;
@@ -239,7 +274,12 @@ svg{display:block;flex:none}
 #pages{position:absolute;inset:0;overflow:hidden}
 .page{
   position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+  /* F6/F14 — `none`, not `contain`: `contain` only stops CHAINING, it keeps this element's
+     own rubber-band, so a pull-to-refresh drag moved twice (the list bounced AND the ring
+     came out). `none` removes the bounce so the custom PTR owns the top edge.
+     -webkit-overflow-scrolling:touch is a no-op since iOS 13 except for forcing a legacy
+     UIScrollView compositing layer — the documented cause of the sticky-bar judder. */
+  overscroll-behavior-y:none;overscroll-behavior-x:none;
   display:none;
 }
 .page.active{display:block}
@@ -336,9 +376,7 @@ svg{display:block;flex:none}
 .stickybar{
   position:sticky;top:calc(var(--sat) + var(--navh));z-index:30;
   margin-top:7px;min-width:0;
-  background:var(--barbg);
-  -webkit-backdrop-filter:saturate(180%) blur(22px);
-  backdrop-filter:saturate(180%) blur(22px);
+  background:var(--barbg);              /* F15 — see .navbar */
 }
 .stickybar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:.5px;background:var(--hair)}
 
@@ -396,7 +434,10 @@ svg{display:block;flex:none}
 .dcell:active{opacity:.6}
 
 .railwrap{min-width:0;overflow:hidden}
-.railslide{transition:transform .22s cubic-bezier(.32,.72,0,1),opacity .22s ease;will-change:transform}
+/* F16 — will-change is a hint for an IMMINENT change. Left on permanently it keeps the
+   whole class list promoted to its own compositing layer for the life of the page; it is
+   applied by .drag, which is added the moment a drag actually starts. */
+.railslide{transition:transform .22s cubic-bezier(.32,.72,0,1),opacity .22s ease}
 .railslide.out-l{opacity:0;transform:translateX(-22px)}
 .railslide.out-r{opacity:0;transform:translateX(22px)}
 .railslide.drag{transition:none}
@@ -404,7 +445,7 @@ svg{display:block;flex:none}
 .chips{
   display:flex;gap:6px;min-width:0;overflow-x:auto;overflow-y:hidden;
   padding:0 var(--pr) 8px var(--pl);
-  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  scrollbar-width:none;overscroll-behavior-x:contain;   /* F14 */
 }
 .chips::-webkit-scrollbar{width:0;height:0}
 .chip{
@@ -426,10 +467,11 @@ svg{display:block;flex:none}
 .dayhead .dc{font-size:12.5px;font-weight:600;color:var(--ink3);flex:none;margin-left:auto;white-space:nowrap}
 .dayhead .dc b{color:var(--go)}
 
-.dayslide{transition:opacity .2s ease,transform .2s ease;will-change:transform}
+.dayslide{transition:opacity .2s ease,transform .2s ease}
 .dayslide.out-l{opacity:0;transform:translateX(-26px)}
 .dayslide.out-r{opacity:0;transform:translateX(26px)}
 .dayslide.drag{transition:none}
+.railslide.drag,.dayslide.drag{will-change:transform}   /* F16 */
 
 .nowrule{
   display:flex;align-items:center;gap:8px;min-width:0;
@@ -540,9 +582,7 @@ svg{display:block;flex:none}
 .savebar{
   position:fixed;left:0;right:0;z-index:55;bottom:calc(var(--tabpadref) + var(--tabh));
   padding:9px var(--pr) 9px var(--pl);
-  background:var(--barbg);
-  -webkit-backdrop-filter:saturate(180%) blur(22px);
-  backdrop-filter:saturate(180%) blur(22px);
+  background:var(--barbg);              /* F15 — see .navbar */
   transform:translateY(140%);opacity:0;pointer-events:none;
   transition:transform .42s cubic-bezier(.32,.9,.32,1),opacity .2s ease;
 }
@@ -575,9 +615,7 @@ svg{display:block;flex:none}
   position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;min-width:0;
   min-height:calc(var(--tabh) + var(--tabpad));
   padding-bottom:var(--tabpad);padding-left:var(--sal);padding-right:var(--sar);
-  background:var(--tabbg);
-  -webkit-backdrop-filter:saturate(180%) blur(30px);
-  backdrop-filter:saturate(180%) blur(30px);
+  background:var(--tabbg);              /* F15 — see .navbar */
 }
 .tabbar::before{content:'';position:absolute;left:0;right:0;top:0;height:.5px;background:var(--hair)}
 .tabbtn{
@@ -625,6 +663,14 @@ svg{display:block;flex:none}
 .logrow{display:flex;gap:11px;padding:10px 13px;align-items:center;min-width:0;position:relative;min-height:52px}
 .logrow + .logrow::before{content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2)}
 .logrow .li{width:26px;height:26px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center}
+/* correctness #8 — a "your pick was NOT booked" line must not read like routine chatter.
+   Tone alone was doing that job and both live in the same grey list, so a failed or
+   skipped run also gets a tinted plate and a coloured rail down its left edge. */
+.logrow.lv-bad{background:var(--bad-bg);box-shadow:inset 3px 0 0 -.5px var(--bad)}
+.logrow.lv-bad .lt{color:var(--bad);font-weight:680}
+.logrow.lv-warn{box-shadow:inset 3px 0 0 -.5px var(--amber-rail)}
+.logrow.lv-warn .lt{color:var(--amber)}
+.logrow.lv-good .lt{color:var(--go)}
 
 /* ── tinted icon tiles: background + a legible ink, always as a pair ─── */
 .ri[data-tone],.li[data-tone]{color:var(--tile-ink)}
@@ -662,7 +708,11 @@ svg{display:block;flex:none}
 }
 .sheet.on{transform:translateY(0)}
 .sheet-card{background:var(--sheet);border-radius:18px;overflow:hidden;max-width:576px;margin:0 auto;min-width:0}
-.sheet-scroll{max-height:min(74vh,640px);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+/* F13 — `contain` keeps the sheet's own bounce (which reads correctly for a modal) but
+   stops the overscroll chaining out into the shell behind the scrim. dvh not vh: vh is the
+   LARGE viewport and over-measures whenever browser chrome is present. */
+.sheet-scroll{max-height:min(74dvh,640px);overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain}
 .sheet-scroll::-webkit-scrollbar{width:0;height:0}
 .grabber{width:36px;height:5px;border-radius:3px;background:var(--hair);margin:8px auto 2px}
 .detail-head{padding:8px 18px 14px;min-width:0}
@@ -696,7 +746,11 @@ svg{display:block;flex:none}
 .as-cancel .as-btn::before{display:none}
 
 /* ── toast ───────────────────────────────────────────────────── */
-#toast{position:fixed;z-index:200;left:12px;right:12px;top:calc(var(--sat) + 6px);
+/* F17 — iOS ignores the manifest's "orientation":"portrait" for home-screen web apps, so
+   this rotates. In landscape the Dynamic Island sits on a long edge and a flat 12px inset
+   put every toast — including every error message — straight underneath it. */
+#toast{position:fixed;z-index:200;
+  left:calc(12px + var(--sal));right:calc(12px + var(--sar));top:calc(var(--sat) + 6px);
   display:flex;justify-content:center;pointer-events:none}
 #toast .tt{
   max-width:100%;min-width:0;background:var(--sheet);color:var(--ink);
@@ -848,11 +902,61 @@ let heroCache = null;
 const POLL_MS      = 45000;            // cheap Contents API read while visible
 const STALE_MS     = 15*60000;         // older than this ⇒ dispatch a real FIT sync
 const DISPATCH_MIN = 5*60000;          // never auto-dispatch refresh.yml more often
+const SYNC_MAX_MS  = 150000;           // a dispatch is "in flight" for at most this long
+/* correctness #3 — a cancel from this app is a workflow_dispatch: queue + runner
+   allocation + checkout + setup-python + pip + FIT login all happen BEFORE the POST that
+   the gym timestamps. 75s is optimistic, 120s is normal, and relTime() rounds ("1m" can
+   mean 89s). Anything inside this margin of the 1-hour free-cancel line WILL land late, so
+   the UI must never call it free. Erring towards warning costs nothing; being wrong costs
+   a strike, and three strikes in 7 days is a 7-day booking ban. */
+const CANCEL_LATENCY_MS = 4*60000;
 let pollTimer = null, freshTimer = null;
+
+/* F3 — DISPATCH_MIN was only ever enforced within one page lifetime, and an iOS
+   home-screen web app is purged and cold-launched constantly. Every relaunch with stale
+   data fired a fresh refresh.yml, so a bot that had STOPPED being able to update the files
+   got hammered ~54 times a day forever, with no user-visible signal. Persist the slot. */
+const DISPATCH_KEY = 'fitbooker_lastdispatch';
 let lastRefreshDispatch = 0;           // ms of the last refresh.yml we fired
+try{
+  const v = Number(localStorage.getItem(DISPATCH_KEY));
+  /* a stamp in the future means the device clock moved backwards — distrust it */
+  if(isFinite(v) && v > 0 && v <= Date.now()) lastRefreshDispatch = v;
+}catch(e){}
+function markDispatch(t){
+  lastRefreshDispatch = t;
+  try{ localStorage.setItem(DISPATCH_KEY, String(t)); }catch(e){}
+}
+/* Re-read at decision time, not just at boot: another instance of this app (a second tab,
+   or the copy that was running before iOS purged this one) may have claimed the slot since
+   this page loaded, and localStorage is the only thing the two share. */
+function lastDispatchMs(){
+  let v = lastRefreshDispatch;
+  try{
+    const s = Number(localStorage.getItem(DISPATCH_KEY));
+    if(isFinite(s) && s > 0 && s <= Date.now() && s > v){ v = s; lastRefreshDispatch = s; }
+  }catch(e){}
+  return v;
+}
+
 let syncing = false;                   // a refresh.yml is believed to be in flight
+let syncStartedAt = 0;                 // WALL CLOCK, so it survives being backgrounded
 let autoBusy = false;                  // debounce: one auto-sync attempt at a time
 let loadingNow = false;                // debounce: one loadAll() at a time
+
+/* F2 — the only thing that ever cleared `syncing` on the failure path was a 115s
+   setTimeout inside pollAfterDispatch(), and visibilitychange clearPostPoll()s it the
+   instant the app is backgrounded. Switching apps while a sync ran (entirely normal while
+   waiting ~70s for a workflow) came back to syncing===true with nothing alive to clear it,
+   which permanently disabled autoSync(), syncNow() AND pull-to-refresh until a force-quit.
+   A deadline held as a timestamp and re-evaluated on resume cannot be cancelled by being
+   backgrounded. */
+function reapSync(){
+  if(syncing && syncStartedAt && Date.now() - syncStartedAt > SYNC_MAX_MS){
+    syncing = false; syncStartedAt = 0;
+    try{ updateFresh(); }catch(e){}
+  }
+}
 
 /* ════════════════════════════════════════════════════════════════
    Helpers
@@ -1000,18 +1104,41 @@ function toast(msg, ms){
   toastTimer = setTimeout(()=> t.classList.remove('on'), ms || 2800);
 }
 function sheetOpen(){ return !!$('#sheetRoot').innerHTML; }
+/* F1 — the wipe that finishes the dismiss animation MUST be cancellable and MUST belong to
+   the sheet that scheduled it. It used to be a bare setTimeout: any sheet opened inside the
+   460ms window (booknow -> confirm, confirm-Cancel -> class sheet, Info -> Data) was deleted
+   out from under the user by the PREVIOUS close's timer, and an actionSheet destroyed that
+   way never resolved its promise, so bookNow() hung forever and nothing was ever dispatched.
+   This is the app's primary booking path. */
+let sheetWipeTimer = null;
+function cancelSheetWipe(){ if(sheetWipeTimer){ clearTimeout(sheetWipeTimer); sheetWipeTimer = null; } }
 function closeSheet(){
   const root = $('#sheetRoot');
   const sc = $('.scrim', root), sh = $('.sheet', root);
   if(sc) sc.classList.remove('on');
   if(sh) sh.classList.remove('on');
-  setTimeout(()=>{ root.innerHTML = ''; }, 460);
+  /* F12 — release the shell as soon as the dismiss starts, not when the node is wiped */
+  try{ $('#app').removeAttribute('inert'); }catch(e){}
+  cancelSheetWipe();
+  const mine = sh;                      // key the teardown to THIS sheet instance
+  sheetWipeTimer = setTimeout(()=>{
+    sheetWipeTimer = null;
+    /* if something opened a new sheet in the meantime, `mine` is no longer in the DOM and
+       this timer has nothing left to do */
+    if(!mine || root.contains(mine)) root.innerHTML = '';
+  }, 460);
 }
 function openSheet(innerHTML, extraClass){
   const root = $('#sheetRoot');
-  root.innerHTML = '<div class="scrim"></div><div class="sheet '+(extraClass||'')+'">'+innerHTML+'</div>';
+  cancelSheetWipe();                    // F1 — a new sheet cancels the pending wipe
+  root.innerHTML = '<div class="scrim"></div><div class="sheet '+(extraClass||'')+
+    '" role="dialog" aria-modal="true">'+innerHTML+'</div>';
   const sc = $('.scrim', root), sh = $('.sheet', root);
   sc.addEventListener('click', ()=> closeSheet());
+  /* F12 — standalone has no browser chrome to escape to, so the shell behind the scrim has
+     to be genuinely unreachable; otherwise VoiceOver swipes straight past it onto Book
+     buttons the user cannot see. */
+  try{ $('#app').setAttribute('inert',''); }catch(e){}
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ sc.classList.add('on'); sh.classList.add('on'); }); });
   return root;
 }
@@ -1031,13 +1158,25 @@ function actionSheet(opts){
     html += '</div><div class="as-cancel"><button class="as-btn" data-as="-1">'+
             esc(opts.cancelLabel||'Cancel')+'</button></div>';
     const root = openSheet(html, 'asheet');
-    let done = false;
-    const finish = v => { if(done) return; done = true; closeSheet(); resolve(v); };
-    root.addEventListener('click', e=>{
+    const mine = $('.sheet', root);
+    let done = false, obs = null;
+    const onClick = e=>{
       const b = e.target.closest('[data-as]');
       if(b) finish(Number(b.dataset.as));
       else if(e.target.classList.contains('scrim')) finish(-1);
-    });
+    };
+    const teardown = ()=>{ if(obs) obs.disconnect(); root.removeEventListener('click', onClick); };
+    const finish = v => { if(done) return; done = true; teardown(); closeSheet(); resolve(v); };
+    /* F1 belt-and-braces: if this sheet is torn out of the DOM by anything other than
+       finish() — a stale wipe, another sheet, bailToSetup() — resolve as cancelled rather
+       than leaving the awaiting caller hung forever. */
+    if(window.MutationObserver){
+      obs = new MutationObserver(()=>{
+        if(!done && mine && !root.contains(mine)){ done = true; teardown(); resolve(-1); }
+      });
+      obs.observe(root, {childList:true});
+    }
+    root.addEventListener('click', onClick);
   });
 }
 
@@ -1048,12 +1187,32 @@ function hdrs(){
   return {Authorization:'Bearer '+token, Accept:'application/vnd.github+json',
           'X-GitHub-Api-Version':'2022-11-28'};
 }
+/* F18 — GitHub: "Making a conditional request does not count against your primary rate
+   limit if a 304 response is returned." The old ?nocache= buster changed the URL on every
+   call, so a 45s poll was 320 BILLED 200s an hour, each re-decoding ~185 KB of timetable
+   JSON that had not changed. Cache the ETag and the parsed body; a 304 replays the cached
+   body for free. cache:'no-store' replaces the URL buster at the HTTP layer.
+   F22 — the 12s abort stops one hung cell pinning `loadingNow` for iOS's full network
+   timeout, during which every poll and every pull-to-refresh was a silent no-op. */
+const etags = {}, etagBody = {};
 async function apiGet(path, raw){
   const h = hdrs(); if(raw) h.Accept = 'application/vnd.github.raw+json';
-  const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path+'?nocache='+Date.now(), {headers:h});
-  if(r.status === 404) return null;
-  if(!r.ok) throw new Error(path+': '+r.status);
-  return raw ? r.text() : r.json();
+  const k = path + (raw ? ':raw' : ':json');
+  if(etags[k] && Object.prototype.hasOwnProperty.call(etagBody, k)) h['If-None-Match'] = etags[k];
+  const ac = ('AbortController' in window) ? new AbortController() : null;
+  const kill = ac ? setTimeout(()=>{ try{ ac.abort(); }catch(e){} }, 12000) : null;
+  try{
+    const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/contents/'+path,
+                          {headers:h, cache:'no-store', signal: ac ? ac.signal : undefined});
+    /* 304 → the cached body, which is byte-identical to what a 200 would have given */
+    if(r.status === 304) return etagBody[k];
+    if(r.status === 404){ delete etags[k]; delete etagBody[k]; return null; }
+    if(!r.ok) throw new Error(path+': '+r.status);
+    const body = raw ? await r.text() : await r.json();
+    const et = r.headers.get && r.headers.get('etag');
+    if(et){ etags[k] = et; etagBody[k] = body; }
+    return body;
+  } finally { if(kill) clearTimeout(kill); }
 }
 async function dispatch(workflow, inputs){
   const r = await fetch(API+'/repos/'+OWNER+'/'+REPO+'/actions/workflows/'+workflow+'/dispatches', {
@@ -1066,7 +1225,9 @@ function isAuthErr(e){ const s = String(e && e.message || e); return s.indexOf('
 function bailToSetup(msg){
   try { localStorage.removeItem('fitbooker_token'); } catch(x){}
   token = ''; booted = false;
-  stopPolling(); clearPostPoll(); syncing = false;
+  stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
+  /* F24 — the in-flight hairline was left animating behind the setup screen forever */
+  clearFlight();
   closeSheet();
   renderSetup(msg || 'That token was rejected. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
 }
@@ -1080,33 +1241,41 @@ function b64(str){
   catch(e){ return btoa(str); }
 }
 
+/* F22 — returns true when this call actually did the work, false when it was debounced
+   away. Pull-to-refresh needs to know, or it tells the user "Up to date" having done
+   nothing at all — at the exact moment they are pulling BECAUSE they think it is stuck. */
 async function loadAll(silent){
-  if(loadingNow) return;          // debounce: poll + visibility + PTR can all land at once
+  if(loadingNow) return false;    // debounce: poll + visibility + PTR can all land at once
   loadingNow = true;
-  try{ await loadAllInner(silent); } finally { loadingNow = false; }
+  try{ await loadAllInner(silent); return true; } finally { loadingNow = false; }
 }
+/* correctness #12 — a failed fetch must be distinguishable from a genuine 404. apiGet
+   returns null for 404 and soft() used to return null for a network error too, so one
+   dropped request nulled picksSha and the next Save 422'd for a file that never changed. */
+const FETCH_FAILED = {failed:true};
 async function loadAllInner(silent){
   let failed = 0;
   /* a background refresh must never silently eat pick edits the user hasn't saved */
   const keepLocalPicks = !!(silent && isDirty());
   try{
-    const soft = pr => pr.catch(e=>{ if(isAuthErr(e)) throw e; failed++; return null; });
+    const soft = pr => pr.catch(e=>{ if(isAuthErr(e)) throw e; failed++; return FETCH_FAILED; });
     const res = await Promise.all([
       soft(apiGet('data/timetable.json', true)),
       soft(apiGet('data/bookings.json', true)),
       soft(apiGet('data/log.json', true)),
       soft(apiGet('data/picks.json'))
     ]);
-    const tt = safeParse(res[0], null);
+    const ok = v => (v === FETCH_FAILED ? null : v);
+    const tt = safeParse(ok(res[0]), null);
     if(tt && Array.isArray(tt.classes)) timetable = tt;
-    const bk = safeParse(res[1], null);
+    const bk = safeParse(ok(res[1]), null);
     if(bk && Array.isArray(bk.bookings)) bookings = bk;
-    const lg = safeParse(res[2], null);
+    const lg = safeParse(ok(res[2]), null);
     /* only replace the activity list when log.json actually came back — a partial
        failure must not blank it while the banner claims a cached view */
     if(Array.isArray(lg)) logdata = lg;
-    else if(res[2] === null && !failed) logdata = [];   // genuine 404 → really empty
-    if(res[3]){
+    else if(res[2] === null) logdata = [];              // genuine 404 → really empty
+    if(res[3] && res[3] !== FETCH_FAILED){
       /* capture the sha even for a byte-empty file, or every later PUT 422s */
       if(res[3].sha) picksSha = res[3].sha;
       let decoded = [];
@@ -1120,8 +1289,10 @@ async function loadAllInner(silent){
         else picks = decoded;
       }
     } else if(res[3] === null){
-      picksSha = null;                                   // 404: no file yet, PUT without a sha
+      picksSha = null;                                   // genuine 404: PUT without a sha
     }
+    /* res[3] === FETCH_FAILED: keep the sha we already have. A dropped request is NOT a
+       deleted file, and nulling the sha makes the next Save 422 for no reason. */
     if(!keepLocalPicks) savedPicksJson = JSON.stringify(picks);
     if(failed){
       loadError = failed >= 4
@@ -1136,13 +1307,29 @@ async function loadAllInner(silent){
     loadError = 'Couldn’t reach GitHub. Showing the last data this device loaded.';
     if(!silent) toast('Offline — showing the cached view', 3200);
   }
+  /* F7 — first load after a cold launch: if this device was killed mid-edit, put the draft
+     back and leave the app dirty so the save bar reappears. Done here, not earlier, because
+     savedPicksJson only becomes the real server baseline once the load has landed. */
+  if(!booted){
+    try{
+      const raw = localStorage.getItem(DRAFT_KEY);
+      const draft = raw ? JSON.parse(raw) : null;
+      if(Array.isArray(draft) && JSON.stringify(draft) !== savedPicksJson){
+        picks = draft;
+        toast('Restored unsaved pick changes — tap Save picks', 4200);
+      } else if(raw){ localStorage.removeItem(DRAFT_KEY); }
+    }catch(e){}
+  }
   indexDates();
   booted = true;
   /* a sync we started has landed the moment the stamps move past the baseline */
   if(syncing){
     const t = dataUpdatedMs();
-    if(t !== null && (syncBaseline === null || t > syncBaseline)){ syncing = false; clearPostPoll(); }
+    if(t !== null && (syncBaseline === null || t > syncBaseline)){
+      syncing = false; syncStartedAt = 0; clearPostPoll();
+    }
   }
+  reapSync();                       // F2 — a sync past its deadline is not in flight
   renderAll();
 }
 
@@ -1226,9 +1413,21 @@ function togglePick(day,time,studio,name,date){
   return addPick(day,time,studio,name,date);
 }
 function isDirty(){ return JSON.stringify(picks) !== savedPicksJson; }
+/* F7 — iOS purges backgrounded home-screen web apps without warning, and picks/
+   savedPicksJson lived only in memory: an unsaved pick edit had exactly one lifetime,
+   until the user took a phone call. Mirror the dirty buffer into localStorage on
+   every edit; the key is removed the moment the list matches the server again. */
+const DRAFT_KEY = 'fitbooker_draft_picks';
+function saveDraft(){
+  try{
+    if(isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(picks));
+    else localStorage.removeItem(DRAFT_KEY);
+  }catch(e){}
+}
 function syncDirty(){
   const app = $('#app'), d = isDirty();
   app.classList.toggle('dirty', d);
+  saveDraft();
   if(d){
     const saved = safeParse(savedPicksJson, []);
     const added = picks.filter(p => !saved.some(q=>samePick(q,p))).length;
@@ -1268,11 +1467,33 @@ async function savePicks(){
       return;
     }
     if(r.status === 409 || r.status === 422){
-      /* stale or missing sha — re-read the file and let the user hit Save again */
+      /* correctness #12 — the app KNEW the remote had changed, then invited the user to
+         press a button that uploads his in-memory list verbatim over it. (The bot removes
+         a one-off the moment it books it; "tap Save again" resurrected it.) Re-read and
+         MERGE instead: keep everything he added, keep everything they added, and honour
+         his removals only. Nothing the user typed is ever discarded silently. */
+      let merged = null;
       try{
         const cur = await apiGet('data/picks.json');
         picksSha = (cur && cur.sha) || null;
+        let theirs = [];
+        const raw = String((cur && cur.content) || '').replace(/\s/g,'');
+        if(raw){
+          try { theirs = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+          catch(e3){ try { theirs = JSON.parse(atob(raw)); } catch(e4){ theirs = []; } }
+        }
+        if(Array.isArray(theirs)){
+          const base = safeParse(savedPicksJson, []);
+          const iAdded   = picks.filter(p => !base.some(q=>samePick(q,p)));
+          const iRemoved = base.filter(q => !picks.some(p=>samePick(p,q)));
+          merged = theirs.filter(t => !iRemoved.some(q=>samePick(q,t)))
+                         .concat(iAdded.filter(p => !theirs.some(t=>samePick(t,p))));
+        }
       }catch(e2){}
+      if(merged){
+        picks = merged; heroCache = null; syncDirty(); renderPicks(); renderBook();
+        throw new Error('Picks had also changed elsewhere — merged. Check the list, then Save again.');
+      }
       throw new Error('Picks changed on GitHub — tap Save picks again');
     }
     if(!r.ok) throw new Error('Save failed ('+r.status+')');
@@ -1291,34 +1512,40 @@ async function savePicks(){
   }
 }
 
-/* Mirror of the bot's bookable_occurrence (contract §4). Do not change. */
-function bookableOpensMs(p){
-  const now = new Date(), wd = DAY_ORDER.indexOf(p.day);
-  const parts = String(p.time).split(':').map(Number), h = parts[0], m = parts[1];
-  for(let i=0;i<10;i++){
-    const d = new Date(now); d.setDate(now.getDate()+i);
-    if(((d.getDay()+6)%7) === wd){
-      const start = new Date(d); start.setHours(h,m,0,0);
-      const opens = start.getTime() - (7*24*60+60)*60000;
-      if(opens >= now.getTime() - 20*60000) return opens;
-    }
+/* Mirror of the bot's bookable_occurrence (contract §4).
+   correctness #6 — the bot subtracts 7 days + 1 hour from an AWARE Australia/Sydney
+   datetime, which Python evaluates as WALL-CLOCK arithmetic: 7 calendar days back, then
+   one hour. Subtracting 169 hours of absolute time (the old `(7*24*60+60)*60000`) is off
+   by exactly 60 minutes for every class starting in the week after a DST change — next on
+   4–10 Oct 2026 — so the UI and the bot disagreed about when a window opened.
+   correctness #19d — the old scan also walked DEVICE-local days and used setHours(), so
+   every countdown shifted if the phone left Sydney while the date strip stayed on Sydney
+   dates. Both are solved by doing the whole thing in Sydney wall clock. */
+function opensMsForSyd(dateStr, hhmm){
+  const a = String(hhmm).split(':').map(Number);
+  if(a.length < 2 || isNaN(a[0]) || isNaN(a[1])) return null;
+  let h = a[0] - 1, day = String(dateStr);          // minus 1 hour, wall clock…
+  if(h < 0){ h += 24; day = addDays(day, -1); }     // …which can cross midnight
+  day = addDays(day, -7);                           // …and minus 7 CALENDAR days
+  return sydWallToMs(day, String(h).padStart(2,'0')+':'+String(a[1]).padStart(2,'0'));
+}
+/* the class start itself, as a real instant, from Sydney wall fields */
+function scanOpens(p, horizonDays){
+  const now = Date.now(), wd = DAY_ORDER.indexOf(p.day);
+  if(wd < 0) return null;
+  const t0 = sydToday();
+  for(let i=0;i<horizonDays;i++){
+    const ds = addDays(t0, i);
+    if(dowMon0(ds) !== wd) continue;
+    const opens = opensMsForSyd(ds, p.time);
+    if(opens === null) continue;                    // e.g. inside the DST gap — say nothing
+    if(opens >= now - 20*60000) return opens;
   }
   return null;
 }
+function bookableOpensMs(p){ return scanOpens(p, 10); }
 /* display-only: identical maths, longer horizon, so a countdown always exists */
-function nextWindowMs(p){
-  const now = new Date(), wd = DAY_ORDER.indexOf(p.day);
-  const parts = String(p.time).split(':').map(Number), h = parts[0], m = parts[1];
-  for(let i=0;i<21;i++){
-    const d = new Date(now); d.setDate(now.getDate()+i);
-    if(((d.getDay()+6)%7) === wd){
-      const start = new Date(d); start.setHours(h,m,0,0);
-      const opens = start.getTime() - (7*24*60+60)*60000;
-      if(opens >= now.getTime() - 20*60000) return opens;
-    }
-  }
-  return null;
-}
+function nextWindowMs(p){ return scanOpens(p, 21); }
 
 /* A ONE-OFF pick is pinned to one calendar date, so its window is that date's
    start − 7d − 1h. bookableOpensMs above is the contract's recurring maths and is
@@ -1328,10 +1555,7 @@ function oneOffOpensMs(p){
   const c = (timetable.classes||[]).find(x => x && x.date===p.date && x.time===p.time && x.studio===p.studio);
   let opens = null;
   if(c && c.opens_iso){ const o = new Date(c.opens_iso).getTime(); if(isFinite(o)) opens = o; }
-  if(opens === null){
-    const start = sydWallToMs(p.date, p.time);
-    if(start !== null) opens = start - (7*24*60+60)*60000;
-  }
+  if(opens === null) opens = opensMsForSyd(p.date, p.time);   // #6: calendar 7d+1h, not 169h
   if(opens === null) return null;
   return opens >= now - 20*60000 ? opens : null;
 }
@@ -1344,23 +1568,48 @@ async function maybeKickSnipe(){
     try{
       await dispatch('snipe.yml');
       beginFlight('A pick opens within the hour — booking run started now.');
-    }catch(e){}
+    }catch(e){
+      /* correctness #19f — this used to swallow everything. It is the mechanism that
+         removes the cron lead-time requirement; if it fails, "the bot will book them
+         automatically" is a lie and nothing started. */
+      if(!handleApiErr(e))
+        toast('Saved, but the instant booking run didn’t start — open Picks and tap ' +
+              '“Fire a booking pass”.', 5200);
+    }
   }
 }
 
 /* ════════════════════════════════════════════════════════════════
    In-flight feedback
    ════════════════════════════════════════════════════════════════ */
+/* F24 — these timers were untracked and the reload did not check document.hidden, so a
+   backgrounded app still burnt four requests on a screen nobody was looking at, and a
+   token bail-out mid-booking left the amber hairline animating forever. */
+let flightTimers = [];
+function clearFlight(){
+  flightTimers.forEach(clearTimeout); flightTimers = [];
+  inFlight = 0;
+  try{ $('#flightbar').classList.remove('on'); }catch(e){}
+}
 function beginFlight(msg, ms){
   inFlight++;
   $('#flightbar').classList.add('on');
   if(msg) toast(msg, 4200);
   const wait = ms || 75000;
-  setTimeout(()=>{
+  const track = fn => {
+    const id = setTimeout(()=>{
+      flightTimers = flightTimers.filter(x => x !== id);   // don't accumulate dead ids
+      fn();
+    }, wait);
+    flightTimers.push(id);
+  };
+  track(()=>{
     inFlight = Math.max(0, inFlight-1);
     if(!inFlight) $('#flightbar').classList.remove('on');
-  }, wait);
-  setTimeout(()=> loadAll(true), wait);
+  });
+  /* match pollAfterDispatch: never burn 4 requests for a screen nobody is looking at —
+     visibilitychange already re-loads on the way back in */
+  track(()=>{ if(!document.hidden) loadAll(true); });
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1417,30 +1666,33 @@ function pollAfterDispatch(){
   [15000,30000,45000,62000,78000,95000].forEach(ms=>{
     postPoll.push(setTimeout(()=>{ if(!document.hidden) loadAll(true); }, ms));
   });
-  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; updateFresh(); } }, 115000));
+  /* kept as the fast path while the app stays open; reapSync() is the backstop that
+     survives being backgrounded, so this timer being destroyed is no longer fatal */
+  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; syncStartedAt = 0; updateFresh(); } }, 115000));
 }
 /* Debounced + rate-limited: at most one attempt in flight, and never more than one
    refresh.yml dispatch per DISPATCH_MIN however many triggers pile up. */
 async function autoSync(force){
+  reapSync();                            // F2 — never bail out behind a stale latch
   if(!token || !booted || autoBusy || syncing) return false;
   if(!force && !isStale()) return false;
   const now = Date.now();
-  if(now - lastRefreshDispatch < DISPATCH_MIN){
+  if(now - lastDispatchMs() < DISPATCH_MIN){
     loadAll(true);                       // too soon to dispatch — just re-read the files
     return false;
   }
   autoBusy = true;
-  lastRefreshDispatch = now;             // claim the slot before awaiting
+  markDispatch(now);                     // F3 — claim the slot, across restarts too
   syncBaseline = dataUpdatedMs();
   try{
     await dispatch('refresh.yml');
-    syncing = true;
+    syncing = true; syncStartedAt = Date.now();
     updateFresh();
     beginFlight(null, 78000);            // subtle hairline only — never a blocking spinner
     pollAfterDispatch();
     return true;
   }catch(e){
-    syncing = false; updateFresh();
+    syncing = false; syncStartedAt = 0; updateFresh();
     if(isAuthErr(e)) bailToSetup();
     return false;
   }finally{ autoBusy = false; }
@@ -1449,18 +1701,34 @@ function startPolling(){
   stopPolling();
   pollTimer = setInterval(()=>{
     if(document.hidden || !token || !booted) return;
+    reapSync();
     loadAll(true);
     if(isStale()) autoSync();
   }, POLL_MS);
-  if(!freshTimer) freshTimer = setInterval(updateFresh, 15000);
+  /* F19 — freshTimer used to be started once and never stopped: it kept ticking for the
+     whole life of the page, including while hidden. It belongs to the visible-polling
+     lifecycle, same as pollTimer. */
+  if(!freshTimer) freshTimer = setInterval(()=>{ reapSync(); updateFresh(); }, 15000);
 }
-function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+function stopPolling(){
+  if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  if(freshTimer){ clearInterval(freshTimer); freshTimer = null; }
+}
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){ stopPolling(); clearPostPoll(); return; }
+  reapSync();                      // F2 — hours may have passed; an "in flight" sync expired
   startPolling();
   updateFresh();
   if(!token || !booted) return;
   loadAll(true).then(()=>{ if(isStale()) autoSync(); });
+});
+/* iOS fires pagehide, not always visibilitychange, when a home-screen web app is put away
+   or frozen. Stop the timers there too, and flush the unsaved-pick draft (F7). */
+window.addEventListener('pagehide', function(){ stopPolling(); clearPostPoll(); try{ saveDraft(); }catch(e){} });
+window.addEventListener('pageshow', function(e){
+  if(!e.persisted) return;         // a bfcache restore resumes a page whose timers are gone
+  reapSync(); startPolling(); updateFresh();
+  if(token && booted) loadAll(true);
 });
 
 /* ════════════════════════════════════════════════════════════════
@@ -1491,7 +1759,13 @@ function studiosOn(date){
 /* studio already booked on this calendar date (one class per studio per day) */
 function bookedStudiosOn(date){
   const out = {};
-  ((bookings&&bookings.bookings)||[]).forEach(b=>{ if(b && b.date===date) out[studioFromBooking(b)] = b; });
+  /* correctness #10 — only claim a studio is taken when we actually know which studio it
+     was. A guessed 'exhale' put a false "already booked today" caution on real classes. */
+  ((bookings&&bookings.bookings)||[]).forEach(b=>{
+    if(!b || b.date !== date) return;
+    const st = studioOfBooking(b);
+    if(st) out[st] = b;
+  });
   return out;
 }
 /* another saved pick in the same studio on the same weekday */
@@ -1509,23 +1783,46 @@ function pickOccurrences(p){
                  new Date(c.start_iso).getTime() > now)
     .sort((a,b)=> String(a.date).localeCompare(String(b.date)));
 }
+/* correctness #11 — the bot locates a class by NAME SUBSTRING as well as slot, the UI
+   only by slot. FIT rotates suffixes (BOLT (LB) -> BOLT (UB)), so a renamed class books in
+   the UI's model and silently never books in the bot's, while the countdown ticks on. */
+function pickNameDrift(p){
+  if(!p || !p.name) return null;
+  const want = String(p.name).toLowerCase();
+  const bad = pickOccurrences(p).filter(c => String(c.name||'').toLowerCase().indexOf(want) < 0);
+  return bad.length ? bad[0] : null;
+}
 /* Single source of truth shared by the hero and the Picks list, so the two can
    never disagree about the same pick. */
 function pickState(p){
   const now = Date.now();
   const occ = pickOccurrences(p);
-  const bookedKey = {};
-  ((bookings&&bookings.bookings)||[]).forEach(b=>{ if(b&&b.date) bookedKey[b.date+'|'+studioFromBooking(b)] = 1; });
+  /* correctness #10 — key on date|studio|TIME as well, so "the bot booked THIS class" can
+     be told apart from "something else in this studio that day is blocking it". They mean
+     opposite things to the user and only the first is a fulfilled pick. Bookings whose
+     studio can't be established are ignored entirely rather than asserted. */
+  const exact = {}, sameStudio = {};
+  ((bookings&&bookings.bookings)||[]).forEach(b=>{
+    if(!b || !b.date) return;
+    const st = studioOfBooking(b);
+    if(!st) return;
+    sameStudio[b.date+'|'+st] = b;
+    if(b.time) exact[b.date+'|'+st+'|'+b.time] = b;
+  });
+  let blocked = null;
   for(let i=0;i<occ.length;i++){
     const c = occ[i];
-    if(bookedKey[c.date+'|'+c.studio]) continue;          // the bot already won this one
+    if(exact[c.date+'|'+c.studio+'|'+c.time]) continue;   // the bot already won this one
+    const other = sameStudio[c.date+'|'+c.studio];
+    if(other){ if(!blocked) blocked = {cls:c, by:other}; continue; }
     const o = new Date(c.opens_iso).getTime();
     if(!isFinite(o)) continue;
     return {kind: o <= now ? 'open' : 'waiting', opens:o, cls:c};
   }
+  if(blocked) return {kind:'blocked', opens:null, cls:blocked.cls, by:blocked.by};
   if(occ.length) return {kind:'booked', opens:null, cls:occ[0]};
-  /* a one-off whose date has already gone is spent, not broken */
-  if(isOneOff(p) && pickDate(p) < sydToday()) return {kind:'expired', opens:null, cls:null};
+  /* a one-off whose date has already gone — or is earlier today — is spent, not broken */
+  if(isOneOff(p) && pickDate(p) <= sydToday()) return {kind:'expired', opens:null, cls:null};
   return {kind:'missing', opens:null, cls:null};
 }
 
@@ -1557,9 +1854,15 @@ function nextPickWindow(){
 const NAV_TITLES = {book:'Book', booked:'Booked', picks:'Picks'};
 
 function renderAll(){
+  /* F10 — renderBook() rewrites #w-book wholesale, which recreates #chips with
+     scrollLeft 0. The chip click handler already saved and restored it; the 45s poll path
+     never did, so the studio rail silently snapped back to "All" (measured 108 -> 0) every
+     45 seconds while the user was reading it. */
+  const chips = $('#chips'), chipsLeft = chips ? chips.scrollLeft : 0;
   safeRender('book', renderBook);
   safeRender('booked', renderBooked);
   safeRender('picks', renderPicks);
+  const c2 = $('#chips'); if(c2 && chipsLeft) c2.scrollLeft = chipsLeft;
   try{ syncDirty(); updateNav(); updateFresh(); }catch(e){}
 }
 function safeRender(tab, fn){
@@ -1612,7 +1915,9 @@ function heroInner(){
   const name = (c ? (c.name||c.studio) : (p.name||p.studio));
   /* no matching class means this is a projected window, not a real one — say so,
      otherwise the hero contradicts the "Not on the current timetable" row below it */
-  const sub = name + ' · ' + WD_SHORT[DAY_ORDER.indexOf(day)] + ' ' + fmt12(time).full +
+  /* #19g — an unrecognised day used to render the literal string "undefined" */
+  const wd = WD_SHORT[DAY_ORDER.indexOf(day)] || String(day||'');
+  const sub = name + ' · ' + wd + ' ' + fmt12(time).full +
               ' · ' + (c ? (SLABEL[studio]||studio) : 'not on timetable');
   const jump = c ? (' data-act="jump" data-date="'+esc(c.date)+'" data-bid="'+esc(c.bid)+'"') : ' data-act="goPicks"';
   return '<button class="hero"'+jump+'>'+
@@ -1812,15 +2117,25 @@ function stepWeek(delta){
 }
 
 /* ── Booked screen ──────────────────────────────────────────── */
-function studioFromBooking(b){
-  const s = ((b.name||'')+' '+(b.location||'')).toLowerCase();
+/* correctness #10 — mirrors fitbot.booking_studio(), which deliberately returns None
+   rather than guessing ("an unknown row must not block a real pick"). The old single
+   guesser could never say "I don't know": every unclassifiable booking — a PT session, a
+   renamed class — became a phantom "Exhale booked that day" that both suppressed a real
+   exhale pick and claimed on screen that the bot had won it.
+   `studioOfBooking` is the honest one and is what any CLAIM must use; `studioFromBooking`
+   keeps the old always-answer behaviour for cosmetics (row dots) and cancel routing, where
+   the bot matches on date+time anyway. */
+function studioOfBooking(b){
+  const s = (((b&&b.name)||'')+' '+((b&&b.location)||'')).toLowerCase();
   if(s.indexOf('reformer')>=0) return 'reformer';
   if(s.indexOf('sauna')>=0 || s.indexOf('nurture')>=0) return 'nurture';
   if(s.indexOf('cycle')>=0) return 'cycle';
   /* word-start match so a future class called "Core Crunch" isn't mapped to run */
   if(s.indexOf('bolt')>=0 || s.indexOf('afterburner')>=0 || /\brun/.test(s) || /\bwod\b/.test(s)) return 'run';
-  return 'exhale';
+  if(/\b(exhale|yoga|pilates|barre|vinyasa|hatha|yin|meditation|stretch|mobility)\b/.test(s)) return 'exhale';
+  return null;
 }
+function studioFromBooking(b){ return studioOfBooking(b) || 'exhale'; }
 /* Resolve a Sydney wall-clock date+time to a real instant.
    A hard-coded +10:00 is wrong for half the year (AEDT is +11:00) and that error
    lands squarely on the free-cancel / strike boundary, so solve it against the same
@@ -1830,15 +2145,20 @@ function sydWallToMs(dateStr, hhmm){
   const b = String(hhmm).split(':').map(Number);
   if(a.length < 3 || b.length < 2 || a.some(isNaN) || b.some(isNaN)) return null;
   let ms = Date.UTC(a[0], a[1]-1, a[2], b[0]-10, b[1]);   // seed at AEST, then correct
-  for(let k=0;k<3;k++){
+  let ok = false;
+  for(let k=0;k<4;k++){
     const p = sydParts(new Date(ms));
     const drift = (Number(p.hour)*60 + Number(p.minute)) - (b[0]*60 + b[1]);
-    if(!drift) break;
+    if(!drift){ ok = true; break; }
     /* wrap a drift that crossed midnight (±23h) back into ±12h */
     const d = drift > 720 ? drift - 1440 : (drift < -720 ? drift + 1440 : drift);
     ms -= d * 60000;
   }
-  return isFinite(ms) ? ms : null;
+  /* correctness #19c — the hour skipped by spring-forward does not exist (2026-10-04
+     02:30 has no instant). The loop used to give up and hand back 01:30, a plausible-
+     looking wrong answer that would land on the free-cancel/strike boundary. Say null. */
+  if(!ok || !isFinite(ms)) return null;
+  return ms;
 }
 function bookingStartMs(b){
   if(!b.date || !b.time) return null;
@@ -1869,25 +2189,34 @@ function renderBooked(){
   if(bks.length){
     rows = '<div class="ghead">On your FIT account<span class="gh-r">'+bks.length+'</span></div><div class="group">' +
       bks.map((b,i)=>{
-      const st = studioFromBooking(b);
+      /* correctness #10 — say "Studio unknown" rather than asserting Exhale */
+      const stk = studioOfBooking(b), st = stk || 'exhale';
+      const stLabel = stk ? (SLABEL[stk]||stk) : 'Studio unknown';
       // shortDate drops the redundant year so studio still fits at 320px
       const when = (b.date ? shortDate(b.date) : (b.date_raw||'')) + ' · ' +
                    (b.time_raw || (b.time ? fmt12(b.time).full : ''));
       const startMs = bookingStartMs(b);
-      let free = '', freeCls = 'go', freeAt = null;
+      /* correctness #3 — measure against when the BOT will reach FIT, not against now */
+      let free = '', freeCls = 'go', freeAt = null, freeG = null;
       if(startMs){
         const freeUntil = startMs - 3600000, dt = freeUntil - Date.now();
-        if(dt > 0){ free = 'Free cancel for ' + relTime(dt); freeAt = freeUntil; }
-        else { free = 'Late cancel = a strike'; freeCls = 'bad'; }
+        if(dt > CANCEL_LATENCY_MS){
+          freeAt = freeUntil - CANCEL_LATENCY_MS;
+          free = 'Free cancel for ' + relTime(freeAt - Date.now());
+        } else if(dt > 0){
+          free = 'Too close to cancel here — use the FIT app'; freeCls = 'bad'; freeG = G.warnS;
+        } else {
+          free = 'Late cancel = a strike'; freeCls = 'bad'; freeG = G.warnS;
+        }
       }
       return '<div class="crow">'+
         '<div class="cbody">'+
           '<div class="cname">'+esc(b.name||'Class')+'</div>'+
-          '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(SCOLOR[st]||'var(--ink3)')+'"></i>'+
-            '<span>'+esc(when)+' · '+esc(SLABEL[st]||st)+'</span></span></div>'+
-          (free ? '<div class="cmeta"><span class="cst '+freeCls+'"'+
+          '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(stk?(SCOLOR[stk]||'var(--ink3)'):'var(--ink3)')+'"></i>'+
+            '<span>'+esc(when)+' · '+esc(stLabel)+'</span></span></div>'+
+          (free ? '<div class="cmeta"><span class="cst '+freeCls+(freeCls==='bad'?' longform':'')+'"'+
                   (freeAt?' data-cd="'+freeAt+'" data-cdmode="free"':'')+'>'+
-                  (freeCls==='bad'?G.warnS:G.clock)+'<span>'+esc(free)+'</span></span></div>' : '')+
+                  (freeG||G.clock)+'<span>'+esc(free)+'</span></span></div>' : '')+
         '</div>'+
         '<div class="cact">'+
           (b.date && b.time ? '<button class="btn-sm redtxt" data-cancel="'+i+'">Cancel</button>' : '')+
@@ -1935,8 +2264,43 @@ const LOG_META = {
   cancel_notfound:   {t:'Cancel — no match',      c:'amber',g:G.warn},
   snipe_nothing_due: {t:'Checked — nothing due',  c:'n3',      g:G.check},
   snipe_notfound:    {t:'Class not on timetable', c:'amber',g:G.warn},
-  snipe_nopicks:     {t:'No picks saved',         c:'n3',      g:G.repeat}
+  snipe_nopicks:     {t:'No picks saved',         c:'n3',      g:G.repeat},
+  /* correctness #8 — nine kinds the bot emits had no entry here and rendered as a grey row
+     showing the raw identifier, visually identical to benign chatter. Every "your pick was
+     NOT booked" signal was in that group. An unmapped kind must be impossible to mistake
+     for routine, so each one below carries plain wording and a failure/warning tone. */
+  snipe_skipped:     {t:'Pick skipped — not booked',           c:'bad',   g:G.warn},
+  snipe_skipped_studio_limit:
+                     {t:'Skipped — that studio was already booked', c:'amber', g:G.warn},
+  snipe_late:        {t:'Run woke too late — window missed',    c:'bad',   g:G.xmark},
+  snipe_rejected:    {t:'Refused by FIT',                       c:'bad',   g:G.xmark},
+  snipe_full:        {t:'Class was full — not booked',          c:'bad',   g:G.warn},
+  pick_removed:      {t:'One-off pick used up',                 c:'n3',    g:G.check},
+  pick_bad_date:     {t:'Pick has an unusable date',            c:'bad',   g:G.warn},
+  pick_day_mismatch: {t:'Pick day and date disagree',           c:'amber', g:G.warn},
+  pick_name_drift:   {t:'Class renamed — matched by time',      c:'amber', g:G.warn},
+  pick_unusable:     {t:'Pick could not be read',               c:'bad',   g:G.warn},
+  picks_unreadable:  {t:'Picks file unreadable',                c:'bad',   g:G.warn},
+  booknow_notfound:  {t:'Instant book — no matching class',     c:'bad',   g:G.warn},
+  booknow_ambiguous: {t:'Instant book — ambiguous, refused',    c:'bad',   g:G.warn},
+  scrape_error:      {t:'Timetable scrape error',               c:'amber', g:G.warn},
+  form_checkbox_skipped: {t:'Unexpected form field skipped',    c:'amber', g:G.warn}
 };
+/* correctness #8 — "make skip/failure states visually distinct from successes". Tone alone
+   is not enough, but the loud treatment has to be reserved for the lines that actually mean
+   "this class was NOT booked", or it stops meaning anything. `cancelled` is a red line but a
+   routine one he asked for; `book_attempt`/`booknow` are progress notes, not warnings. */
+const LOG_LOUD = {snipe_failed:1, snipe_skipped:1, snipe_late:1, snipe_rejected:1,
+                  snipe_full:1, pick_bad_date:1, pick_unusable:1, picks_unreadable:1,
+                  booknow_notfound:1, booknow_ambiguous:1};
+const LOG_QUIET = {book_attempt:1, booknow:1};
+function logVariant(kind, tone){
+  if(LOG_LOUD[kind]) return 'lv-bad';
+  if(LOG_QUIET[kind]) return '';
+  if(tone === 'amber') return 'lv-warn';
+  if(tone === 'go') return 'lv-good';
+  return '';
+}
 function logDetail(e){
   if(e.pick) return e.pick.day+' '+fmt12(e.pick.time).full+' · '+(e.pick.name||SLABEL[e.pick.studio]||e.pick.studio||'');
   if(e.target){
@@ -1960,10 +2324,18 @@ function logWhen(iso){
 function pickRowHTML(p, dupe){
   const once = isOneOff(p);
   const st = pickState(p);
-  let nextTxt, nextCls = 'amb', g = G.clock, opens = null;
+  const drift = pickNameDrift(p);
+  let nextTxt, nextCls = 'amb', g = G.clock, opens = null, wide = false;
   if(st.kind === 'open'){ nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt; }
   else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
   else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
+  else if(st.kind === 'blocked'){
+    /* correctness #10 — say WHY it will not book, instead of a green tick that claims the
+       bot got it. FIT allows one class per studio per day, so this pick is skipped. */
+    nextTxt = 'Won’t book '+shortDate(st.cls.date)+' — '+(SLABEL[p.studio]||p.studio)+
+              ' already booked at '+(st.by.time_raw || (st.by.time ? fmt12(st.by.time).full : 'another time'));
+    nextCls = 'bad'; g = G.warnS; wide = true;
+  }
   else if(st.kind === 'expired'){ nextTxt = 'Date has passed'; nextCls = ''; g = G.warnS; }
   else { nextTxt = 'Not on the timetable'; nextCls = 'bad'; g = G.warnS; }
   return '<div class="crow'+(once?' once ispick':'')+'">'+
@@ -1972,7 +2344,7 @@ function pickRowHTML(p, dupe){
     '<div class="cbody">'+
       '<div class="cname">'+esc(p.name || SLABEL[p.studio] || p.studio)+'</div>'+
       '<div class="cmeta">'+
-        '<span class="cst '+nextCls+'"'+(opens?' data-cd="'+opens+'" data-cdmode="pick"':'')+'>'+
+        '<span class="cst '+nextCls+(wide?' longform':'')+'"'+(opens?' data-cd="'+opens+'" data-cdmode="pick"':'')+'>'+
           g+'<span>'+esc(nextTxt)+'</span></span>'+
         (once
           ? '<span class="onceTag">'+esc(shortDate(pickDate(p)))+' only</span>'
@@ -1983,6 +2355,8 @@ function pickRowHTML(p, dupe){
         '<span>'+esc(SLABEL[p.studio]||p.studio)+' · one-off, not repeated</span></span></div>' : '')+
       (dupe ? '<div class="cmeta"><span class="cst bad longform">'+G.warnS+
         '<span>Two '+esc(SLABEL[p.studio]||p.studio)+' picks on '+esc(p.day)+' — FIT allows one per day</span></span></div>' : '')+
+      (drift ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
+        '<span>This slot is now “'+esc(drift.name)+'” — the bot matches on name, so re-pick it or it will never book</span></span></div>' : '')+
     '</div>'+
     '<div class="cact"><button class="ptog rm" data-remove="'+esc(p.day+'|'+p.time+'|'+p.studio+'|'+pickDate(p))+'" '+
       'aria-label="Remove this '+(once?'one-off':'weekly')+' pick"><span class="pk">'+G.xmark+'</span></button></div>'+
@@ -2042,9 +2416,13 @@ function renderPicks(){
       '<div class="rt"><b>No activity yet</b><span>Every booking, cancel and sync the bot performs is listed here.</span></div></div></div>';
   } else {
     logHTML = '<div class="group">' + items.map(e=>{
-      const m = LOG_META[e.kind] || {t:String(e.kind||'Event'), c:'n3', g:G.clockL};
+      /* correctness #8 — amber, not grey: a kind this build does not know about is far
+         more likely to be a new failure mode than routine chatter, and the raw identifier
+         is at least made readable rather than printed as snipe_skipped_studio_limit */
+      const m = LOG_META[e.kind] ||
+                {t:String(e.kind||'Event').replace(/_/g,' '), c:'amber', g:G.warn};
       const d = logDetail(e);
-      return '<div class="logrow"><div class="li" data-tone="'+m.c+'">'+m.g+'</div>'+
+      return '<div class="logrow '+logVariant(e.kind, m.c)+'"><div class="li" data-tone="'+m.c+'">'+m.g+'</div>'+
         '<div class="lb"><div class="lt">'+esc(m.t)+'</div>'+
         (d ? '<div class="ls">'+esc(d)+'</div>' : '')+'</div>'+
         '<div class="lw">'+esc(logWhen(e.ts))+'</div></div>';
@@ -2088,11 +2466,37 @@ function renderSetup(msg){
       '<div class="mark">'+G.mark+'</div>'+
       '<h1>FIT Booker</h1>'+
       '<p>Paste your GitHub access token to connect this phone to the booking bot. It is stored only on this device.</p>'+
-      '<input type="password" id="tokin" placeholder="github_pat_…" autocomplete="off" '+
-        'autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">'+
+      /* F8 — enterkeyhint="go" turns the generic iOS "return" key into "Go"; the keydown
+         handler below makes it actually connect. Without it the only way to submit was a
+         button the keyboard was covering. */
+      '<input type="password" id="tokin" name="fitbooker-token" placeholder="github_pat_…" '+
+        'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" '+
+        'inputmode="text" enterkeyhint="go">'+
       '<button class="btn filled" data-act="connect" style="margin-top:12px">Connect</button>'+
       (msg ? '<div class="warn">'+esc(msg)+'</div>' : '')+
     '</div>';
+  const tin = $('#tokin');
+  if(tin){
+    tin.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.keyCode === 13){ e.preventDefault(); tin.blur(); connect(); }
+    });
+    /* F8 — iOS does not resize the LAYOUT viewport for the keyboard in a standalone web
+       app (only visualViewport shrinks), and #app is fixed to the layout viewport, so
+       nothing reflowed and the Connect button sat ~30px under the keyboard. Lift the setup
+       block by the occluded height. */
+    const vv = window.visualViewport;
+    if(vv && !vv.__fitbookerBound){
+      vv.__fitbookerBound = true;
+      const fit = ()=>{
+        const el = $('.setup'); if(!el) return;
+        const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        el.style.paddingBottom = hidden ? (hidden + 12) + 'px' : '';
+        if(hidden) el.scrollIntoView({block:'end'});
+      };
+      vv.addEventListener('resize', fit);
+      vv.addEventListener('scroll', fit);
+    }
+  }
   $('#navTitle').style.opacity = 0;
 }
 function connect(){
@@ -2272,7 +2676,14 @@ async function bookNow(bid, fromSheet){
   });
   if(choice !== 0){ if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
   try{
-    await dispatch('booknow.yml', {day:c.day, time:c.time, studio:c.studio});
+    /* correctness #2 — `date` pins the occurrence. Without it the bot resolves the
+       (day,time,studio) triple to the SOONEST future match, and the two-week timetable
+       makes every triple ambiguous: for the first hour after a window opens that is LAST
+       week's slot repeating today, i.e. a class starting within the hour that he never
+       asked for. A no-show there is a strike, and cancelling it is also a strike.
+       booknow.yml already declares a `date` input (it is used for cancel), so sending it
+       is safe whether or not the bot-side patch has landed. */
+    await dispatch('booknow.yml', {day:c.day, time:c.time, studio:c.studio, date:c.date});
     beginFlight('Booking… the Booked tab updates in about a minute.');
   }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
 }
@@ -2282,15 +2693,20 @@ async function cancelBooking(i){
     .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
   const b = list[i]; if(!b) return;
   const startMs = bookingStartMs(b);
-  const late = startMs ? (startMs - Date.now()) < 3600000 : false;
+  /* correctness #3 — judge against the instant the BOT will POST, not against now */
+  const atRun = startMs ? (startMs - (Date.now() + CANCEL_LATENCY_MS)) : null;
+  const late  = atRun !== null && atRun < 3600000;
+  /* correctness #10 — the studio we send is a guess when the name/location don't say */
+  const knownStudio = studioOfBooking(b);
   const choice = await actionSheet({
     title: 'Cancel ' + (b.name||'this booking') + '?',
     message: (b.date_raw || shortDate(b.date)) + ' at ' + (b.time_raw || fmt12(b.time).full) +
       (startMs === null
         ? '\nCancelling within 1 hour of the class counts as a strike. 3 strikes in 7 days = a 7-day ban.'
-        : (late ? '\nThis is within 1 hour of the class — it counts as a strike. 3 strikes in 7 days = a 7-day ban.'
-                : '\nFree cancel: this is more than 1 hour before the class.')),
-    actions: [{label:'Cancel Booking', style:'destructive'}],
+        : (late ? '\nThe bot takes about a minute to reach FIT and that lands inside the last hour — this WILL count as a strike. Cancel in the FIT app instead if you can. 3 strikes in 7 days = a 7-day ban.'
+                : '\nFree cancel: the bot will reach FIT more than 1 hour before the class.')) +
+      (knownStudio ? '' : '\nThe studio for this booking isn’t obvious from its name, so the bot matches on date and time.'),
+    actions: [{label: late ? 'Cancel Anyway (strike)' : 'Cancel Booking', style:'destructive'}],
     cancelLabel:'Keep Booking'
   });
   if(choice !== 0) return;
@@ -2303,22 +2719,23 @@ async function cancelBooking(i){
 /* Manual sync is now a fallback, not the primary path — the poller and the
    staleness check drive refresh.yml on their own. */
 async function syncNow(){
+  reapSync();                     // F2 — a stale latch must never block a manual sync
   if(syncing){ toast('Already syncing — new data lands in about a minute.', 2600); return; }
-  const now = Date.now();
-  if(now - lastRefreshDispatch < DISPATCH_MIN){
+  const now = Date.now(), last = lastDispatchMs();
+  if(now - last < DISPATCH_MIN){
     loadAll(true);
-    toast('Synced '+ageShort(now - lastRefreshDispatch).replace(' ago','')+' ago — data reloaded.', 2600);
+    toast('Synced '+ageShort(now - last).replace(' ago','')+' ago — data reloaded.', 2600);
     return;
   }
   autoBusy = true;
-  lastRefreshDispatch = now;
+  markDispatch(now);              // F3
   syncBaseline = dataUpdatedMs();
   try{
     await dispatch('refresh.yml');
-    syncing = true; updateFresh();
+    syncing = true; syncStartedAt = Date.now(); updateFresh();
     beginFlight('Syncing with FIT — new data in about a minute.', 78000);
     pollAfterDispatch();
-  }catch(e){ syncing = false; updateFresh(); if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
+  }catch(e){ syncing = false; syncStartedAt = 0; updateFresh(); if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
   finally{ autoBusy = false; }
 }
 
@@ -2471,24 +2888,46 @@ async function pullRefresh(){
   if(ptrBusy) return;
   ptrBusy = true;
   ptrEnd(true);
-  let fired = false;
+  let fired = false, reloaded = false;
   try{
-    fired = await autoSync(true);   // a REAL refresh.yml dispatch (still ≤1 per 5 min)
-    await loadAll(true);            // …plus an immediate re-read of the data files
+    fired = await autoSync(true);      // a REAL refresh.yml dispatch (still ≤1 per 5 min)
+    reloaded = await loadAll(true);    // …plus an immediate re-read of the data files
   }catch(e){}
-  if(!fired && !syncing) toast('Up to date', 1500);
+  /* F22 — never claim "Up to date" for a refresh that was debounced away behind a hung
+     fetch: that is the exact moment the user is pulling BECAUSE it looks stuck. */
+  if(!fired && !syncing){
+    if(reloaded) toast(loadError ? 'Still offline — showing the cached view' : 'Up to date', 1800);
+    else toast('Still loading…', 1500);
+  }
   setTimeout(()=>{ ptrBusy = false; ptrEnd(false); }, 700);
 }
 
 function attachGestures(page, daySwipe){
-  let sx=0, sy=0, locked=null, active=false, onRail=false, onChips=false;
+  let sx=0, sy=0, locked=null, active=false, onRail=false, onChips=false, edgeStart=false;
+  /* F4 — undo every visual side effect a partial gesture left behind. A second finger, a
+     touchcancel the system raises for you (call banner, Control Centre, Reachability, the
+     edge swipe) or a sheet opening mid-drag all used to strand #dayslide translated and
+     faded, or the PTR ring frozen mid-pull at a random rotation, until another gesture
+     happened to complete. touchstart cleared `active` before deciding whether it cared,
+     and `end` then refused to clean up because `active` was already false. */
+  function resetGestureVisuals(){
+    const rs = $('#railslide'), ds = $('#dayslide');
+    [rs,ds].forEach(s=>{ if(s){ s.classList.remove('drag'); s.style.transform=''; s.style.opacity=''; } });
+    if(locked === 'ptr' && !ptrBusy) ptrEnd(false);
+  }
   page.addEventListener('touchstart', e=>{
+    if(active) resetGestureVisuals();      // a re-entrant touchstart aborts the old gesture
     locked = null; active = false;
     if(e.touches.length !== 1 || sheetOpen() || ptrBusy) return;
     const t = e.touches[0];
     sx = t.clientX; sy = t.clientY;
     onRail  = !!(e.target.closest && (e.target.closest('.rail') || e.target.closest('.weekhead')));
     onChips = !!(e.target.closest && e.target.closest('.chips'));
+    /* F20 — iOS standalone web apps ship a system back/forward edge swipe authors cannot
+       disable (w3c/manifest#1041). A horizontal gesture begun in the edge strip is claimed
+       by the system and we get a touchcancel; refuse it outright so the failure is a clean
+       no-op rather than a half-animated abort. */
+    edgeStart = (sx <= 24 || sx >= (page.clientWidth - 24));
     active = true;
   }, {passive:true});
 
@@ -2498,7 +2937,7 @@ function attachGestures(page, daySwipe){
     if(locked === null){
       /* axis lock: horizontal wins only on clear horizontal intent */
       if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5){
-        locked = onChips ? 'none' : ((onRail || daySwipe) ? 'x' : 'none');
+        locked = (onChips || edgeStart) ? 'none' : ((onRail || daySwipe) ? 'x' : 'none');   // F20
       } else if(dy > 9 && dy > Math.abs(dx) * 1.4 && page.scrollTop <= 0){
         locked = 'ptr';
       } else if(Math.abs(dy) > 9){
@@ -2514,19 +2953,24 @@ function attachGestures(page, daySwipe){
         s.style.opacity = String(1 - Math.min(0.5, Math.abs(dx)/420));
       }
     } else if(locked === 'ptr'){
-      if(page.scrollTop > 0){ locked = 'y'; ptrEnd(false); return; }
+      /* F5 — the finger came back above where it started: the user changed their mind and
+         wants to scroll. Hand the gesture back. Waiting for scrollTop>0 could never happen,
+         because we are the reason it cannot scroll — 215px of upward travel stayed
+         preventDefault()ed, which reads as a frozen app. */
+      if(dy <= 0 || page.scrollTop > 0){ locked = 'y'; ptrEnd(false); return; }
       if(e.cancelable) e.preventDefault();
       ptrSet(dy, dy >= PTR_TRIGGER);
     }
   }, {passive:false});
 
   const end = e=>{
-    if(!active) return; active = false;
-    const rs = $('#railslide'), ds = $('#dayslide');
-    [rs,ds].forEach(s=>{ if(s){ s.classList.remove('drag'); s.style.transform=''; s.style.opacity=''; } });
+    /* F4 — always clean up, even for a gesture we already disowned: an orphaned transform
+       or a frozen PTR ring is far worse than an ignored swipe */
+    const wasActive = active; active = false;
+    resetGestureVisuals();
     const t = (e.changedTouches && e.changedTouches[0]) || null;
     const was = locked; locked = null;
-    if(!t) return;
+    if(!wasActive || !t) return;
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(was === 'x'){
       if(onRail){ if(dx < -44) stepWeek(1); else if(dx > 44) stepWeek(-1); }
@@ -2541,6 +2985,42 @@ function attachGestures(page, daySwipe){
 attachGestures($('#page-book'), true);
 attachGestures($('#page-booked'), false);
 attachGestures($('#page-picks'), false);
+
+/* F12 — the .grabber pill is *the* iOS "drag me down to dismiss" affordance and every
+   sheet drew one, but none of them could be dragged. Combined with body{overscroll-
+   behavior:none} there was not so much as a wiggle for feedback, which reads as frozen. */
+(function attachSheetDismiss(){
+  const root = $('#sheetRoot');
+  let sy = 0, dragging = false, sh = null, scrimEl = null;
+  root.addEventListener('touchstart', e=>{
+    dragging = false;
+    if(e.touches.length !== 1) return;
+    sh = e.target.closest && e.target.closest('.sheet'); if(!sh) return;
+    const sc = e.target.closest('.sheet-scroll');
+    if(sc && sc.scrollTop > 0) return;             // let an inner scroller scroll first
+    scrimEl = $('.scrim', root);
+    sy = e.touches[0].clientY; dragging = true;
+  }, {passive:true});
+  root.addEventListener('touchmove', e=>{
+    if(!dragging || !sh) return;
+    const dy = e.touches[0].clientY - sy;
+    if(dy <= 0) return;
+    if(e.cancelable) e.preventDefault();
+    sh.style.transition = 'none';
+    sh.style.transform = 'translateY('+dy+'px)';
+    if(scrimEl) scrimEl.style.opacity = String(Math.max(0, 1 - dy/420));
+  }, {passive:false});
+  const settle = e=>{
+    if(!dragging || !sh) return; dragging = false;
+    const t = (e.changedTouches && e.changedTouches[0]) || null;
+    const dy = t ? t.clientY - sy : 0;
+    sh.style.transition = ''; sh.style.transform = '';
+    if(scrimEl) scrimEl.style.opacity = '';
+    if(dy > 110) closeSheet();
+  };
+  root.addEventListener('touchend', settle, {passive:true});
+  root.addEventListener('touchcancel', settle, {passive:true});
+})();
 
 function jumpToClass(date, bid){
   const go = ()=>{
@@ -2583,23 +3063,29 @@ async function handlePickToggle(bid, btn){
   const opensMs = new Date(c.opens_iso).getTime();
   const open = isFinite(opensMs) && opensMs <= Date.now();
   let once = false;
-  /* a window that has ALREADY opened has no future occurrence to schedule other than
-     the recurring one — the instant Book pill covers "just this one" there. */
-  if(!open){
-    const choice = await actionSheet({
-      title: (c.name || c.studio),
-      message: longDate(c.date)+' · '+fmt12(c.time).full+' · '+(SLABEL[c.studio]||c.studio)+
-               '\nHow should the bot book this?',
-      actions:[{label:'Auto-book every week', style:'default'},
-               {label:'Auto-book just this one'}]
-    });
-    if(choice === 0) once = false;
-    else if(choice === 1) once = true;
-    else return;
-  }
+  /* correctness #15 — ALWAYS ask. This branch used to be skipped whenever the window had
+     already opened, which turned one tap on today's class into a RECURRING FOREVER pick,
+     disclosed only by a 2.2s toast. Every following week the bot books a class he never
+     asked for; two absences plus any third strike in the same rolling week is a 7-day ban.
+     When the window is already open a one-off would book nothing extra, so say that rather
+     than silently choosing weekly on his behalf. */
+  const choice = await actionSheet({
+    title: (c.name || c.studio),
+    message: longDate(c.date)+' · '+fmt12(c.time).full+' · '+(SLABEL[c.studio]||c.studio)+
+             '\nHow should the bot book this?'+
+             (open ? '\nThis one is already open — use Book to take it now.' : ''),
+    actions: open
+      ? [{label:'Auto-book every '+c.day+' from next week', style:'default'}]
+      : [{label:'Auto-book every '+c.day, style:'default'},
+         {label:'Auto-book just '+shortDate(c.date)}]
+  });
+  if(choice === 0) once = false;
+  else if(choice === 1 && !open) once = true;
+  else return;
 
   addPick(c.day, c.time, c.studio, c.name, once ? c.date : null);
-  toast(once ? 'One-off pick added for '+shortDate(c.date) : 'Weekly pick added — every '+c.day, 2200);
+  toast(once ? 'One-off pick added for '+shortDate(c.date)
+             : 'Weekly pick added — every '+c.day+', until you remove it', 3000);
   const clash = pickClash(c);
   if(clash) toast('Heads up: you already pick '+fmt12(clash.time).full+' '+(SLABEL[c.studio]||c.studio)+
                   ' on '+c.day+' — FIT allows one per studio per day', 4200);
@@ -2686,7 +3172,9 @@ $('#saveBtn').addEventListener('click', savePicks);
 let flipQueued = false;
 setInterval(function(){
   try{
-    if(!booted) return;
+    /* F19 — this used to run a document-wide querySelectorAll every second for the life of
+       the page, hidden or not */
+    if(!booted || document.hidden) return;
     const now = Date.now();
     let flip = false;
     const nodes = document.querySelectorAll('[data-cd]');
@@ -2708,7 +3196,7 @@ setInterval(function(){
 /* keep the lists honest as classes fall into the past */
 setInterval(function(){
   try{
-    if(!booted || sheetOpen()) return;
+    if(!booted || document.hidden || sheetOpen()) return;   // F19
     heroCache = null;
     indexDates();
     const p = $('#page-'+activeTab), s = p ? p.scrollTop : 0;
@@ -2716,6 +3204,46 @@ setInterval(function(){
     if(p) p.scrollTop = s;
   }catch(e){}
 }, 300000);
+
+/* ── safe-area top backstop ─────────────────────────────────────
+   Under the iOS 26/27 standalone regression env(safe-area-inset-top) reports 0, which
+   silently removes the .navbar's Dynamic Island clearance and puts the Info button under
+   the Island. Nothing in CSS can detect that, so measure it.
+
+   Deliberately narrow, so it cannot misfire:
+     • only when the RESOLVED --sat really is 0 (a healthy device keeps its own value);
+     • only in standalone display mode (in a browser tab the missing height is Safari's
+       own toolbars, not an inset — treating those as a top inset would wreck the layout);
+     • only when the window is 40–200px shorter than the physical screen, which is the
+       signature of the regression on a notched device and not of anything else.
+   Re-measured on rotate/resize because screen and window swap axes.                    */
+function fixSafeAreaTop(){
+  try{
+    const root = document.documentElement;
+    root.style.removeProperty('--sat');            // re-measure the stylesheet's own value
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:var(--sat);' +
+                          'visibility:hidden;pointer-events:none';
+    document.body.appendChild(probe);
+    const measured = probe.getBoundingClientRect().height;
+    probe.remove();
+    if(measured > 0) return;                       // env() works here — leave it alone
+    const standalone = (window.navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if(!standalone) return;
+    const missing = (window.screen && window.screen.height ? window.screen.height : 0) -
+                    window.innerHeight;
+    if(missing >= 40 && missing <= 200) root.style.setProperty('--sat', missing + 'px');
+  }catch(e){}
+}
+/* Re-run rather than latch: every call first REMOVES its own inline value and re-measures,
+   so the moment env() starts reporting a real inset the override is dropped again. Run once
+   now (before first paint) and again after load, in case styles resolve late. */
+fixSafeAreaTop();
+window.addEventListener('load', fixSafeAreaTop);
+setTimeout(fixSafeAreaTop, 400);
+window.addEventListener('resize', fixSafeAreaTop);
+window.addEventListener('orientationchange', ()=> setTimeout(fixSafeAreaTop, 250));
 
 /* ── boot ───────────────────────────────────────────────────── */
 (function boot(){
