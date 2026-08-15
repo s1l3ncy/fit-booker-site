@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FIT Booker</title>
+<style>
+  :root {
+    --bg:#f7f6f3; --card:#fff; --ink:#1a1a1a; --soft:#6b6b6b; --line:#e6e3dd;
+    --accent:#0f6b5c; --accent-soft:#e3f0ed; --danger:#b3372c;
+    --exhale:#7c5cb8; --reformer:#0f6b5c; --run:#c25417; --cycle:#1f5fa8; --nurture:#a8842c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161513; --card:#21201d; --ink:#f0efec; --soft:#a5a29c; --line:#35332e;
+      --accent:#4ecdb4; --accent-soft:#1d3833; --danger:#e07666;
+      --exhale:#a98ae0; --reformer:#4ecdb4; --run:#ef8a4e; --cycle:#6ea8e8; --nurture:#d4b05e; }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:90px}
+  header{padding:calc(14px + env(safe-area-inset-top)) 16px 8px;display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto}
+  header h1{font-size:1.1rem;font-weight:700;flex:1}
+  .syncbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:.78rem;color:var(--soft);cursor:pointer}
+  .updated{font-size:.68rem;color:var(--soft);padding:0 16px 6px;max-width:760px;margin:0 auto}
+  nav{display:flex;gap:6px;padding:6px 16px;position:sticky;top:0;background:var(--bg);z-index:9;max-width:760px;margin:0 auto}
+  nav button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 4px;font-size:.82rem;color:var(--soft);cursor:pointer;font-weight:600}
+  nav button.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  main{max-width:760px;margin:0 auto;padding:8px 16px}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0}
+  .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:.75rem;cursor:pointer;color:var(--soft)}
+  .chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+  h2.day{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin:16px 0 6px;font-weight:600}
+  .row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:5px}
+  .row.picked{border-color:var(--accent);background:var(--accent-soft)}
+  .row .t{font-variant-numeric:tabular-nums;font-weight:600;font-size:.86rem;width:46px;flex-shrink:0}
+  .row .info{flex:1;min-width:0}
+  .row .nm{font-weight:600;font-size:.88rem}
+  .row .meta{color:var(--soft);font-size:.72rem;margin-top:1px}
+  .row .full{color:var(--danger);font-weight:600}
+  .tick{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent;cursor:pointer}
+  .picked .tick{background:var(--accent);border-color:var(--accent);color:#fff}
+  .booknow{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:8px;padding:5px 9px;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0}
+  .cancelbtn{border:1px solid var(--danger);color:var(--danger);background:none;border-radius:8px;padding:5px 9px;font-size:.72rem;font-weight:600;cursor:pointer}
+  .savebar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:10}
+  .savebar-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px}
+  .savebar .n{font-size:.8rem;color:var(--soft);flex:1}
+  .primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:.88rem;font-weight:600;cursor:pointer}
+  .primary:disabled{opacity:.4}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}
+  .card .hd{font-weight:600;font-size:.9rem}
+  .card .sub{color:var(--soft);font-size:.75rem;margin-top:2px}
+  .logline{font-size:.74rem;padding:7px 2px;border-bottom:1px solid var(--line);color:var(--soft)}
+  .logline b{color:var(--ink)}
+  .note{font-size:.78rem;color:var(--soft);padding:10px 2px;line-height:1.5}
+  input[type=password],input[type=text]{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:.9rem;margin:8px 0}
+  .toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:10px;padding:9px 16px;font-size:.8rem;z-index:99;max-width:88vw;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .pickline{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:.85rem}
+  .pickline .x{margin-left:auto;color:var(--danger);cursor:pointer;font-weight:700;padding:2px 8px}
+  .opens{font-size:.66rem;color:var(--soft);white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>FIT Booker</h1>
+  <button class="syncbtn" onclick="syncNow()" id="syncBtn">↻ Sync</button>
+</header>
+<div class="updated" id="updated"></div>
+<nav id="nav" style="display:none">
+  <button data-tab="timetable" class="active" onclick="showTab('timetable')">Timetable</button>
+  <button data-tab="picks" onclick="showTab('picks')">Picks</button>
+  <button data-tab="bookings" onclick="showTab('bookings')">Booked</button>
+  <button data-tab="activity" onclick="showTab('activity')">Activity</button>
+</nav>
+<main id="main"></main>
+<div class="savebar" id="savebar" style="display:none">
+  <div class="savebar-inner">
+    <div class="n" id="savenote"></div>
+    <button class="primary" id="savebtn" onclick="savePicks()">Save picks</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const OWNER = 's1l3ncy', REPO = 'fit-booker', API = 'https://api.github.com';
+const STUDIO_COLORS = {exhale:'var(--exhale)',reformer:'var(--reformer)',run:'var(--run)',cycle:'var(--cycle)',nurture:'var(--nurture)'};
+const DAY_ORDER = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+let token = localStorage.getItem('fitbooker_token') || '';
+let timetable = null, bookings = null, logdata = [], picks = [], picksSha = null, savedPicksJson = '[]';
+let activeTab = 'timetable', studioFilter = 'all';
+
+function toast(msg, ms=2600){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
+function hdrs(){return {Authorization:'Bearer '+token, Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28'};}
+
+async function apiGet(path, raw=false){
+  const h = hdrs(); if(raw) h.Accept='application/vnd.github.raw+json';
+  const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${path}?nocache=${Date.now()}`, {headers:h});
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error(`${path}: ${r.status}`);
+  return raw ? r.text() : r.json();
+}
+
+async function loadAll(){
+  try{
+    const [tt, bk, lg, pk] = await Promise.all([
+      apiGet('data/timetable.json', true),
+      apiGet('data/bookings.json', true),
+      apiGet('data/log.json', true),
+      apiGet('data/picks.json'),
+    ]);
+    timetable = tt ? JSON.parse(tt) : {updated:null, classes:[]};
+    bookings = bk ? JSON.parse(bk) : {updated:null, bookings:[]};
+    logdata = lg ? JSON.parse(lg) : [];
+    if(pk){ picksSha = pk.sha; picks = JSON.parse(atob(pk.content.replace(/\n/g,''))); }
+    savedPicksJson = JSON.stringify(picks);
+    document.getElementById('nav').style.display='flex';
+    render();
+  }catch(e){
+    if(String(e).includes('401')||String(e).includes('403')){ localStorage.removeItem('fitbooker_token'); token=''; renderTokenSetup('That token was rejected — try again.'); }
+    else toast('Load failed: '+e.message, 4000);
+  }
+}
+
+function renderTokenSetup(msg){
+  document.getElementById('nav').style.display='none';
+  document.getElementById('savebar').style.display='none';
+  document.getElementById('main').innerHTML = `
+    <div class="card" style="margin-top:24px">
+      <div class="hd">One-time setup</div>
+      <div class="note">${msg||'Paste your GitHub access token to connect. It stays in this browser only.'}</div>
+      <input type="password" id="tokin" placeholder="github_pat_...">
+      <button class="primary" style="width:100%" onclick="saveToken()">Connect</button>
+    </div>`;
+}
+function saveToken(){
+  token = document.getElementById('tokin').value.trim();
+  if(!token) return;
+  localStorage.setItem('fitbooker_token', token);
+  document.getElementById('main').innerHTML='<div class="note">Loading…</div>';
+  loadAll();
+}
+
+function showTab(t){ activeTab=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t)); render(); }
+
+function pickKey(p){ return `${p.day}|${p.time}|${p.studio}|${p.name||''}`; }
+function isPicked(c){ return picks.some(p=>p.day===c.day&&p.time===c.time&&p.studio===c.studio); }
+function togglePick(day,time,studio,name){
+  const i = picks.findIndex(p=>p.day===day&&p.time===time&&p.studio===studio);
+  if(i>=0) picks.splice(i,1); else picks.push({day,time,studio,name});
+  render();
+}
+
+function fmt12(t){let[h,m]=t.split(':').map(Number);const ap=h>=12?'pm':'am';h=h%12||12;return h+':'+String(m).padStart(2,'0')+ap;}
+function opensLabel(iso){
+  const d=new Date(iso), now=new Date();
+  if(d<=now) return 'open now';
+  return 'opens '+d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});
+}
+
+function render(){
+  const main=document.getElementById('main');
+  const upd = timetable?.updated ? new Date(timetable.updated).toLocaleString('en-AU',{weekday:'short',hour:'numeric',minute:'2-digit'}) : '—';
+  document.getElementById('updated').textContent = 'Timetable updated '+upd;
+  document.getElementById('savebar').style.display = 'none';
+  if(activeTab==='timetable') renderTimetable(main);
+  else if(activeTab==='picks') renderPicks(main);
+  else if(activeTab==='bookings') renderBookings(main);
+  else renderActivity(main);
+  const dirty = JSON.stringify(picks)!==savedPicksJson;
+  if(dirty && (activeTab==='timetable'||activeTab==='picks')){
+    document.getElementById('savebar').style.display='block';
+    document.getElementById('savenote').textContent = `${picks.length} weekly pick${picks.length===1?'':'s'} — unsaved changes`;
+  }
+}
+
+function renderTimetable(main){
+  const now = new Date();
+  const classes = (timetable.classes||[]).filter(c=> new Date(c.start_iso) > now && (studioFilter==='all'||c.studio===studioFilter));
+  let html = `<div class="filters">
+    <div class="chip ${studioFilter==='all'?'active':''}" onclick="studioFilter='all';render()">All</div>
+    ${Object.keys(STUDIO_COLORS).map(s=>`<div class="chip ${studioFilter===s?'active':''}" onclick="studioFilter='${s}';render()"><span class="dot" style="background:${STUDIO_COLORS[s]}"></span>${s}</div>`).join('')}
+  </div>`;
+  const byDate = {};
+  classes.forEach(c=>{(byDate[c.date]=byDate[c.date]||[]).push(c);});
+  for(const date of Object.keys(byDate).sort()){
+    const d = new Date(date+'T12:00:00');
+    html += `<h2 class="day">${d.toLocaleDateString('en-AU',{weekday:'long', day:'numeric', month:'short'})}</h2>`;
+    for(const c of byDate[date].sort((a,b)=>a.time.localeCompare(b.time)||a.studio.localeCompare(b.studio))){
+      const picked = isPicked(c);
+      const windowOpen = new Date(c.opens_iso) <= now;
+      html += `<div class="row ${picked?'picked':''}">
+        <div class="t">${fmt12(c.time)}</div>
+        <div class="info">
+          <div class="nm"><span class="dot" style="background:${STUDIO_COLORS[c.studio]}"></span>${c.name||c.studio}</div>
+          <div class="meta">${c.staff||''} ${c.notfull?'':'· <span class="full">FULL</span>'}</div>
+        </div>
+        <div class="opens">${opensLabel(c.opens_iso)}</div>
+        ${windowOpen && c.notfull ? `<button class="booknow" onclick="bookNow('${c.day}','${c.time}','${c.studio}')">Book</button>`:''}
+        <div class="tick" onclick="togglePick('${c.day}','${c.time}','${c.studio}',${JSON.stringify(c.name||'').replace(/"/g,'&quot;')})">✓</div>
+      </div>`;
+    }
+  }
+  html += `<div class="note">Tick = book this class automatically every week (the bot fires the moment its window opens). “Book” = book this one right now.</div>`;
+  main.innerHTML = html;
+}
+
+function renderPicks(main){
+  let html = '<div class="card"><div class="hd">Weekly auto-book picks</div>';
+  if(!picks.length) html += '<div class="note">No picks yet — tick classes on the Timetable tab.</div>';
+  for(const p of [...picks].sort((a,b)=>DAY_ORDER.indexOf(a.day)-DAY_ORDER.indexOf(b.day)||a.time.localeCompare(b.time))){
+    html += `<div class="pickline"><span class="dot" style="background:${STUDIO_COLORS[p.studio]}"></span>
+      <b>${p.day}</b> ${fmt12(p.time)} — ${p.name||p.studio}
+      <span class="x" onclick="togglePick('${p.day}','${p.time}','${p.studio}','')">✕</span></div>`;
+  }
+  html += '</div><div class="note">Saved picks are booked automatically every week: the bot wakes just before each class’s window opens (7 days + 1 hour before class) and books instantly. Remember FIT’s rules: one class per studio per day, and no-shows earn strikes — cancel in the FIT app if you can’t make it (free up to 1 hour before).</div>';
+  main.innerHTML = html;
+}
+
+function renderBookings(main){
+  const bks = bookings?.bookings || [];
+  let html = `<div class="updated" style="padding:6px 0">Bookings updated ${bookings?.updated?new Date(bookings.updated).toLocaleString('en-AU',{weekday:'short',hour:'numeric',minute:'2-digit'}):'—'}</div>`;
+  if(!bks.length) html += '<div class="note">No upcoming bookings on your FIT account. (Tap ↻ Sync to refresh from the portal.)</div>';
+  for(const b of bks){
+    const label = b.name || b.classname || b.class_name || JSON.stringify(b).slice(0,60);
+    const when = b.arrival || b.date || b.starttime || '';
+    const time = b.starttime || b.time || '';
+    html += `<div class="card"><div class="hd">${label}</div><div class="sub">${when} ${time}</div></div>`;
+  }
+  html += '<div class="note">Cancelling: quickest is the FIT app (free more than 1 hour before class). In-site cancel buttons arrive in v2 once we see the real booking data shape.</div>';
+  main.innerHTML = html;
+}
+
+function renderActivity(main){
+  let html = '';
+  const items = [...logdata].reverse().slice(0,60);
+  if(!items.length) html = '<div class="note">No bot activity yet.</div>';
+  for(const e of items){
+    const t = new Date(e.ts).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+    const desc = {booked:'✅ Booked', waitlisted:'⏳ Waitlisted', snipe_failed:'❌ Booking failed',
+      snipe_waiting:'…waiting for window', book_attempt:'attempt', refresh:'↻ data refreshed',
+      booknow:'⚡ instant book', cancelled:'🗑 cancelled', snipe_nothing_due:'checked — nothing due',
+      snipe_notfound:'⚠️ class not found', snipe_nopicks:'no picks configured'}[e.kind] || e.kind;
+    const detail = e.pick ? ` — ${e.pick.day} ${e.pick.time} ${e.pick.name||e.pick.studio}` :
+                   e.target ? ` — ${e.target.name} ${e.target.date} ${e.target.time}` :
+                   e.classes!==undefined ? ` (${e.classes} classes, ${e.bookings} bookings)` : '';
+    html += `<div class="logline"><b>${desc}</b>${detail}<br>${t}</div>`;
+  }
+  main.innerHTML = html;
+}
+
+async function savePicks(){
+  const btn=document.getElementById('savebtn'); btn.disabled=true;
+  try{
+    const body = {message:'update picks', content: btoa(JSON.stringify(picks, null, 1)), branch:'main'};
+    if(picksSha) body.sha = picksSha;
+    const r = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/data/picks.json`,{method:'PUT',headers:hdrs(),body:JSON.stringify(body)});
+    if(!r.ok) throw new Error('save failed: '+r.status);
+    const j = await r.json();
+    picksSha = j.content.sha; savedPicksJson = JSON.stringify(picks);
+    toast('Picks saved — booking schedule updating itself now.');
+    render();
+  }catch(e){ toast(String(e.message||e),4000); }
+  btn.disabled=false;
+}
+
+async function dispatch(workflow, inputs){
+  const r = await fetch(`${API}/repos/${OWNER}/${REPO}/actions/workflows/${workflow}/dispatches`,{
+    method:'POST', headers:hdrs(), body: JSON.stringify({ref:'main', inputs: inputs||{}})});
+  if(r.status!==204) throw new Error(`${workflow} dispatch failed: ${r.status}`);
+}
+
+async function bookNow(day,time,studio){
+  if(!confirm(`Book ${day} ${fmt12(time)} (${studio}) now?`)) return;
+  try{ await dispatch('booknow.yml',{day,time,studio}); toast('Booking started — check Booked tab in ~1 min.',4000);
+    setTimeout(loadAll, 75000);
+  }catch(e){ toast(String(e.message||e),4000); }
+}
+
+async function syncNow(){
+  const b=document.getElementById('syncBtn'); b.textContent='↻ …';
+  try{ await dispatch('refresh.yml'); toast('Sync started — data refreshes in about a minute.'); setTimeout(()=>{loadAll(); b.textContent='↻ Sync';}, 70000);}
+  catch(e){ toast(String(e.message||e),4000); b.textContent='↻ Sync'; }
+}
+
+if(!token) renderTokenSetup();
+else { document.getElementById('main').innerHTML='<div class="note">Loading…</div>'; loadAll(); }
+</script>
+</body>
+</html>
