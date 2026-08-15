@@ -27,6 +27,7 @@
      studio hues → identification only, small and always labelled
    ══════════════════════════════════════════════════════════════════ */
 :root{
+  --tabpadref:max(calc(var(--sab) - 16px), 6px);
   /* safe-area insets, exposed as custom properties so they are testable */
   --sat: env(safe-area-inset-top, 0px);
   --sar: env(safe-area-inset-right, 0px);
@@ -115,7 +116,9 @@
 @media (max-width:359px){ :root{ --gx:12px } }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;max-width:100%;height:100%;overflow-x:hidden;background:var(--bg)}
+/* nothing outside #app ever scrolls: the shell owns the viewport, each tab owns its
+   own scroller. This is also what stops Safari's toolbar from resizing under us. */
+html,body{width:100%;max-width:100%;height:100%;overflow:hidden;background:var(--bg)}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   color:var(--ink);font-size:17px;line-height:1.3;
@@ -127,7 +130,17 @@ svg{display:block;flex:none}
 .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 .hidden{display:none !important}
 
-#app{position:fixed;inset:0;overflow:hidden;max-width:100%}
+/* The shell must equal the VISUAL viewport in both standalone PWA and Safari-with-
+   toolbars. `inset:0` on a fixed element resolves against the LARGE viewport in
+   Safari, which pushes the tab bar down behind the browser chrome and makes it
+   look like it "sits higher" than the screen edge. 100dvh tracks the dynamic
+   viewport; 100vh is the fallback for engines without dvh. */
+#app{
+  position:fixed;top:0;left:0;right:0;width:100%;max-width:100%;
+  height:100vh;height:100dvh;
+  overflow:hidden;
+}
+@supports (height:100dvh){ html,body{height:100dvh} }
 
 /* ── nav bar (translucent material) ──────────────────────────── */
 .navbar{
@@ -173,6 +186,37 @@ svg{display:block;flex:none}
 }
 @keyframes flight{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 
+/* ── freshness pill (replaces the manual Sync button as the primary path) ── */
+.freshbtn{
+  height:44px;min-width:44px;flex:none;border-radius:22px;padding:0 10px;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  color:var(--ink3);font-size:12px;font-weight:650;letter-spacing:-.1px;
+  white-space:nowrap;max-width:132px;overflow:hidden;
+}
+.freshbtn .fx{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.freshbtn svg{width:15px;height:15px}
+.freshbtn:active{opacity:.45}
+.freshbtn.syncing{color:var(--amber)}
+.freshbtn.syncing svg{animation:spin 1s linear infinite}
+.freshbtn.stale{color:var(--amber)}
+
+/* ── pull to refresh ─────────────────────────────────────────── */
+.ptr{
+  position:absolute;left:0;right:0;top:calc(var(--sat) + var(--navh));z-index:45;
+  height:0;display:flex;align-items:flex-start;justify-content:center;
+  pointer-events:none;overflow:visible;
+}
+.ptr .pring{
+  width:30px;height:30px;border-radius:15px;
+  background:var(--card);box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center;color:var(--ink2);
+  opacity:0;transform:translateY(0) scale(.7);
+}
+.ptr.anim .pring{transition:opacity .28s ease,transform .38s cubic-bezier(.32,.72,0,1)}
+.ptr.ready .pring{color:var(--amber)}
+.ptr.spinning .pring svg{animation:spin .85s linear infinite}
+.ptr .pring svg{width:17px;height:17px}
+
 /* ── pages ───────────────────────────────────────────────────── */
 #pages{position:absolute;inset:0;overflow:hidden}
 .page{
@@ -182,11 +226,11 @@ svg{display:block;flex:none}
 }
 .page.active{display:block}
 .page::-webkit-scrollbar{width:0;height:0}
-#app.dirty .wrap{padding-bottom:calc(var(--sab) + var(--tabh) + 104px)}
+#app.dirty .wrap{padding-bottom:calc(var(--tabpadref) + var(--tabh) + 104px)}
 .wrap{
   max-width:592px;margin:0 auto;width:100%;min-width:0;
   padding-top:calc(var(--sat) + var(--navh));
-  padding-bottom:calc(var(--sab) + var(--tabh) + 58px);
+  padding-bottom:calc(var(--tabpadref) + var(--tabh) + 58px);
 }
 
 .ltitle{
@@ -280,34 +324,64 @@ svg{display:block;flex:none}
 }
 .stickybar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:.5px;background:var(--hair)}
 
+/* week header: ‹ 11 – 17 Aug › */
+.weekhead{
+  display:flex;align-items:center;gap:4px;min-width:0;
+  padding:0 calc(var(--pr) - 8px) 0 calc(var(--pl) - 8px);
+}
+.wknav{
+  width:46px;height:44px;flex:none;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;color:var(--ink2);
+}
+.wknav:active{opacity:.45}
+.wknav[disabled]{opacity:.22;pointer-events:none}
+.wklabel{
+  flex:1;min-width:0;text-align:center;
+  font-size:12.5px;font-weight:700;letter-spacing:.01em;color:var(--ink2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.wklabel b{color:var(--ink);font-weight:700}
+
+/* The strip shows EXACTLY one week — seven equal columns that always fit.
+   No overflow-x, no fixed cell width: paging + swipe replace scrolling. */
 .rail{
-  display:flex;gap:6px;min-width:0;overflow-x:auto;overflow-y:hidden;
-  padding:5px calc(var(--pr) - 4px) 5px calc(var(--pl) - 4px);
-  -webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-behavior:smooth;
+  display:flex;gap:6px;min-width:0;width:100%;overflow:hidden;
+  padding:3px calc(var(--pr) - 4px) 6px calc(var(--pl) - 4px);
+  touch-action:pan-y;
 }
-.rail::-webkit-scrollbar{width:0;height:0}
 .dcell{
-  flex:0 0 auto;width:50px;height:54px;border-radius:14px;
+  flex:1 1 0;width:auto;min-width:0;height:54px;border-radius:13px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  background:var(--card);box-shadow:var(--shadow);overflow:hidden;padding:0 2px;
-  transition:background-color .2s ease,color .2s ease;
+  background:var(--card);box-shadow:var(--shadow);overflow:hidden;padding:0 1px;
+  transition:background-color .2s ease,color .2s ease,opacity .2s ease;
 }
-.dcell .dw{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
-.dcell .dn{font-size:19px;font-weight:720;letter-spacing:-.03em;line-height:21px;color:var(--ink);font-variant-numeric:tabular-nums}
-.dcell .pips{display:flex;gap:2.5px;height:4px;align-items:center}
-.dcell .pips i{width:4px;height:4px;border-radius:2px;display:block}
+.dcell .dw{font-size:9px;font-weight:800;letter-spacing:.045em;text-transform:uppercase;color:var(--ink3);
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.dcell .dn{font-size:18px;font-weight:720;letter-spacing:-.03em;line-height:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.dcell .pips{display:flex;gap:2px;height:4px;align-items:center;max-width:100%;overflow:hidden}
+.dcell .pips i{width:4px;height:4px;border-radius:2px;display:block;flex:none}
 .dcell.today .dw{color:var(--amber)}
 /* NOTE: the modifier is `noclass`, NOT `empty` — `.empty` is the empty-state block
    below and an equal-specificity collision silently reshaped every class-free cell. */
 .dcell.noclass{opacity:.38}
-/* belt-and-braces: nothing bolted onto a date cell may change its box */
-.dcell[class]{width:50px;height:54px;gap:2px;padding:0 2px}
+/* a day that has already been and gone can never be booked */
+.dcell.past{opacity:.3;pointer-events:none;box-shadow:none;background:var(--fill)}
+.dcell.past .dn{color:var(--ink3)}
+/* belt-and-braces: nothing bolted onto a date cell may change its box.
+   `flex:1 1 0` + `min-width:0` is the fitting rule that replaced `width:50px`. */
+.dcell[class]{flex:1 1 0;min-width:0;height:54px;gap:2px;padding:0 1px}
 
 .dcell.sel{background:var(--btn-ink)}
 .dcell.sel .dn{color:var(--btn-on)}
 .dcell.sel .dw{color:var(--btn-on);opacity:.62}
 .dcell.sel .pips i{opacity:.95;box-shadow:0 0 0 .5px rgba(255,255,255,.35)}
 .dcell:active{opacity:.6}
+
+.railwrap{min-width:0;overflow:hidden}
+.railslide{transition:transform .22s cubic-bezier(.32,.72,0,1),opacity .22s ease;will-change:transform}
+.railslide.out-l{opacity:0;transform:translateX(-22px)}
+.railslide.out-r{opacity:0;transform:translateX(22px)}
+.railslide.drag{transition:none}
 
 .chips{
   display:flex;gap:6px;min-width:0;overflow-x:auto;overflow-y:hidden;
@@ -410,6 +484,21 @@ svg{display:block;flex:none}
 .ptog[aria-pressed="true"] .pk{background:var(--amber-rail);border-color:var(--amber-rail);color:var(--on-amber)}
 .ptog:active{transform:scale(.86)}
 .ptog.rm .pk{border-color:transparent;background:var(--fill);color:var(--bad)}
+/* a ONE-OFF pick reads as temporary: hollow amber ring, not a solid amber fill */
+.ptog.once[aria-pressed="true"] .pk{background:transparent;border-color:var(--amber-rail);
+  border-style:dashed;color:var(--amber)}
+.crow.ispick.once{background:transparent;box-shadow:inset 3px 0 0 -.5px var(--amber-rail)}
+/* one-off date tag */
+.onceTag{
+  flex:none;display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;
+  border-radius:6px;background:var(--fill);color:var(--amber);
+  font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  border:1px dashed var(--amber-rail);white-space:nowrap;max-width:100%;overflow:hidden;
+}
+.ghead .gh-k{
+  flex:none;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--amber);
+  border:1px dashed var(--amber-rail);border-radius:5px;padding:1px 5px;text-transform:uppercase;
+}
 
 /* ── buttons ─────────────────────────────────────────────────── */
 .btn{
@@ -431,7 +520,7 @@ svg{display:block;flex:none}
 
 /* ── save bar (docked material) ──────────────────────────────── */
 .savebar{
-  position:absolute;left:0;right:0;z-index:55;bottom:calc(var(--sab) + var(--tabh));
+  position:absolute;left:0;right:0;z-index:55;bottom:calc(var(--tabpadref) + var(--tabh));
   padding:9px var(--pr) 9px var(--pl);
   background:var(--barbg);
   -webkit-backdrop-filter:saturate(180%) blur(22px);
@@ -450,14 +539,24 @@ svg{display:block;flex:none}
 /* ── tab bar ─────────────────────────────────────────────────── */
 .tabfade{
   position:absolute;left:0;right:0;z-index:48;pointer-events:none;
-  bottom:calc(var(--sab) + var(--tabh));height:40px;
+  bottom:calc(var(--tabpadref) + var(--tabh));height:40px;
   background:linear-gradient(to top,var(--bg),var(--bg0));
   transition:opacity .2s ease;
 }
 #app.dirty .tabfade{opacity:0}
+/* Flush to the true bottom edge: the bar is anchored at bottom:0 of the dvh-sized
+   shell and its BACKGROUND paints through the home-indicator inset, which is applied
+   once here as internal padding. --sab is never added again further down the chain,
+   so there is no empty strip under the bar in either context. */
 .tabbar{
+  /* --tabpad: how much of the home-indicator inset we actually reserve. iOS reports
+     34px, but the indicator pill is only ~5px tall sitting ~8px off the bottom, so
+     reserving all 34px strands the icons visibly high. We keep a comfortable margin
+     and still never sit under the pill. */
+  --tabpad:var(--tabpadref);
   position:absolute;left:0;right:0;bottom:0;z-index:50;display:flex;min-width:0;
-  padding-bottom:var(--sab);padding-left:var(--sal);padding-right:var(--sar);
+  min-height:calc(var(--tabh) + var(--tabpad));
+  padding-bottom:var(--tabpad);padding-left:var(--sal);padding-right:var(--sar);
   background:var(--tabbg);
   -webkit-backdrop-filter:saturate(180%) blur(30px);
   backdrop-filter:saturate(180%) blur(30px);
@@ -594,8 +693,8 @@ svg{display:block;flex:none}
 /* ── setup ───────────────────────────────────────────────────── */
 #app.setupmode .wrap{min-height:100%;display:flex;flex-direction:column}
 #app.setupmode .wrap{padding-bottom:calc(var(--sab) + 20px)}
-#app.setupmode .navbtn{opacity:0;pointer-events:none}
-#app.setupmode .savebar,#app.setupmode .tabfade{display:none}
+#app.setupmode .navbtn,#app.setupmode .freshbtn{opacity:0;pointer-events:none}
+#app.setupmode .savebar,#app.setupmode .tabfade,#app.setupmode .ptr{display:none}
 .setup{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;
   padding:0 calc(24px + var(--sar)) 30px calc(24px + var(--sal))}
 .setup .mark{
@@ -627,6 +726,13 @@ svg{display:block;flex:none}
   .logrow .ls{font-size:12px}
   .logrow{gap:9px;padding:10px 11px}
   .crow{gap:8px;padding-left:10px}
+  /* seven columns still have to fit — buy the px back from the gutters, not the cells */
+  .rail{gap:4px;padding-left:calc(var(--pl) - 6px);padding-right:calc(var(--pr) - 6px)}
+  .dcell .dw{font-size:8.5px;letter-spacing:.01em}
+  .dcell .dn{font-size:17px}
+  .dcell .pips{gap:1.5px}
+  .dcell .pips i{width:3.5px}
+  .freshbtn{max-width:104px;font-size:11.5px;padding:0 8px}
 }
 </style>
 </head>
@@ -640,12 +746,17 @@ svg{display:block;flex:none}
       </button>
       <div class="nav-spacer"></div>
       <div class="nav-title" id="navTitle">Book</div>
-      <button class="navbtn" id="syncBtn" aria-label="Sync with FIT">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>
+      <button class="freshbtn" id="syncBtn" aria-label="Data freshness — tap for sync options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>
+        <span class="fx" id="freshTxt">…</span>
       </button>
     </div>
     <div class="flightbar" id="flightbar"><i></i></div>
   </header>
+
+  <div class="ptr" id="ptr" aria-hidden="true"><div class="pring">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>
+  </div></div>
 
   <main id="pages">
     <section class="page active" id="page-book"><div class="wrap" id="w-book"></div></section>
@@ -709,10 +820,20 @@ let activeTab = 'book';
 let studioFilter = 'all';
 let selDate = null;
 let allDates = [];
+let weekStart = null;                  // Monday (YYYY-MM-DD) of the week on screen
 let scrollMemo = {book:0, booked:0, picks:0};
-let railScroll = null;
 let inFlight = 0;
 let heroCache = null;
+
+/* live-data machinery (§3) */
+const POLL_MS      = 45000;            // cheap Contents API read while visible
+const STALE_MS     = 15*60000;         // older than this ⇒ dispatch a real FIT sync
+const DISPATCH_MIN = 5*60000;          // never auto-dispatch refresh.yml more often
+let pollTimer = null, freshTimer = null;
+let lastRefreshDispatch = 0;           // ms of the last refresh.yml we fired
+let syncing = false;                   // a refresh.yml is believed to be in flight
+let autoBusy = false;                  // debounce: one auto-sync attempt at a time
+let loadingNow = false;                // debounce: one loadAll() at a time
 
 /* ════════════════════════════════════════════════════════════════
    Helpers
@@ -739,6 +860,9 @@ function toUTC(ds){ const a=String(ds).split('-').map(Number); return Date.UTC(a
 function fromUTC(ms){ const d=new Date(ms); return dstr(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate()); }
 function addDays(ds,n){ return fromUTC(toUTC(ds)+n*86400000); }
 function dowMon0(ds){ return (new Date(toUTC(ds)).getUTCDay()+6)%7; }
+/* Monday-first (DAY_ORDER) week arithmetic for the one-week-at-a-time strip */
+function mondayOf(ds){ return addDays(ds, -dowMon0(ds)); }
+function weekDates(ws){ const out=[]; for(let i=0;i<7;i++) out.push(addDays(ws,i)); return out; }
 const WD_LONG = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const WD_SHORT= ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const MON_LONG= ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -747,6 +871,13 @@ function dayNum(ds){ return Number(String(ds).split('-')[2]); }
 function monIdx(ds){ return Number(String(ds).split('-')[1])-1; }
 function longDate(ds){ return WD_LONG[dowMon0(ds)]+' '+dayNum(ds)+' '+MON_LONG[monIdx(ds)]; }
 function shortDate(ds){ return WD_SHORT[dowMon0(ds)]+' '+dayNum(ds)+' '+MON_SHORT[monIdx(ds)]; }
+/* "11 – 17 Aug" / "31 Aug – 6 Sep" */
+function weekLabel(ws){
+  const a = ws, b = addDays(ws,6);
+  return monIdx(a) === monIdx(b)
+    ? dayNum(a)+' – '+dayNum(b)+' '+MON_SHORT[monIdx(b)]
+    : dayNum(a)+' '+MON_SHORT[monIdx(a)]+' – '+dayNum(b)+' '+MON_SHORT[monIdx(b)];
+}
 function relDayLabel(ds){
   const t = sydToday();
   if(ds === t) return 'Today';
@@ -916,6 +1047,7 @@ function isAuthErr(e){ const s = String(e && e.message || e); return s.indexOf('
 function bailToSetup(msg){
   try { localStorage.removeItem('fitbooker_token'); } catch(x){}
   token = ''; booted = false;
+  stopPolling(); clearPostPoll(); syncing = false;
   closeSheet();
   renderSetup(msg || 'That token was rejected. Generate a new fine-grained token with Contents + Actions write access and paste it again.');
 }
@@ -930,6 +1062,11 @@ function b64(str){
 }
 
 async function loadAll(silent){
+  if(loadingNow) return;          // debounce: poll + visibility + PTR can all land at once
+  loadingNow = true;
+  try{ await loadAllInner(silent); } finally { loadingNow = false; }
+}
+async function loadAllInner(silent){
   let failed = 0;
   /* a background refresh must never silently eat pick edits the user hasn't saved */
   const keepLocalPicks = !!(silent && isDirty());
@@ -982,6 +1119,11 @@ async function loadAll(silent){
   }
   indexDates();
   booted = true;
+  /* a sync we started has landed the moment the stamps move past the baseline */
+  if(syncing){
+    const t = dataUpdatedMs();
+    if(t !== null && (syncBaseline === null || t > syncBaseline)){ syncing = false; clearPostPoll(); }
+  }
   renderAll();
 }
 
@@ -998,22 +1140,71 @@ function indexDates(){
     if(allDates.indexOf(today) >= 0 && dayHasClasses(today)) selDate = today;
     else selDate = allDates.filter(dayHasClasses)[0] || allDates[0] || today;
   }
+  syncWeek();
+}
+
+/* ── one-week-at-a-time strip: paging bounds (§2) ───────────────── */
+function firstWeek(){ return mondayOf(sydToday()); }          // never a fully-past week
+function lastWeek(){
+  const last = allDates.length ? allDates[allDates.length-1] : sydToday();
+  const m = mondayOf(last);
+  return m < firstWeek() ? firstWeek() : m;
+}
+function clampWeek(ws){
+  const a = firstWeek(), b = lastWeek();
+  return ws < a ? a : (ws > b ? b : ws);
+}
+/* the visible week defaults to the one holding the selected day and is never a week
+   that is entirely in the past */
+function syncWeek(){
+  if(!weekStart) weekStart = mondayOf(selDate || sydToday());
+  weekStart = clampWeek(weekStart);
 }
 
 /* ════════════════════════════════════════════════════════════════
    Picks
    ════════════════════════════════════════════════════════════════ */
-function pickIndex(day,time,studio){
-  return picks.findIndex(p => p.day===day && p.time===time && p.studio===studio);
+/* A pick is either RECURRING  {day,time,studio,name}
+   or ONE-OFF               {day,time,studio,name,date:"YYYY-MM-DD"}
+   — the bot reads the optional `date` field to restrict a pick to a single day. */
+function pickDate(p){ return (p && p.date) ? String(p.date) : ''; }
+function isOneOff(p){ return !!pickDate(p); }
+function pickKey(p){ return p.day+'|'+p.time+'|'+p.studio+'|'+pickDate(p); }
+function samePick(a,b){
+  return a.day===b.day && a.time===b.time && a.studio===b.studio && pickDate(a)===pickDate(b);
 }
-function isPicked(c){ return pickIndex(c.day,c.time,c.studio) >= 0; }
-function togglePick(day,time,studio,name){
-  const i = pickIndex(day,time,studio);
+/* index of an exact pick; `date` omitted/'' means the recurring one */
+function pickIndex(day,time,studio,date){
+  const d = date || '';
+  return picks.findIndex(p => p.day===day && p.time===time && p.studio===studio && pickDate(p)===d);
+}
+/* the pick that covers THIS class occurrence — recurring wins, else a one-off on its date */
+function pickFor(c){
+  const rec = pickIndex(c.day,c.time,c.studio,'');
+  if(rec >= 0) return picks[rec];
+  const one = pickIndex(c.day,c.time,c.studio,c.date);
+  return one >= 0 ? picks[one] : null;
+}
+function isPicked(c){ return !!pickFor(c); }
+
+function addPick(day,time,studio,name,date){
+  const p = {day:day, time:time, studio:studio, name:name||''};
+  if(date) p.date = date;
+  if(pickIndex(day,time,studio,date||'') < 0) picks.push(p);
+  heroCache = null; syncDirty();
+  return true;
+}
+function removePick(day,time,studio,date){
+  const i = pickIndex(day,time,studio,date||'');
   if(i >= 0) picks.splice(i,1);
-  else picks.push({day:day, time:time, studio:studio, name:name||''});
-  heroCache = null;
-  syncDirty();
-  return i < 0;
+  heroCache = null; syncDirty();
+  return false;
+}
+/* legacy signature kept for the recurring path (sheet switch, remove buttons) */
+function togglePick(day,time,studio,name,date){
+  const i = pickIndex(day,time,studio,date||'');
+  if(i >= 0) return removePick(day,time,studio,date);
+  return addPick(day,time,studio,name,date);
 }
 function isDirty(){ return JSON.stringify(picks) !== savedPicksJson; }
 function syncDirty(){
@@ -1021,13 +1212,15 @@ function syncDirty(){
   app.classList.toggle('dirty', d);
   if(d){
     const saved = safeParse(savedPicksJson, []);
-    const added = picks.filter(p => !saved.some(q=>q.day===p.day&&q.time===p.time&&q.studio===p.studio)).length;
-    const removed = saved.filter(q => !picks.some(p=>p.day===q.day&&p.time===q.time&&p.studio===q.studio)).length;
+    const added = picks.filter(p => !saved.some(q=>samePick(q,p))).length;
+    const removed = saved.filter(q => !picks.some(p=>samePick(p,q))).length;
     const bits = [];
     if(added) bits.push(added+' added');
     if(removed) bits.push(removed+' removed');
     $('#saveTitle').textContent = bits.join(', ') || 'Picks changed';
-    $('#saveSub').textContent = picks.length + (picks.length===1?' weekly pick':' weekly picks') + ' after saving';
+    const once = picks.filter(isOneOff).length;
+    $('#saveSub').textContent = picks.length + (picks.length===1?' pick':' picks') +
+      (once ? ' ('+once+' one-off)' : '') + ' after saving';
   }
   updateBadges();
 }
@@ -1108,9 +1301,26 @@ function nextWindowMs(p){
   return null;
 }
 
+/* A ONE-OFF pick is pinned to one calendar date, so its window is that date's
+   start − 7d − 1h. bookableOpensMs above is the contract's recurring maths and is
+   left byte-for-byte intact; this is the dated sibling, used only when p.date is set. */
+function oneOffOpensMs(p){
+  const now = Date.now();
+  const c = (timetable.classes||[]).find(x => x && x.date===p.date && x.time===p.time && x.studio===p.studio);
+  let opens = null;
+  if(c && c.opens_iso){ const o = new Date(c.opens_iso).getTime(); if(isFinite(o)) opens = o; }
+  if(opens === null){
+    const start = sydWallToMs(p.date, p.time);
+    if(start !== null) opens = start - (7*24*60+60)*60000;
+  }
+  if(opens === null) return null;
+  return opens >= now - 20*60000 ? opens : null;
+}
+function pickOpensMs(p){ return isOneOff(p) ? oneOffOpensMs(p) : bookableOpensMs(p); }
+
 async function maybeKickSnipe(){
   const now = Date.now();
-  const imminent = picks.some(p => { const o = bookableOpensMs(p); return o !== null && (o - now) <= 45*60000; });
+  const imminent = picks.some(p => { const o = pickOpensMs(p); return o !== null && (o - now) <= 45*60000; });
   if(imminent){
     try{
       await dispatch('snipe.yml');
@@ -1133,6 +1343,106 @@ function beginFlight(msg, ms){
   }, wait);
   setTimeout(()=> loadAll(true), wait);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Live data (§3) — poll while visible, auto-dispatch a real FIT sync
+   when the files go stale, and show freshness instead of demanding a tap.
+   ════════════════════════════════════════════════════════════════ */
+/* the OLDER of the two `updated` stamps — both files have to be fresh */
+function dataUpdatedMs(){
+  let oldest = null;
+  [timetable && timetable.updated, bookings && bookings.updated].forEach(u=>{
+    if(!u) return;
+    const t = new Date(u).getTime();
+    if(isFinite(t) && (oldest === null || t < oldest)) oldest = t;
+  });
+  return oldest;
+}
+function dataAgeMs(){ const t = dataUpdatedMs(); return t === null ? Infinity : Math.max(0, Date.now()-t); }
+function isStale(){ return dataAgeMs() > STALE_MS; }
+function ageShort(ms){
+  if(!isFinite(ms)) return '—';
+  const m = Math.floor(ms/60000);
+  if(m < 1) return 'now';
+  if(m < 60) return m+'m ago';
+  const h = Math.floor(m/60);
+  if(h < 24) return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+function ageLong(ms){
+  if(!isFinite(ms)) return 'never synced';
+  const m = Math.floor(ms/60000);
+  if(m < 1) return 'updated just now';
+  if(m === 1) return 'updated 1 min ago';
+  if(m < 60) return 'updated '+m+' min ago';
+  const h = Math.floor(m/60);
+  if(h === 1) return 'updated 1 hour ago';
+  if(h < 24) return 'updated '+h+' hours ago';
+  const d = Math.floor(h/24);
+  return 'updated '+d+(d===1?' day ago':' days ago');
+}
+function freshnessText(){ return syncing ? 'Syncing…' : ageShort(dataAgeMs()); }
+function updateFresh(){
+  const b = $('#syncBtn'); if(!b) return;
+  const t = $('#freshTxt'); if(t) t.textContent = freshnessText();
+  b.classList.toggle('syncing', !!syncing);
+  b.classList.toggle('stale', !syncing && isStale());
+  b.setAttribute('aria-label', syncing ? 'Syncing with FIT' : 'Data '+ageLong(dataAgeMs())+' — tap for sync options');
+}
+
+let postPoll = [], syncBaseline = null;
+function clearPostPoll(){ postPoll.forEach(clearTimeout); postPoll = []; }
+/* after a dispatch the run takes ~60–75s; poll across that window, non-blocking */
+function pollAfterDispatch(){
+  clearPostPoll();
+  [15000,30000,45000,62000,78000,95000].forEach(ms=>{
+    postPoll.push(setTimeout(()=>{ if(!document.hidden) loadAll(true); }, ms));
+  });
+  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; updateFresh(); } }, 115000));
+}
+/* Debounced + rate-limited: at most one attempt in flight, and never more than one
+   refresh.yml dispatch per DISPATCH_MIN however many triggers pile up. */
+async function autoSync(force){
+  if(!token || !booted || autoBusy || syncing) return false;
+  if(!force && !isStale()) return false;
+  const now = Date.now();
+  if(now - lastRefreshDispatch < DISPATCH_MIN){
+    loadAll(true);                       // too soon to dispatch — just re-read the files
+    return false;
+  }
+  autoBusy = true;
+  lastRefreshDispatch = now;             // claim the slot before awaiting
+  syncBaseline = dataUpdatedMs();
+  try{
+    await dispatch('refresh.yml');
+    syncing = true;
+    updateFresh();
+    beginFlight(null, 78000);            // subtle hairline only — never a blocking spinner
+    pollAfterDispatch();
+    return true;
+  }catch(e){
+    syncing = false; updateFresh();
+    if(isAuthErr(e)) bailToSetup();
+    return false;
+  }finally{ autoBusy = false; }
+}
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(()=>{
+    if(document.hidden || !token || !booted) return;
+    loadAll(true);
+    if(isStale()) autoSync();
+  }, POLL_MS);
+  if(!freshTimer) freshTimer = setInterval(updateFresh, 15000);
+}
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){ stopPolling(); clearPostPoll(); return; }
+  startPolling();
+  updateFresh();
+  if(!token || !booted) return;
+  loadAll(true).then(()=>{ if(isStale()) autoSync(); });
+});
 
 /* ════════════════════════════════════════════════════════════════
    Derived data
@@ -1167,14 +1477,16 @@ function bookedStudiosOn(date){
 }
 /* another saved pick in the same studio on the same weekday */
 function pickClash(c){
-  return picks.find(p => p.studio===c.studio && p.day===c.day && p.time!==c.time) || null;
+  return picks.find(p => p.studio===c.studio && p.day===c.day && p.time!==c.time &&
+                         (!isOneOff(p) || pickDate(p)===c.date)) || null;
 }
 
 /* Every future timetable occurrence of a saved pick, soonest first. */
 function pickOccurrences(p){
-  const now = Date.now();
+  const now = Date.now(), only = pickDate(p);
   return (timetable.classes||[])
     .filter(c => c && c.day===p.day && c.time===p.time && c.studio===p.studio &&
+                 (!only || c.date===only) &&
                  new Date(c.start_iso).getTime() > now)
     .sort((a,b)=> String(a.date).localeCompare(String(b.date)));
 }
@@ -1193,6 +1505,8 @@ function pickState(p){
     return {kind: o <= now ? 'open' : 'waiting', opens:o, cls:c};
   }
   if(occ.length) return {kind:'booked', opens:null, cls:occ[0]};
+  /* a one-off whose date has already gone is spent, not broken */
+  if(isOneOff(p) && pickDate(p) < sydToday()) return {kind:'expired', opens:null, cls:null};
   return {kind:'missing', opens:null, cls:null};
 }
 
@@ -1208,7 +1522,8 @@ function nextPickWindow(){
       if(isFinite(o) && o > now && (!hit || o < hit.opens)) hit = {opens:o, cls:c, pick:p};
     });
     if(!hit){
-      const o = nextWindowMs(p);
+      /* a one-off can only ever open on its own date — never project it forward */
+      const o = isOneOff(p) ? oneOffOpensMs(p) : nextWindowMs(p);
       if(o !== null && o > now) hit = {opens:o, cls:null, pick:p};
     }
     if(hit && (!best || hit.opens < best.opens)) best = hit;
@@ -1226,7 +1541,7 @@ function renderAll(){
   safeRender('book', renderBook);
   safeRender('booked', renderBooked);
   safeRender('picks', renderPicks);
-  try{ syncDirty(); updateNav(); }catch(e){}
+  try{ syncDirty(); updateNav(); updateFresh(); }catch(e){}
 }
 function safeRender(tab, fn){
   try{ fn(); }
@@ -1267,7 +1582,7 @@ function heroInner(){
       '<span class="hbig">No picks yet</span>'+
       '<span class="hsub">Tap the '+
       '<span style="display:inline-flex;vertical-align:-3px;color:var(--amber)">'+G.repeat+'</span> '+
-      'on any class and the bot grabs that slot every week.</span>'+
+      'on any class — every week, or just that one date.</span>'+
       '<span class="hchev">'+G.chevBig+'</span></button>';
   }
   const left = nw.opens - Date.now();
@@ -1288,23 +1603,37 @@ function heroInner(){
     '<span class="hchev">'+G.chevBig+'</span></button>';
 }
 
-/* ── date rail ──────────────────────────────────────────────── */
+/* ── date strip: exactly one week, seven equal columns, never scrolls ─── */
 function railHTML(){
   const today = sydToday();
-  let h = '';
-  allDates.forEach(d=>{
-    const st = studiosOn(d);
+  return weekDates(weekStart).map(d=>{
+    const past = d < today;
+    const st = past ? [] : studiosOn(d);
     const cls = ['dcell'];
-    if(d === selDate) cls.push('sel');
-    if(d === today) cls.push('today');
-    if(!st.length) cls.push('noclass');
+    if(past) cls.push('past');
+    else{
+      if(d === selDate) cls.push('sel');
+      if(d === today) cls.push('today');
+      if(!st.length) cls.push('noclass');
+    }
     const pips = st.slice(0,5).map(s=>'<i style="background:'+SCOLOR[s]+'"></i>').join('');
-    h += '<button class="'+cls.join(' ')+'" data-date="'+d+'" aria-label="'+esc(longDate(d))+'">'+
+    return '<button class="'+cls.join(' ')+'" data-date="'+d+'"'+(past?' disabled aria-disabled="true"':'')+
+         ' aria-label="'+esc(longDate(d))+(past?' — past':'')+'">'+
          '<span class="dw">'+(d===today?'TODAY':WD_SHORT[dowMon0(d)].toUpperCase())+'</span>'+
          '<span class="dn">'+dayNum(d)+'</span>'+
          '<span class="pips">'+pips+'</span></button>';
-  });
-  return h;
+  }).join('');
+}
+function weekHeadHTML(){
+  const canPrev = weekStart > firstWeek(), canNext = weekStart < lastWeek();
+  const thisWk = weekStart === mondayOf(sydToday());
+  return '<div class="weekhead">'+
+    '<button class="wknav" data-week="-1"'+(canPrev?'':' disabled')+' aria-label="Previous week">'+
+      '<svg viewBox="0 0 9 15" width="9" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleX(-1)"><path d="m1.6 1.6 5.6 5.9-5.6 5.9"/></svg></button>'+
+    '<span class="wklabel"><b>'+esc(weekLabel(weekStart))+'</b>'+(thisWk?' · this week':'')+'</span>'+
+    '<button class="wknav" data-week="1"'+(canNext?'':' disabled')+' aria-label="Next week">'+
+      '<svg viewBox="0 0 9 15" width="9" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m1.6 1.6 5.6 5.9-5.6 5.9"/></svg></button>'+
+  '</div>';
 }
 function chipsHTML(){
   const items = [{k:'all',label:'All'}].concat(STUDIOS.map(s=>({k:s,label:SLABEL[s]})));
@@ -1322,7 +1651,8 @@ function classRowHTML(c, bookedStudios){
   const av = availInfo(c);
   const opensMs = new Date(c.opens_iso).getTime();
   const open = opensMs <= Date.now();
-  const picked = isPicked(c);
+  const pk = pickFor(c);
+  const picked = !!pk, once = picked && isOneOff(pk);
   const conflict = bookedStudios[c.studio];
   const clash = (picked || conflict || av.full) ? null : pickClash(c);
 
@@ -1345,7 +1675,7 @@ function classRowHTML(c, bookedStudios){
      same studio is a WARNING (bookings.json can be up to 8 hours stale), never a block. */
   const canBook = open && !av.full;
 
-  return '<div class="crow'+(picked?' ispick':'')+(av.full?' isfull':'')+'" data-bid="'+esc(c.bid)+'" id="row-'+esc(c.bid)+'">'+
+  return '<div class="crow'+(picked?' ispick':'')+(once?' once':'')+(av.full?' isfull':'')+'" data-bid="'+esc(c.bid)+'" id="row-'+esc(c.bid)+'">'+
     '<div class="ctime"><b>'+esc(t.h)+'</b><span>'+t.ap.toUpperCase()+'</span></div>'+
     '<div class="cbody">'+
       '<div class="cname">'+esc(c.name || c.studio)+'</div>'+
@@ -1359,12 +1689,15 @@ function classRowHTML(c, bookedStudios){
         '<span>'+esc(SLABEL[c.studio]||c.studio)+' already booked today — FIT allows one per day</span></span></div>' : '')+
       (clash ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
         '<span>Clashes with your '+esc(fmt12(clash.time).full)+' pick</span></span></div>' : '')+
+      (once ? '<div class="cmeta"><span class="cst amb"><span>One-off pick · this date only</span></span></div>' : '')+
     '</div>'+
     '<div class="cact">'+
       (canBook ? '<button class="bookpill'+(conflict?' caution':'')+'" data-book="'+esc(c.bid)+'" '+
         'aria-label="'+(conflict?'Book anyway — you already have this studio today':'Book this class now')+'">Book</button>' : '')+
-      '<button class="ptog" data-pick="'+esc(c.bid)+'" aria-pressed="'+picked+'" '+
-        'aria-label="Auto-book this class every week"><span class="pk">'+G.repeat+'</span></button>'+
+      '<button class="ptog'+(once?' once':'')+'" data-pick="'+esc(c.bid)+'" aria-pressed="'+picked+'" '+
+        'aria-label="'+(picked ? (once?'Remove this one-off pick':'Remove this weekly pick')
+                               : 'Auto-book this class — every week or just this one')+'">'+
+        '<span class="pk">'+pickGlyph(once)+'</span></button>'+
     '</div>'+
   '</div>';
 }
@@ -1378,7 +1711,7 @@ function renderBook(){
       '<div class="et">'+(loadError?'No timetable on this device':'No timetable yet')+'</div>'+
       '<div class="es">'+(loadError
         ? 'Nothing has been cached here yet and GitHub is unreachable. Try again once you have a connection.'
-        : 'Tap sync at the top right to pull the latest FIT timetable.')+'</div>'+
+        : 'The app is syncing with FIT by itself — pull down, or tap below, to fetch the timetable now.')+'</div>'+
       '<div style="width:100%;max-width:280px;margin-top:14px">'+
       '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT</button></div></div>';
     return;
@@ -1406,8 +1739,9 @@ function renderBook(){
                   '<div class="group">'+rows.map(c=>classRowHTML(c,bookedStudios)).join('')+'</div>';
     });
     listHTML += '<div class="gfoot">'+
-      '<span class="ig">'+G.repeat+'</span> saves the slot as a weekly pick — the bot takes it the second the '+
-      'window opens, 7 days + 1 hour ahead. <b>Book</b> takes this one class now. Tap a row for detail.</div>';
+      '<span class="ig">'+G.repeat+'</span> hands the slot to the bot — <b>every week</b>, or <b>just this one</b> '+
+      'date. It books the second the window opens, 7 days + 1 hour ahead. <b>Book</b> takes this one class now. '+
+      'Tap a row for detail.</div>';
   }
 
   const nowRule = (selDate === sydToday())
@@ -1420,7 +1754,10 @@ function renderBook(){
     offlineBanner()+
     heroHTML()+
     '<div class="stickybar">'+
-      '<div class="rail" id="rail">'+railHTML()+'</div>'+
+      '<div class="railwrap"><div class="railslide" id="railslide">'+
+        weekHeadHTML()+
+        '<div class="rail" id="rail">'+railHTML()+'</div>'+
+      '</div></div>'+
       '<div class="chips" id="chips">'+chipsHTML()+'</div>'+
     '</div>'+
     '<div class="dayslide" id="dayslide">'+
@@ -1430,26 +1767,29 @@ function renderBook(){
       listHTML+
       '<div class="spacer"></div>'+
     '</div>';
-
-  syncRail(railScroll === null);
 }
 
-function syncRail(instant){
-  const rail = $('#rail'); if(!rail) return;
-  const sel = $('.dcell.sel', rail);
-  if(!sel) return;
-  const target = clamp(sel.offsetLeft - (rail.clientWidth - sel.offsetWidth)/2, 0,
-                       Math.max(0, rail.scrollWidth - rail.clientWidth));
-  if(instant){
-    const prev = rail.style.scrollBehavior;
-    rail.style.scrollBehavior = 'auto';
-    rail.scrollLeft = target;
-    rail.style.scrollBehavior = prev || '';
-  } else {
-    rail.scrollLeft = railScroll !== null ? railScroll : target;
-    requestAnimationFrame(()=>{ try{ rail.scrollLeft = target; }catch(e){} });
+/* ── week paging ────────────────────────────────────────────── */
+function stepWeek(delta){
+  if(!weekStart) return;
+  const next = clampWeek(addDays(weekStart, delta*7));
+  const slide = $('#railslide');
+  if(next === weekStart){
+    if(slide){ slide.style.transition='transform .3s cubic-bezier(.32,.72,0,1)';
+               slide.style.transform='translateX('+(delta>0?-10:10)+'px)';
+               setTimeout(()=>{ slide.style.transform=''; setTimeout(()=>{ slide.style.transition=''; },320); },130); }
+    return;
   }
-  railScroll = target;
+  if(slide) slide.classList.add(delta > 0 ? 'out-l' : 'out-r');
+  weekStart = next;
+  setTimeout(()=>{
+    renderBook();
+    const s2 = $('#railslide');
+    if(s2){
+      s2.classList.add(delta > 0 ? 'out-r' : 'out-l');
+      requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ s2.classList.remove('out-r','out-l'); }); });
+    }
+  }, slide ? 150 : 0);
 }
 
 /* ── Booked screen ──────────────────────────────────────────── */
@@ -1501,9 +1841,10 @@ function renderBooked(){
   const w = $('#w-booked');
   const bks = ((bookings && bookings.bookings) || []).slice()
     .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
-  const upd = bookings && bookings.updated
-    ? 'Synced ' + shortDate(isoDateStr(bookings.updated)) + ', ' + isoClock(bookings.updated)
-    : 'Not synced yet';
+  const bms = bookings && bookings.updated ? new Date(bookings.updated).getTime() : NaN;
+  const upd = syncing ? 'Syncing with FIT…'
+    : (isFinite(bms) ? 'From your FIT account, ' + ageLong(Math.max(0, Date.now()-bms))
+                     : 'Not synced yet');
 
   let rows = '';
   if(bks.length){
@@ -1596,50 +1937,83 @@ function logWhen(iso){
   return WD_SHORT[dowMon0(ds)]+' '+dayNum(ds);
 }
 
+/* one saved pick, recurring or one-off */
+function pickRowHTML(p, dupe){
+  const once = isOneOff(p);
+  const st = pickState(p);
+  let nextTxt, nextCls = 'amb', g = G.clock, opens = null;
+  if(st.kind === 'open'){ nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt; }
+  else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
+  else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
+  else if(st.kind === 'expired'){ nextTxt = 'Date has passed'; nextCls = ''; g = G.warnS; }
+  else { nextTxt = 'Not on the timetable'; nextCls = 'bad'; g = G.warnS; }
+  return '<div class="crow'+(once?' once ispick':'')+'">'+
+    '<div class="ctime"><b style="font-size:13.5px">'+esc(p.day)+'</b>'+
+      '<span style="letter-spacing:0;text-transform:none;font-size:11px">'+esc(fmt12(p.time).full)+'</span></div>'+
+    '<div class="cbody">'+
+      '<div class="cname">'+esc(p.name || SLABEL[p.studio] || p.studio)+'</div>'+
+      '<div class="cmeta">'+
+        '<span class="cst '+nextCls+'"'+(opens?' data-cd="'+opens+'" data-cdmode="pick"':'')+'>'+
+          g+'<span>'+esc(nextTxt)+'</span></span>'+
+        (once
+          ? '<span class="onceTag">'+esc(shortDate(pickDate(p)))+' only</span>'
+          : '<span class="ctail"><i class="sdot" style="background:'+(SCOLOR[p.studio]||'var(--ink3)')+'"></i>'+
+            '<span>'+esc(SLABEL[p.studio]||p.studio)+'</span></span>')+
+      '</div>'+
+      (once ? '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(SCOLOR[p.studio]||'var(--ink3)')+'"></i>'+
+        '<span>'+esc(SLABEL[p.studio]||p.studio)+' · one-off, not repeated</span></span></div>' : '')+
+      (dupe ? '<div class="cmeta"><span class="cst bad longform">'+G.warnS+
+        '<span>Two '+esc(SLABEL[p.studio]||p.studio)+' picks on '+esc(p.day)+' — FIT allows one per day</span></span></div>' : '')+
+    '</div>'+
+    '<div class="cact"><button class="ptog rm" data-remove="'+esc(p.day+'|'+p.time+'|'+p.studio+'|'+pickDate(p))+'" '+
+      'aria-label="Remove this '+(once?'one-off':'weekly')+' pick"><span class="pk">'+G.xmark+'</span></button></div>'+
+  '</div>';
+}
+
+function picksSummary(){
+  const once = picks.filter(isOneOff).length, rec = picks.length - once;
+  if(!picks.length) return 'Nothing scheduled for the bot yet';
+  const bits = [];
+  if(rec) bits.push(rec + (rec===1?' class every week':' classes every week'));
+  if(once) bits.push(once + (once===1?' one-off':' one-offs'));
+  return bits.join(' · ');
+}
 function renderPicks(){
   const w = $('#w-picks');
-  const sorted = picks.slice().sort((a,b)=>
-    (DAY_ORDER.indexOf(a.day)-DAY_ORDER.indexOf(b.day)) || String(a.time).localeCompare(String(b.time)));
+  const byDay =(a,b)=> (DAY_ORDER.indexOf(a.day)-DAY_ORDER.indexOf(b.day)) || String(a.time).localeCompare(String(b.time));
+  const weekly = picks.filter(p=>!isOneOff(p)).sort(byDay);
+  const single = picks.filter(isOneOff).sort((a,b)=>
+    String(pickDate(a)).localeCompare(String(pickDate(b))) || String(a.time).localeCompare(String(b.time)));
 
-  let pickHTML;
-  if(!sorted.length){
+  let pickHTML = '';
+  if(!picks.length){
     pickHTML = '<div class="emptystate"><div class="eg">'+G.big_rep+'</div>'+
-      '<div class="et">No weekly picks</div>'+
-      '<div class="es">Pick a class on the Book tab and the bot grabs that slot every week, the instant its window opens.</div>'+
+      '<div class="et">No picks yet</div>'+
+      '<div class="es">Pick a class on the Book tab — every week, or just this one — and the bot grabs it the instant its window opens.</div>'+
       '<div style="width:100%;max-width:280px;margin-top:14px">'+
       '<button class="btn gray" data-act="goBook">Browse classes</button></div></div>';
   } else {
-    const seenStudioDay = {};
-    pickHTML = '<div class="ghead">Every week<span class="gh-r">'+sorted.length+'</span></div><div class="group">' +
-      sorted.map(p=>{
-      const key = p.day+'|'+p.studio;
-      const dupe = !!seenStudioDay[key]; seenStudioDay[key] = true;
-      const st = pickState(p);
-      let nextTxt, nextCls = 'amb', g = G.clock, opens = null;
-      if(st.kind === 'open'){ nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt; }
-      else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
-      else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
-      else { nextTxt = 'Not on the timetable'; nextCls = 'bad'; g = G.warnS; }
-      return '<div class="crow">'+
-        '<div class="ctime"><b style="font-size:13.5px">'+esc(p.day)+'</b>'+
-          '<span style="letter-spacing:0;text-transform:none;font-size:11px">'+esc(fmt12(p.time).full)+'</span></div>'+
-        '<div class="cbody">'+
-          '<div class="cname">'+esc(p.name || SLABEL[p.studio] || p.studio)+'</div>'+
-          '<div class="cmeta">'+
-            '<span class="cst '+nextCls+'"'+(opens?' data-cd="'+opens+'" data-cdmode="pick"':'')+'>'+
-              g+'<span>'+esc(nextTxt)+'</span></span>'+
-            '<span class="ctail"><i class="sdot" style="background:'+(SCOLOR[p.studio]||'var(--ink3)')+'"></i>'+
-              '<span>'+esc(SLABEL[p.studio]||p.studio)+'</span></span>'+
-          '</div>'+
-          (dupe ? '<div class="cmeta"><span class="cst bad longform">'+G.warnS+
-            '<span>Two '+esc(SLABEL[p.studio]||p.studio)+' picks on '+esc(p.day)+' — FIT allows one per day</span></span></div>' : '')+
-        '</div>'+
-        '<div class="cact"><button class="ptog rm" data-remove="'+esc(p.day+'|'+p.time+'|'+p.studio)+'" '+
-          'aria-label="Remove this pick"><span class="pk">'+G.xmark+'</span></button></div>'+
-      '</div>';
-    }).join('') + '</div>'+
-    '<div class="gfoot">Bookings open 7 days + 1 hour before class starts. Saving a pick whose window is '+
-    'within 45 minutes fires a booking run straight away.</div>';
+    if(weekly.length){
+      const seen = {};
+      pickHTML += '<div class="ghead">Every week<span class="gh-r">'+weekly.length+'</span></div><div class="group">' +
+        weekly.map(p=>{
+          const key = p.day+'|'+p.studio, dupe = !!seen[key]; seen[key] = true;
+          return pickRowHTML(p, dupe);
+        }).join('') + '</div>';
+    }
+    if(single.length){
+      const seen = {};
+      pickHTML += '<div class="ghead">Just this one<span class="gh-k">one-off</span>'+
+        '<span class="gh-r">'+single.length+'</span></div><div class="group">' +
+        single.map(p=>{
+          const key = pickDate(p)+'|'+p.studio, dupe = !!seen[key]; seen[key] = true;
+          return pickRowHTML(p, dupe);
+        }).join('') + '</div>'+
+        '<div class="gfoot">A one-off pick is booked on its date only and never repeats. '+
+        'Remove it any time with '+'×'+'.</div>';
+    }
+    pickHTML += '<div class="gfoot">Bookings open 7 days + 1 hour before class starts. Saving a pick whose window is '+
+      'within 45 minutes fires a booking run straight away.</div>';
   }
 
   const items = logdata.slice().reverse().slice(0,60);
@@ -1661,7 +2035,7 @@ function renderPicks(){
 
   w.innerHTML =
     '<div class="ltitle">Picks</div>'+
-    '<div class="lsub">'+picks.length+(picks.length===1?' class':' classes')+' booked automatically each week</div>'+
+    '<div class="lsub">'+esc(picksSummary())+'</div>'+
     offlineBanner()+
     heroHTML()+
     pickHTML+
@@ -1674,7 +2048,8 @@ function renderPicks(){
       '<button class="row tapme" data-act="sync">'+
         '<span style="color:var(--ink2);flex:none;width:22px;display:flex;justify-content:center">'+G.refresh+'</span>'+
         '<div class="rbody"><div class="rtitle">Sync timetable &amp; bookings</div>'+
-        '<div class="rsub"><span class="txt">Pull fresh data from the FIT portal</span></div></div>'+G.chev+'</button>'+
+        '<div class="rsub"><span class="txt">'+
+          esc(syncing ? 'Syncing now…' : 'Automatic — data '+ageLong(dataAgeMs()))+'</span></div></div>'+G.chev+'</button>'+
     '</div>'+
     '<div class="ghead">Bot activity</div>'+
     logHTML+
@@ -1711,7 +2086,7 @@ function connect(){
   $('#tabfade').classList.remove('hidden');
   $('#app').classList.remove('setupmode');
   $('#w-book').innerHTML = '<div class="ltitle">Book</div><div class="emptystate"><div class="es">Connecting…</div></div>';
-  loadAll();
+  loadAll().then(()=>{ startPolling(); if(isStale()) autoSync(); });
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1724,7 +2099,8 @@ function openClassSheet(bid){
   const av = availInfo(c);
   const opensMs = new Date(c.opens_iso).getTime();
   const open = opensMs <= Date.now();
-  const picked = isPicked(c);
+  const recurring = pickIndex(c.day,c.time,c.studio,'') >= 0;
+  const oneOff = pickIndex(c.day,c.time,c.studio,c.date) >= 0;
   const dur = durationMins(c);
   const t = fmt12(c.time);
   const conflict = bookedStudiosOn(c.date)[c.studio];
@@ -1774,9 +2150,18 @@ function openClassSheet(bid){
     '</div>'+
     '<div class="swrow">'+
       '<div class="rbody"><div class="rtitle">Auto-book every week</div>'+
-      '<div class="rsub"><span class="txt">'+esc(c.day+' '+t.full+' · '+(SLABEL[c.studio]||c.studio))+'</span></div></div>'+
-      '<button class="swtap" role="switch" aria-checked="'+picked+'" data-act="togglepick" data-bid="'+esc(c.bid)+'" '+
+      '<div class="rsub"><span class="txt">'+esc('Every '+c.day+' at '+t.full+' · '+(SLABEL[c.studio]||c.studio))+'</span></div></div>'+
+      '<button class="swtap" role="switch" aria-checked="'+recurring+'" data-act="togglepick" data-bid="'+esc(c.bid)+'" '+
         'aria-label="Auto-book every week">'+
+        '<span class="sw" aria-hidden="true"><i></i></span></button>'+
+    '</div>'+
+    '<div class="swrow">'+
+      '<div class="rbody"><div class="rtitle">Auto-book just this one</div>'+
+      '<div class="rsub"><span class="txt">'+
+        (recurring ? 'Already covered by the weekly pick' : esc(longDate(c.date)+' only — never repeated'))+
+      '</span></div></div>'+
+      '<button class="swtap" role="switch" aria-checked="'+oneOff+'" data-act="toggleonce" data-bid="'+esc(c.bid)+'" '+
+        'aria-label="Auto-book just this one">'+
         '<span class="sw" aria-hidden="true"><i></i></span></button>'+
     '</div>'+
     '<div class="sheet-actions">'+ conflictNote + primary +
@@ -1802,7 +2187,9 @@ function openInfoSheet(){
       '<div class="rulerow"><div class="ri" data-tone="amber">'+G.clockL+'</div>'+
         '<div class="rt"><b>7 days + 1 hour</b><span>A class becomes bookable exactly 7 days and 1 hour before it starts, Sydney time.</span></div></div>'+
       '<div class="rulerow"><div class="ri" data-tone="amber">'+G.repeat+'</div>'+
-        '<div class="rt"><b>Picks are recurring</b><span>A pick is a weekday + time + studio. The bot wakes just before each window and books on the second.</span></div></div>'+
+        '<div class="rt"><b>Every week, or just this one</b><span>A weekly pick is a weekday + time + studio and repeats forever. A one-off is pinned to a single date and is never repeated. The bot wakes just before each window and books on the second.</span></div></div>'+
+      '<div class="rulerow"><div class="ri" data-tone="n2">'+G.refresh+'</div>'+
+        '<div class="rt"><b>Data keeps itself fresh</b><span>The app re-reads your data every 45 seconds while it is open and pulls a new copy from the FIT portal by itself once it is more than 15 minutes old. Pull down to force it.</span></div></div>'+
       '<div class="rulerow"><div class="ri" data-tone="n2">'+G.cal+'</div>'+
         '<div class="rt"><b>One class per studio per day</b><span>FIT rejects a second booking in the same studio on the same day.</span></div></div>'+
       '<div class="rulerow"><div class="ri" data-tone="bad">'+G.warn+'</div>'+
@@ -1859,14 +2246,58 @@ async function cancelBooking(i){
   }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
 }
 
+/* Manual sync is now a fallback, not the primary path — the poller and the
+   staleness check drive refresh.yml on their own. */
 async function syncNow(){
-  const b = $('#syncBtn');
-  b.classList.add('spin');
+  if(syncing){ toast('Already syncing — new data lands in about a minute.', 2600); return; }
+  const now = Date.now();
+  if(now - lastRefreshDispatch < DISPATCH_MIN){
+    loadAll(true);
+    toast('Synced '+ageShort(now - lastRefreshDispatch).replace(' ago','')+' ago — data reloaded.', 2600);
+    return;
+  }
+  autoBusy = true;
+  lastRefreshDispatch = now;
+  syncBaseline = dataUpdatedMs();
   try{
     await dispatch('refresh.yml');
-    beginFlight('Syncing with FIT — new data in about a minute.', 70000);
-  }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
-  setTimeout(()=> b.classList.remove('spin'), 70000);
+    syncing = true; updateFresh();
+    beginFlight('Syncing with FIT — new data in about a minute.', 78000);
+    pollAfterDispatch();
+  }catch(e){ syncing = false; updateFresh(); if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
+  finally{ autoBusy = false; }
+}
+
+/* subtle manual affordance: the freshness pill opens this, it is not the main path */
+function openDataSheet(){
+  const age = dataAgeMs();
+  const html =
+  '<div class="sheet-card"><div class="grabber"></div><div class="sheet-scroll">'+
+    '<div class="detail-head">'+
+      '<div class="detail-title">Live data</div>'+
+      '<div class="detail-when">'+esc(syncing
+        ? 'A sync is running now — this updates itself when it lands.'
+        : 'FIT Booker re-reads your data every 45 seconds while the app is open, and pulls a '+
+          'fresh copy from the FIT portal by itself whenever it goes more than 15 minutes stale.')+
+      '</div>'+
+    '</div>'+
+    '<div>'+
+      factRow('Timetable', esc(timetable && timetable.updated
+        ? ageLong(Math.max(0, Date.now()-new Date(timetable.updated).getTime())) : 'never'))+
+      factRow('Bookings', esc(bookings && bookings.updated
+        ? ageLong(Math.max(0, Date.now()-new Date(bookings.updated).getTime())) : 'never'))+
+      factRow('Status', syncing ? '<span style="color:var(--amber)">Syncing…</span>'
+        : (age > STALE_MS ? '<span style="color:var(--amber)">Stale — syncing shortly</span>'
+                          : '<span style="color:var(--go)">Up to date</span>'))+
+    '</div>'+
+    '<div class="sheet-actions">'+
+      '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT now</button>'+
+      '<button class="btn gray" data-act="close">Done</button>'+
+    '</div>'+
+    '<div class="sheet-note">Pull down on any tab to force a sync too. Automatic syncs are limited to one '+
+      'every 5 minutes so the bot is never hammered.</div>'+
+  '</div></div>';
+  openSheet(html);
 }
 
 async function firePass(){
@@ -1895,7 +2326,6 @@ function switchTab(t){
   void next.offsetHeight;
   next.scrollTop = scrollMemo[activeTab] || 0;
   updateNav();
-  if(t === 'book') syncRail(true);
 }
 
 function updateNav(){
@@ -1922,7 +2352,7 @@ function setDay(date, dir){
   const slide = $('#dayslide');
   if(slide && dir) slide.classList.add(dir > 0 ? 'out-l' : 'out-r');
   selDate = date;
-  railScroll = null;
+  weekStart = clampWeek(mondayOf(date));   // the strip follows the day, one week at a time
   setTimeout(()=>{
     renderBook();
     const s2 = $('#dayslide');
@@ -1948,46 +2378,115 @@ function stepDay(delta){
   setDay(allDates[j], delta);
 }
 
-/* rubber-band, finger-tracking day swipe */
-(function(){
-  const page = $('#page-book');
-  let sx=0, sy=0, locked=null, active=false;
+/* ════════════════════════════════════════════════════════════════
+   Gestures (§4) — one axis-locked handler per scrollable tab:
+     vertical intent at scrollTop ≤ 0 → pull to refresh
+     horizontal intent on the strip   → previous / next week
+     horizontal intent anywhere else  → previous / next day (Book only)
+   ════════════════════════════════════════════════════════════════ */
+const PTR_TRIGGER = 66;      // finger travel that arms the refresh
+const PTR_MAX     = 116;
+let ptrBusy = false;
+
+function ptrSet(dist, ready){
+  const el = $('#ptr'); if(!el) return;
+  const ring = el.firstElementChild; if(!ring) return;
+  const d = clamp(dist, 0, PTR_MAX);
+  const p = Math.min(1, d / PTR_TRIGGER);
+  el.classList.remove('anim','spinning');
+  el.classList.toggle('ready', !!ready);
+  ring.style.opacity = String(Math.min(1, p * 1.3));
+  ring.style.transform = 'translateY('+(d*0.6)+'px) scale('+(0.7 + 0.3*p)+') rotate('+(d*3.4)+'deg)';
+}
+function ptrEnd(spinning){
+  const el = $('#ptr'); if(!el) return;
+  const ring = el.firstElementChild; if(!ring) return;
+  el.classList.add('anim');
+  el.classList.remove('ready');
+  if(spinning){
+    el.classList.add('spinning');
+    ring.style.opacity = '1';
+    ring.style.transform = 'translateY(42px) scale(1) rotate(0deg)';
+  }else{
+    el.classList.remove('spinning');
+    ring.style.opacity = '0';
+    ring.style.transform = 'translateY(0) scale(.7) rotate(0deg)';
+  }
+}
+async function pullRefresh(){
+  if(ptrBusy) return;
+  ptrBusy = true;
+  ptrEnd(true);
+  let fired = false;
+  try{
+    fired = await autoSync(true);   // a REAL refresh.yml dispatch (still ≤1 per 5 min)
+    await loadAll(true);            // …plus an immediate re-read of the data files
+  }catch(e){}
+  if(!fired && !syncing) toast('Up to date', 1500);
+  setTimeout(()=>{ ptrBusy = false; ptrEnd(false); }, 700);
+}
+
+function attachGestures(page, daySwipe){
+  let sx=0, sy=0, locked=null, active=false, onRail=false, onChips=false;
   page.addEventListener('touchstart', e=>{
-    if(e.touches.length !== 1 || sheetOpen()){ active=false; return; }
-    if(e.target.closest('.rail') || e.target.closest('.chips')){ active=false; return; }
-    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; locked = null; active = true;
+    locked = null; active = false;
+    if(e.touches.length !== 1 || sheetOpen() || ptrBusy) return;
+    const t = e.touches[0];
+    sx = t.clientX; sy = t.clientY;
+    onRail  = !!(e.target.closest && (e.target.closest('.rail') || e.target.closest('.weekhead')));
+    onChips = !!(e.target.closest && e.target.closest('.chips'));
+    active = true;
   }, {passive:true});
+
   page.addEventListener('touchmove', e=>{
     if(!active) return;
     const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
     if(locked === null){
-      if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.6) locked = 'x';
-      else if(Math.abs(dy) > 8) locked = 'y';
+      /* axis lock: horizontal wins only on clear horizontal intent */
+      if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5){
+        locked = onChips ? 'none' : ((onRail || daySwipe) ? 'x' : 'none');
+      } else if(dy > 9 && dy > Math.abs(dx) * 1.4 && page.scrollTop <= 0){
+        locked = 'ptr';
+      } else if(Math.abs(dy) > 9){
+        locked = 'y';                       // ordinary scrolling — hands off
+      }
     }
     if(locked === 'x'){
       if(e.cancelable) e.preventDefault();
-      const s = $('#dayslide');
+      const s = onRail ? $('#railslide') : $('#dayslide');
       if(s){
         s.classList.add('drag');
-        s.style.transform = 'translateX('+(dx*0.32)+'px)';
+        s.style.transform = 'translateX('+(dx*(onRail?0.28:0.32))+'px)';
         s.style.opacity = String(1 - Math.min(0.5, Math.abs(dx)/420));
       }
+    } else if(locked === 'ptr'){
+      if(page.scrollTop > 0){ locked = 'y'; ptrEnd(false); return; }
+      if(e.cancelable) e.preventDefault();
+      ptrSet(dy, dy >= PTR_TRIGGER);
     }
   }, {passive:false});
+
   const end = e=>{
     if(!active) return; active = false;
-    const s = $('#dayslide');
-    if(s){ s.classList.remove('drag'); s.style.transform = ''; s.style.opacity = ''; }
-    if(locked !== 'x') return;
+    const rs = $('#railslide'), ds = $('#dayslide');
+    [rs,ds].forEach(s=>{ if(s){ s.classList.remove('drag'); s.style.transform=''; s.style.opacity=''; } });
     const t = (e.changedTouches && e.changedTouches[0]) || null;
+    const was = locked; locked = null;
     if(!t) return;
-    const dx = t.clientX - sx;
-    if(dx < -56) stepDay(1);
-    else if(dx > 56) stepDay(-1);
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if(was === 'x'){
+      if(onRail){ if(dx < -44) stepWeek(1); else if(dx > 44) stepWeek(-1); }
+      else if(daySwipe){ if(dx < -56) stepDay(1); else if(dx > 56) stepDay(-1); }
+    } else if(was === 'ptr'){
+      if(dy >= PTR_TRIGGER) pullRefresh(); else ptrEnd(false);
+    }
   };
   page.addEventListener('touchend', end, {passive:true});
   page.addEventListener('touchcancel', end, {passive:true});
-})();
+}
+attachGestures($('#page-book'), true);
+attachGestures($('#page-booked'), false);
+attachGestures($('#page-picks'), false);
 
 function jumpToClass(date, bid){
   const go = ()=>{
@@ -2002,8 +2501,56 @@ function jumpToClass(date, bid){
   };
   switchTab('book');
   if(studioFilter !== 'all'){ studioFilter = 'all'; }
-  if(date !== selDate){ selDate = date; railScroll = null; renderBook(); setTimeout(go, 60); }
+  if(date !== selDate){ selDate = date; weekStart = clampWeek(mondayOf(date)); renderBook(); setTimeout(go, 60); }
   else { renderBook(); setTimeout(go, 60); }
+}
+
+/* ── pick toggle: every week vs just this one (§5) ───────────── */
+function pickGlyph(once){ return once ? G.cal : G.repeat; }
+/* redraw Book without losing the reader's place */
+function rerenderBook(){
+  const p = $('#page-book'), s = p ? p.scrollTop : 0;
+  safeRender('book', renderBook);
+  if(p) p.scrollTop = s;
+}
+async function handlePickToggle(bid, btn){
+  const c = findClass(bid); if(!c) return;
+  const existing = pickFor(c);
+
+  if(existing){
+    const wasOnce = isOneOff(existing);
+    removePick(existing.day, existing.time, existing.studio, pickDate(existing));
+    toast(wasOnce ? 'One-off pick removed' : 'Weekly pick removed', 1800);
+    rerenderBook();
+    safeRender('picks', renderPicks);
+    return;
+  }
+
+  const opensMs = new Date(c.opens_iso).getTime();
+  const open = isFinite(opensMs) && opensMs <= Date.now();
+  let once = false;
+  /* a window that has ALREADY opened has no future occurrence to schedule other than
+     the recurring one — the instant Book pill covers "just this one" there. */
+  if(!open){
+    const choice = await actionSheet({
+      title: (c.name || c.studio),
+      message: longDate(c.date)+' · '+fmt12(c.time).full+' · '+(SLABEL[c.studio]||c.studio)+
+               '\nHow should the bot book this?',
+      actions:[{label:'Auto-book every week', style:'default'},
+               {label:'Auto-book just this one'}]
+    });
+    if(choice === 0) once = false;
+    else if(choice === 1) once = true;
+    else return;
+  }
+
+  addPick(c.day, c.time, c.studio, c.name, once ? c.date : null);
+  toast(once ? 'One-off pick added for '+shortDate(c.date) : 'Weekly pick added — every '+c.day, 2200);
+  const clash = pickClash(c);
+  if(clash) toast('Heads up: you already pick '+fmt12(clash.time).full+' '+(SLABEL[c.studio]||c.studio)+
+                  ' on '+c.day+' — FIT allows one per studio per day', 4200);
+  rerenderBook();
+  safeRender('picks', renderPicks);
 }
 
 /* ── delegated events ───────────────────────────────────────── */
@@ -2015,8 +2562,13 @@ document.addEventListener('click', function(e){
   const dcell = T('[data-date][data-act="jump"]');
   if(dcell){ jumpToClass(dcell.dataset.date, dcell.dataset.bid); return; }
 
+  const wk = T('[data-week]'); if(wk){ stepWeek(Number(wk.dataset.week)); return; }
+
   const dc = T('.dcell[data-date]');
-  if(dc){ const d = dc.dataset.date; setDay(d, d > selDate ? 1 : -1); return; }
+  if(dc){
+    if(dc.classList.contains('past')) return;      // a past day is never selectable
+    const d = dc.dataset.date; setDay(d, d > selDate ? 1 : -1); return;
+  }
 
   const chip = T('[data-studio]'); if(chip){
     studioFilter = chip.dataset.studio;
@@ -2030,23 +2582,13 @@ document.addEventListener('click', function(e){
 
   const bk = T('[data-book]'); if(bk){ bookNow(bk.dataset.book, false); return; }
 
-  const pt = T('[data-pick]'); if(pt){
-    const c = findClass(pt.dataset.pick);
-    if(c){
-      const on = togglePick(c.day, c.time, c.studio, c.name);
-      pt.setAttribute('aria-pressed', String(on));
-      const row = pt.closest('.crow'); if(row) row.classList.toggle('ispick', on);
-      const clash = on ? picks.find(p => p.studio===c.studio && p.day===c.day && p.time!==c.time) : null;
-      if(clash) toast('Heads up: you already pick '+fmt12(clash.time).full+' '+(SLABEL[c.studio]||c.studio)+' on '+c.day+' — FIT allows one per studio per day', 4200);
-      safeRender('picks', renderPicks);
-    }
-    return;
-  }
+  const pt = T('[data-pick]'); if(pt){ handlePickToggle(pt.dataset.pick, pt); return; }
+
   const rm = T('[data-remove]'); if(rm){
     const a = rm.dataset.remove.split('|');
-    togglePick(a[0], a[1], a[2], '');
+    removePick(a[0], a[1], a[2], a[3] || '');
     safeRender('picks', renderPicks);
-    safeRender('book', renderBook);
+    rerenderBook();
     return;
   }
   const cn = T('[data-cancel]'); if(cn){ cancelBooking(Number(cn.dataset.cancel)); return; }
@@ -2054,7 +2596,7 @@ document.addEventListener('click', function(e){
   const act = T('[data-act]');
   if(act){
     const a = act.dataset.act;
-    if(a === 'sync') syncNow();
+    if(a === 'sync'){ if(sheetOpen()) closeSheet(); syncNow(); }
     else if(a === 'snipe') firePass();
     else if(a === 'connect') connect();
     else if(a === 'reload') loadAll();
@@ -2062,13 +2604,18 @@ document.addEventListener('click', function(e){
     else if(a === 'goPicks') switchTab('picks');
     else if(a === 'close') closeSheet();
     else if(a === 'booknow'){ closeSheet(); setTimeout(()=>bookNow(act.dataset.bid, true), 200); }
-    else if(a === 'togglepick'){
+    else if(a === 'togglepick' || a === 'toggleonce'){
       const c = findClass(act.dataset.bid);
       if(c){
-        const on = togglePick(c.day, c.time, c.studio, c.name);
+        const date = (a === 'toggleonce') ? c.date : null;
+        const on = togglePick(c.day, c.time, c.studio, c.name, date);
         act.setAttribute('aria-checked', String(on));
+        /* a weekly pick already covers this date — drop a redundant one-off */
+        if(a === 'togglepick' && on) removePick(c.day, c.time, c.studio, c.date);
         safeRender('picks', renderPicks);
-        safeRender('book', renderBook);
+        rerenderBook();
+        const sib = $('[data-act="'+(a==='togglepick'?'toggleonce':'togglepick')+'"][data-bid="'+c.bid+'"]');
+        if(sib) sib.setAttribute('aria-checked', String(pickIndex(c.day,c.time,c.studio, a==='togglepick'?c.date:'') >= 0));
       }
     }
     return;
@@ -2077,13 +2624,9 @@ document.addEventListener('click', function(e){
   const row = T('.crow[data-bid]'); if(row){ openClassSheet(row.dataset.bid); return; }
 }, false);
 
-$('#syncBtn').addEventListener('click', syncNow);
+$('#syncBtn').addEventListener('click', openDataSheet);
 $('#infoBtn').addEventListener('click', openInfoSheet);
 $('#saveBtn').addEventListener('click', savePicks);
-window.addEventListener('resize', ()=>{ try{ syncRail(true); }catch(e){} }, {passive:true});
-$$('.page').forEach(p=>{
-  p.addEventListener('scroll', ()=>{ const r = $('#rail'); if(r) railScroll = r.scrollLeft; }, {passive:true});
-});
 
 /* ── live countdowns (hero ticks every second) ──────────────── */
 let flipQueued = false;
@@ -2126,7 +2669,8 @@ setInterval(function(){
     if(!token){ renderSetup(''); return; }
     $('#w-book').innerHTML = '<div class="ltitle">Book</div>'+
       '<div class="emptystate"><div class="es">Loading your timetable…</div></div>';
-    loadAll();
+    /* §3: load, then let the staleness check dispatch a real FIT sync by itself */
+    loadAll().then(()=>{ startPolling(); if(isStale()) autoSync(); });
   }catch(e){
     try{ $('#w-book').innerHTML = errorBlock(e); }catch(x){}
   }
