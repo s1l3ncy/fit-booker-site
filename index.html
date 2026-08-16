@@ -492,6 +492,19 @@ svg{display:block;flex:none}
    the reason on the row itself. Nothing else in the app uses this treatment. */
 .crow.alarm{background:var(--bad-bg);box-shadow:inset 3px 0 0 -.5px var(--bad)}
 .crow.alarm + .crow::before,.crow + .crow.alarm::before{display:none}
+/* A bot-booked class awaiting confirmation. Amber, not red: nothing has gone wrong, but
+   this row will delete itself if it is ignored, so it must not read as ordinary. Same
+   treatment as a pick, one step louder — a rail, because the consequence is real. */
+.crow.tocheck{background:var(--amber-bg);box-shadow:inset 3px 0 0 -.5px var(--amber-rail)}
+.crow.tocheck + .crow::before,.crow + .crow.tocheck::before{display:none}
+/* ...but two tinted rows in a ROW still need dividing. Suppressing the separator exists
+   to stop a hairline colliding with the edge of a tint, which is only a problem at the
+   boundary between a tinted row and a plain one. Now that every unconfirmed booking is
+   tinted, runs of three or four are normal, and without this they merge into one panel
+   with several Confirm/Cancel pairs floating in it — on the one screen whose entire job
+   is "which class is this button about". Same tint on both sides ⇒ draw the divider. */
+.crow.alarm + .crow.alarm::before,
+.crow.tocheck + .crow.tocheck::before{display:block;background:var(--hair2);opacity:.55}
 .crow.flash{animation:flash 1.6s ease}
 @keyframes flash{0%,55%{background:var(--amber-bg)}100%{background:transparent}}
 .ctime{flex:none;width:45px;min-width:0}
@@ -524,6 +537,12 @@ svg{display:block;flex:none}
 .ctail .sdot{width:7px;height:7px;border-radius:4px;flex:none}
 .ctail span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cact{flex:none;display:flex;align-items:center;gap:4px;min-width:0}
+/* Two actions on one row (Confirm + Cancel) stack instead of sitting side by side. Side
+   by side they are ~175px of the 320px narrow phone, which leaves the class name nothing
+   to be truncated out of. Stacking keeps both at the full 44px tap target at every
+   supported width and costs one taller row on the rows that need attention anyway. */
+.cact.stack{flex-direction:column;align-items:stretch;gap:6px}
+.cact.stack .btn-sm{width:100%;min-width:84px}
 .bookpill{
   height:44px;min-width:56px;padding:0 11px;border-radius:12px;flex:none;
   background:var(--btn-ink);color:var(--btn-on);
@@ -918,7 +937,11 @@ function wipeMemberState(){
   bootstrapSyncs = 0;
   alerts = [];
   stickyWarn = {};
-  pendingCancels = []; pendingBooks = [];
+  pendingCancels = []; pendingBooks = []; pendingConfirms = [];
+  /* One member's auto-cancel roster must never be visible to another: it decides which
+     rows offer a Confirm button and which claim they will cancel themselves. sweepArmed
+     resets to the cautious answer, not to the last member's. */
+  confirmData = []; sweepArmed = false; sweepPaused = false;
   allDates = []; selDate = null; weekStart = null; heroCache = null;
   loadError = null; freshFromServer = false;
   scrollMemo = {book:0, booked:0, picks:0};
@@ -1475,8 +1498,17 @@ async function loadAllInner(silent){
   try{
     /* ONE call replaces the four file reads. The Worker picks the member from the session,
        so there is no per-member path to get wrong here any more. */
-    const d = await wapi('/data', {});
-    const fresh = JSON.stringify([d.timetable, d.bookings, d.log, d.picks, d.picksSha]);
+    /* Advertise that this build can CONFIRM. The Worker refuses to arm the sweep for a
+       member whose phone has not been seen sending this, so an app that predates the
+       feature can never have its classes auto-cancelled with no way to keep them. Deploy
+       order is supposed to prevent that; this makes it impossible rather than intended. */
+    const d = await wapi('/data', {ui: UI_CAPS});
+    /* confirm + sweepArmed are part of the change hash. Leaving them out would mean a
+       confirmation landing from another device, or the sweep being armed, never redrew
+       the Booked tab — the row would keep offering a Confirm button for something already
+       confirmed, and keep promising an auto-cancel that had just become real. */
+    const fresh = JSON.stringify([d.timetable, d.bookings, d.log, d.picks, d.picksSha,
+                                  d.confirm, d.sweepArmed]);
     unchanged = (lastDataJson !== null && fresh === lastDataJson);
     lastDataJson = fresh;
 
@@ -1498,6 +1530,19 @@ async function loadAllInner(silent){
     /* only replace the activity list when the log actually came back as a list — a
        malformed payload must not blank it while the banner claims a cached view */
     if(Array.isArray(d.log)) logdata = d.log;
+    /* Only replace on a real list. The Worker sends `null` when the file could not be
+       parsed, and an old Worker sends nothing at all; neither may be read as "nothing is
+       on the roster and nothing is confirmed", because that hides every Confirm button
+       while the bot goes on cancelling. Keeping the last good copy is strictly safer. */
+    if(Array.isArray(d.confirm)) confirmData = d.confirm;
+    /* NOT retained, unlike confirmData. The two point in opposite safety directions:
+       keeping the last roster leaves MORE Confirm buttons on screen, which is harmless;
+       keeping the last `true` leaves the app promising "this cancels itself" after it
+       has lost the ability to check — and a Worker that stops sending the field is a
+       Worker with no sweep, so the class becomes a no-show while the app says it will
+       remove itself. Cannot tell and off must read identically. */
+    sweepArmed = (typeof d.sweepArmed === 'boolean') ? d.sweepArmed : false;
+    sweepPaused = d.sweepPaused === true;
     /* correctness #12 — the sha is captured even for an empty list, or every later save
        is rejected as a conflict for a file that never changed. null is legitimate: it
        means this member has never saved, and /picks takes sha:null for that case. */
@@ -1562,10 +1607,10 @@ async function loadAllInner(silent){
   /* the fast poll exists only to settle pending actions; the moment there are none it
      has nothing to watch. Doing this here (rather than only inside the fast timer's own
      tick) means ANY load that resolves the last pending action ends it immediately. */
-  try{ if(fastTimer && !pendingCancels.length && !pendingBooks.length && !syncing) stopFastPoll(); }catch(e){}
+  try{ if(fastTimer && !pendingCancels.length && !pendingBooks.length && !pendingConfirms.length && !syncing) stopFastPoll(); }catch(e){}
   try{
     if(unchanged && !hadError && !settled && !pendingCancels.length) updateNav();
-    else renderAll();
+    else renderAllIdle();
   }catch(e){ if(window.console && console.warn) console.warn('render', e); }
 }
 
@@ -1697,7 +1742,13 @@ function syncDirty(){
   updateBadges();
 }
 function updateBadges(){
-  const nb = ((bookings&&bookings.bookings)||[]).length;
+  /* The Booked badge counts what NEEDS DOING, not what exists. There are no push
+     notifications — the confirm prompt is only ever seen by opening the app — so the badge
+     is the only thing that can carry "something here will delete itself if you ignore it".
+     A count of bookings carried no such information: it was the same number whether
+     everything was settled or three classes were hours from cancelling themselves.
+     It goes to zero, and off, the moment nothing is waiting on him. */
+  const nb = ((bookings&&bookings.bookings)||[]).filter(needsConfirm).length;
   const bb = $('#badgeBooked');
   bb.textContent = nb > 99 ? '99+' : String(nb);
   bb.classList.toggle('on', nb > 0);
@@ -1870,14 +1921,89 @@ async function maybeKickSnipe(){
    That number identifies the booking and nothing else does. */
 let pendingCancels = [];   // {key, at, b, idx, bookingId}
 let pendingBooks   = [];   // {key, at, b, before:Set}
+let pendingConfirms = [];  // {id, at, b}  — see confirmBooking()
 let freshFromServer = false;   // did the load that is running right now actually land?
+
+/* ── confirm-or-it-cancels ──────────────────────────────────────────────────────────
+   The bot books classes the user never explicitly agreed to attend, and a booking he does
+   not attend is a no-show: three in a rolling 7 days is a 7-day ban. So a bot-booked class
+   has to be CONFIRMED here, and if it is not confirmed 4 hours before it starts, the bot
+   cancels it. Not going is what happens unless he says otherwise.
+
+   `confirmData` is data/<user>/confirm.json, an append-only event list with two writers
+   (the bot records what it booked, the Worker records what the user confirmed). Both sets
+   below are POSITIVE:
+
+     autobooked  the BOT booked this and recorded FIT's booking id at the time
+     confirmed   the user has said he is going
+
+   A row is only ever at risk if it is in `autobooked`. That is the whole safety property:
+   a class booked by tapping Book, booked in the FIT app, or booked at reception is never
+   in that set, so it can never be auto-cancelled and never even shows a Confirm button.
+   Nothing here infers "must be the bot's" from the absence of a confirmation — that would
+   put every class the user booked himself elsewhere at risk of being deleted. */
+let confirmData = [];
+/* Is the sweep actually armed, or is it in dry run? Comes from the Worker. The app must
+   NOT promise an auto-cancel that will not happen — CONTRACT §7, "things the UI must
+   never claim". Default false: an app that cannot tell says the cautious thing. */
+let sweepArmed = false;
+/* Distinct from "switched off". The sweep has a daily run ceiling as a cost backstop, and
+   hitting it means today's auto-cancels are not happening — which is a thing to act on,
+   not a setting. Rows fall back to the cautious wording either way (sweepArmed is false);
+   this only picks the explanation. */
+let sweepPaused = false;
+/* Sent on every /data call. The Worker records it per member and will not arm the sweep
+   for anyone it has not seen — see worker.js `uiSeen`. */
+const UI_CAPS = 'confirm1';
+const CONFIRM_LEAD_MS = 4 * 3600000;      // must equal fitbot.SWEEP_LEAD_H
+const CONFIRM_FLOOR_MS = 75 * 60000;      // must equal fitbot.SWEEP_FLOOR_MIN
+
+function confirmState(){
+  const autob = {}, conf = {};
+  (Array.isArray(confirmData) ? confirmData : []).forEach(e=>{
+    if(!e || typeof e !== 'object') return;
+    const id = bookingId({booking_id: e.booking_id});
+    if(!id) return;
+    if(e.kind === 'autobooked'){ if(!autob[id]) autob[id] = e; }
+    else if(e.kind === 'confirmed'){ conf[id] = e.ts || '1'; }
+  });
+  /* An optimistic confirm counts immediately — the tap is instant and silent like every
+     other action here. If it turns out not to have stuck, reconcilePending() withdraws it
+     and says so loudly, because an unconfirmed class WILL be cancelled. */
+  pendingConfirms.forEach(p=>{ if(p && p.id) conf[p.id] = '1'; });
+  return {autob: autob, conf: conf};
+}
+/* Does this row need confirming? Positive on every clause. */
+function needsConfirm(b){
+  if(!b || b.__pending) return false;
+  const id = bookingId(b);
+  if(!id) return false;
+  const st = confirmState();
+  return !!st.autob[id] && !st.conf[id];
+}
+/* When it will cancel itself: 4 hours before the class, as an INSTANT. bookingStartMs()
+   already resolves the Sydney offset properly, so subtracting here is real elapsed time
+   and stays correct across the 4 Oct 2026 DST change. */
+function confirmDeadlineMs(b){
+  const s = bookingStartMs(b);
+  return s ? s - CONFIRM_LEAD_MS : null;
+}
+/* "2:00 am Sun 23 Aug", in Sydney, from an instant. */
+function sydStampShort(ms){
+  const p = sydParts(new Date(ms));
+  return fmt12(p.hour+':'+p.minute).full + ' ' + shortDate(p.year+'-'+p.month+'-'+p.day);
+}
 /* FIT's numeric booking id, or '' when the row has no cancel link to read it from. */
 function bookingId(b){
   if(!b) return '';
-  const raw = String(b.booking_id || b.cancel_url || '');
-  const m = raw.match(/\/booking\/(\d+)/);
+  const raw = String(b.booking_id || b.cancel_url || '').trim();
+  if(raw.length > 256) return '';
+  const m = raw.match(/\/booking\/(\d{1,12})(?:\D|$)/);
   if(m) return m[1];
-  return /^\d+$/.test(raw) ? raw : '';
+  /* Bounded to 12 digits, the same as worker.js bookingIdOf() and fitbot.booking_id_of().
+     An id one side accepts and another rejects is a Confirm button that always fails, or
+     a roster entry nothing ever acts on. */
+  return /^\d{1,12}$/.test(raw) ? raw : '';
 }
 /* Can the bot act on this row at all? It only ever cancels rows that carry a cancel link
    (fitbot.cmd_cancel filters on exactly that), so a row without one must not be offered a
@@ -1920,7 +2046,7 @@ function alreadyBookedSlot(c){
    of time. Returns true when something was decided, so the caller re-renders even if the
    payload was byte-identical. */
 function reconcilePending(){
-  if(!pendingCancels.length && !pendingBooks.length) return false;
+  if(!pendingCancels.length && !pendingBooks.length && !pendingConfirms.length) return false;
   /* Only ever judge against data that actually arrived. A failed load leaves the previous
      (already-edited) list in place, where a cancelled row is missing because WE removed it
      — reading that as "the server agrees" would retire the pending record without ever
@@ -1981,6 +2107,31 @@ function reconcilePending(){
     if(list.indexOf(p.b) < 0) list.push(p.b);  // hold the optimistic row until it lands
     return true;
   });
+  /* Pending CONFIRMS. Only ever reached with a successful /confirm behind them —
+     confirmBooking() withdraws its own record on any error, because the Confirm button
+     coming back is the honest state and re-tapping is free. So this is pure bookkeeping:
+     hold the optimistic "confirmed" look until the server's own list agrees, then let go.
+
+     The timeout is generous and DELIBERATELY SILENT. The Worker answered 200, which means
+     the confirmation is written; GitHub's contents API is merely slow to show it. Alarming
+     here would train the user to ignore an alarm that is usually wrong — and the state it
+     would be complaining about is one the row itself re-advertises the moment the record
+     is dropped and the server still disagrees. */
+  const serverConfirmed = {};
+  (Array.isArray(confirmData) ? confirmData : []).forEach(e=>{
+    if(e && e.kind === 'confirmed'){
+      const id = bookingId({booking_id: e.booking_id});
+      if(id) serverConfirmed[id] = true;
+    }
+  });
+  pendingConfirms = pendingConfirms.filter(p=>{
+    if(serverConfirmed[p.id]){ dropAlert('confirmfail:'+p.id); return false; }
+    /* the booking has left the account entirely (cancelled elsewhere, or swept) — there is
+       nothing left to confirm */
+    if(!list.some(b => bookingId(b) === p.id)){ dropAlert('confirmfail:'+p.id); return false; }
+    if(now - p.at > SETTLE_MS * 2){ settled = true; return false; }
+    return true;
+  });
   return settled;
 }
 /* Snapshot of what was on the account at the instant an optimistic action was taken. */
@@ -1989,6 +2140,56 @@ function bookingKeySnapshot(){
   realBookings().forEach(b => { o[bookingKey(b)] = true; });
   return o;
 }
+/* ── never rebuild the screen out from under a finger ───────────────────────────────
+   renderBooked() replaces #w-booked wholesale, and this screen redraws on a 45s poll, a
+   5-minute past-class sweep and every countdown flip. If one lands between finger-down
+   and finger-up, the element the touch started on is detached, so no `click` is
+   synthesised on any [data-confirm] — the tap does nothing at all, silently. On a row
+   counting down to a deadline that is the worst possible thing for a tap to do.
+   (It cannot hit the WRONG row — the buttons carry the booking's identity, not its
+   position — but "nothing happened" is still a failure.)
+   A tap is down-then-up in ~100ms, so deferring for the duration of one is invisible. */
+let pointerHeld = 0, renderHeld = false;
+function releasePointer(){
+  pointerHeld = 0;
+  /* DEFERRED, not immediate. `pointerup` fires BEFORE `mouseup` and before `click`, so
+     rendering here tears out the element the touch started on and no click is ever
+     synthesised — the latch would guarantee the swallowed tap it exists to prevent
+     instead of merely allowing it. A macrotask puts the redraw after the click has been
+     dispatched and handled. */
+  if(renderHeld){
+    renderHeld = false;
+    setTimeout(()=>{ try{ renderAll(); }catch(e){} }, 0);
+  }
+}
+try{
+  document.addEventListener('pointerdown', ()=>{ pointerHeld = Date.now(); }, true);
+  /* Several ways out, on purpose. A latch with a single release is a latch that sticks:
+     iOS can swallow a pointerup to a system gesture, a share sheet or a context menu, and
+     if that ever happened the countdown flip, the 45s poll redraw and the 5-minute
+     past-class sweep would all stop for good — leaving the Booked screen frozen on a
+     stale "Confirm by … or this cancels itself" until the next tap. The hold is only ever
+     meant to cover the ~100ms of one tap, so a stale one is always a bug. */
+  ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel',
+   'visibilitychange'].forEach(ev=>{
+    document.addEventListener(ev, releasePointer, true);
+  });
+  /* Window blur ONLY — the app losing focus. NOT a capture-phase 'blur' on document:
+     that fires for every element that loses focus, including the one the finger just
+     pressed, so it released the latch on the same tick it was taken and the whole guard
+     was inert. `blur` does not bubble, so a plain window listener sees only window blur. */
+  window.addEventListener('blur', releasePointer);
+}catch(e){}
+/* every TIMER-driven redraw goes through this; user-initiated ones call renderAll */
+function renderAllIdle(){
+  /* ...and a watchdog, so even a release event that never arrives cannot outlast one
+     redraw interval */
+  if(pointerHeld && Date.now() - pointerHeld > 1500) pointerHeld = 0;
+  if(pointerHeld){ renderHeld = true; return; }
+  renderHeld = false;
+  renderAll();
+}
+
 /* redraw everything without throwing the reader out of their scroll position */
 function rerenderKeepScroll(){
   const p = $('#page-'+activeTab), s = p ? p.scrollTop : 0;
@@ -2136,7 +2337,7 @@ function startFastPoll(){
     if(document.hidden || !session || !booted) return;
     if(Date.now() > fastUntil){ stopFastPoll(); return; }
     loadAll(true).then(()=>{
-      if(!pendingCancels.length && !pendingBooks.length && !syncing) stopFastPoll();
+      if(!pendingCancels.length && !pendingBooks.length && !pendingConfirms.length && !syncing) stopFastPoll();
     });
   }, FAST_POLL_MS);
 }
@@ -2158,7 +2359,7 @@ function startPolling(){
      The condition is "is anything still pending", not the old `fastUntil > now` — that
      variable is cleared by stopFastPoll(), which stopPolling() has just called, and a
      stale deadline used to restart an already-resolved window anyway. */
-  if(pendingCancels.length || pendingBooks.length) startFastPoll();
+  if(pendingCancels.length || pendingBooks.length || pendingConfirms.length) startFastPoll();
 }
 function stopPolling(){
   if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
@@ -2681,7 +2882,30 @@ const BOT_LOG_SURFACE = {
   pick_day_mismatch:'', pick_name_drift:'', pick_unusable:'',
   snipe_notfound:'', snipe_waiting:'', snipe_full:'', snipe_rejected:'', snipe_failed:'',
   snipe_nopicks:'', snipe_skipped:'', snipe_nothing_due:'', snipe_late:'',
-  snipe_skipped_studio_limit:''
+  snipe_skipped_studio_limit:'',
+
+  /* ── confirm-or-it-cancels ────────────────────────────────────────────────────────
+     The sweep cancels bot-booked classes the user never confirmed. Every one of these
+     describes something done to a REAL booking without being asked, so the bar for
+     showing it is lower than anywhere else in this table: silence here means a class
+     disappeared and nothing said so. */
+  auto_cancelled:'alert',            // it is gone, and he needs to know why
+  auto_cancel_failed:'row',          // still booked after the attempt — a coming no-show
+  auto_cancel_unknown:'row',         // couldn't be verified — treat as still booked
+  sweep_too_late:'row',              // unconfirmed and now inside the late-cancel window
+  sweep_uncancellable:'row',         // unconfirmed, due, and FIT gives no cancel link
+  sweep_no_start:'row',              // on the roster but its deadline can't be computed
+  sweep_would_cancel:'alert',        // DRY RUN: what it would have cancelled
+  sweep_no_confirm_source:'note',    // the sweep stood down; nothing was cancelled
+
+  /* recovered/transport are the same "went wrong in transit, outcome still proven" pair
+     as their manual twins, and settle doubt rather than raising it */
+  auto_cancel_recovered:'', auto_cancel_transport_error:'',
+  /* housekeeping: the roster write, the per-run summary, and a failed prune. The Confirm
+     button appearing on a row is a better surface for `autobook_tagged` than any notice,
+     and `autobook_untagged` means only that a class will NOT be auto-cancelled — i.e.
+     exactly the behaviour that existed before this feature. */
+  autobook_tagged:'', autobook_untagged:'', sweep:'', sweep_error:''
 };
 const unmappedKinds = {};
 function checkLogKinds(){
@@ -2695,9 +2919,16 @@ function checkLogKinds(){
   });
 }
 
-/* the cancel-related kinds that describe ONE booking; the last one wins */
+/* the cancel-related kinds that describe ONE booking; the last one wins.
+   The sweep's own outcomes are in here for the same reason the manual ones are: they are
+   statements about whether a specific booking is still on the account, and a later one
+   must be able to supersede an earlier one. `auto_cancelled` is a settling kind — it
+   retires a warning rather than raising one, exactly like `cancelled`. */
 const CANCEL_OUTCOME_KINDS = {cancel_failed:1, cancelled:1, cancel_notfound:1,
-                              cancel_unknown:1, cancel_recovered:1};
+                              cancel_unknown:1, cancel_recovered:1,
+                              auto_cancelled:1, auto_cancel_failed:1,
+                              auto_cancel_unknown:1, auto_cancel_recovered:1,
+                              sweep_too_late:1, sweep_uncancellable:1, sweep_no_start:1};
 /* {rowKey: {tone, text}} for rows that need a persistent inline warning */
 function botRowWarnings(){
   const latest = {};
@@ -2729,6 +2960,22 @@ function botRowWarnings(){
       out[k] = {tone:'bad', text:'The bot couldn’t confirm this cancel — treat it as STILL BOOKED. Check the FIT app and cancel it there, or it becomes a no-show'};
     } else if(e.kind === 'cancel_notfound' && e.ambiguous){
       out[k] = {tone:'bad', text:'The bot can’t tell this apart from another booking at the same time, so it refused to cancel either — cancel this one in the FIT app'};
+    } else if(e.kind === 'auto_cancel_failed'){
+      /* The auto-cancel ran and the booking is STILL there. Worse than an ordinary failed
+         cancel, because he never asked for this one and has no reason to be watching for
+         it — the class is one he was on course to skip. */
+      out[k] = {tone:'bad', text:'This didn’t confirm and the auto-cancel FAILED — it is still booked. Cancel it in the FIT app or it becomes a no-show'};
+    } else if(e.kind === 'auto_cancel_unknown'){
+      out[k] = {tone:'bad', text:'The auto-cancel couldn’t be confirmed — treat this as STILL BOOKED. Check the FIT app and cancel it there, or it becomes a no-show'};
+    } else if(e.kind === 'sweep_too_late'){
+      /* The one case the bot deliberately refuses. Cancelling inside FIT's last hour is a
+         late cancel, which is a strike exactly like a no-show, so it left the booking
+         alone. Both remaining options are his and both are said out loud. */
+      out[k] = {tone:'bad', text:'You never confirmed this and it’s now too late to cancel it safely — go to the class, or cancel in the FIT app and take the strike'};
+    } else if(e.kind === 'sweep_uncancellable'){
+      out[k] = {tone:'bad', text:'This should have auto-cancelled but FIT gives it no cancel link — cancel it in the FIT app or go to the class'};
+    } else if(e.kind === 'sweep_no_start'){
+      out[k] = {tone:'bad', text:'The bot can’t read this booking’s start time, so it will NOT auto-cancel — cancel it yourself if you’re not going'};
     }
     /* `cancelled` and `cancel_recovered` deliberately produce nothing: both mean the
        booking is confirmed gone, and both are here so they can supersede a warning. */
@@ -2757,6 +3004,21 @@ function botRowWarnings(){
     Object.keys(stickyWarn).forEach(k=>{ if(!live[k]) delete stickyWarn[k]; });
   }
   Object.keys(stickyWarn).forEach(k=>{ if(!out[k]) out[k] = stickyWarn[k]; });
+  /* A confirmation answers the three sweep warnings that are ABOUT not having confirmed.
+     Two of them end "cancel it in the FIT app / cancel it yourself if you're not going",
+     so leaving them up tells him to cancel a class he has just said he is attending.
+     auto_cancel_failed / auto_cancel_unknown deliberately survive: those are about a
+     booking still sitting on the account, which confirming does not change. */
+  const SWEEP_ASKS = {sweep_too_late:1, sweep_uncancellable:1, sweep_no_start:1};
+  const cs = confirmState();
+  realBookings().forEach(b=>{
+    const id = bookingId(b);
+    if(!id || !cs.conf[id]) return;
+    bookingRowKeys(b).forEach(k=>{
+      const e = latest[k];
+      if(e && SWEEP_ASKS[e.kind]){ delete out[k]; delete stickyWarn[k]; }
+    });
+  });
   if(JSON.stringify(stickyWarn) !== before) persistStickyWarn();
   return out;
 }
@@ -2857,6 +3119,74 @@ function syncBotAlerts(){
   /* drop waitlist notices whose class has passed out of the log entirely */
   alerts.filter(a => a.id.indexOf('waitlist:') === 0 && !seen[a.id]).forEach(a => dropAlert(a.id));
 
+  /* ── the sweep's own outcomes ──────────────────────────────────────────────────────
+     `auto_cancelled` has no row to hang off, because the row is exactly what it removed.
+     This is the app taking something away from the user without being asked, so it says
+     so plainly and persistently — the spec's "say so where the row was". It is the only
+     notice here about something that WORKED, and it earns that by being an action he
+     never requested.
+
+     `sweep_would_cancel` is the dry run's whole point: it shows what an armed sweep would
+     have taken, so the behaviour can be watched for a few days against real classes
+     before it is allowed to touch anything. */
+  /* Rate-limited, with classes waiting on it. Persistent, because the consequence lands
+     hours later and he will not be looking then. */
+  if(sweepPaused && ((bookings && bookings.bookings) || []).some(needsConfirm)){
+    seen['sweeppaused'] = true;
+    pushAlert({id:'sweeppaused', tone:'bad', tab:'booked',
+      title:'Auto-cancel is paused today',
+      body:'The service has hit its daily limit, so classes you haven’t confirmed will '+
+           'NOT be cancelled for you today. Confirm the ones you are going to, and cancel '+
+           'the ones you are not — or they become no-shows.'});
+  } else {
+    dropAlert('sweeppaused');
+  }
+  const cstate = confirmState();
+  [['auto_cancelled', 'autocancel:'], ['sweep_would_cancel', 'wouldcancel:']].forEach(pair=>{
+    const kind = pair[0], pre = pair[1];
+    (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+      if(!e || e.kind !== kind) return;
+      const t = e.target || {};
+      const d = t.date || '';
+      if(d && d < sydToday()) return;                    // the class has been and gone
+      const id = String(e.booking_id || t.booking_id || '');
+      if(kind === 'sweep_would_cancel'){
+        /* A dry-run notice about a class he has since confirmed is answered and must go —
+           otherwise the notice outlives the decision it was asking him to make. */
+        if(id && cstate.conf[id]) return;
+        /* ...and it must not outlive TEST MODE. Arming the sweep is the planned next step
+           for this feature, and the old dry-run entries stay in the 200-entry log after
+           it: without this the app tells him "nothing was actually changed on your FIT
+           account" while the row beside it correctly says "or this cancels itself", and
+           then keeps saying it next to the notice announcing the real cancellation. */
+        if(sweepArmed) return;
+        /* a later definite outcome for the same booking supersedes it */
+        if(id && (Array.isArray(logdata) ? logdata : []).some(x =>
+             x && x.kind === 'auto_cancelled' &&
+             String(x.booking_id || (x.target && x.target.booking_id) || '') === id)) return;
+      }
+      const aid = pre + (id || (d + '|' + (t.time || '')));
+      seen[aid] = true;
+      const what = (t.name || 'A class') + (d ? ' · ' + shortDate(d) : '') +
+                   (t.time ? ', ' + fmt12(t.time).full : '');
+      if(kind === 'auto_cancelled'){
+        pushAlert({id:aid, tone:'amber', tab:'booked',
+          title:'Cancelled — you didn’t confirm it',
+          body: what + ' was booked automatically and never confirmed, so it was cancelled '+
+                '4 hours before it started rather than becoming a no-show. Nothing else to do.'});
+      } else {
+        pushAlert({id:aid, tone:'amber', tab:'booked',
+          title:'Would have been cancelled (test mode)',
+          body: what + ' was booked automatically and you haven’t confirmed it. Once '+
+                'auto-cancel is switched on, this is the one it would have cancelled — '+
+                'nothing was actually changed on your FIT account.'});
+      }
+    });
+  });
+  ['autocancel:', 'wouldcancel:'].forEach(pre=>{
+    alerts.filter(a => a.id.indexOf(pre) === 0 && !seen[a.id]).forEach(a => dropAlert(a.id));
+  });
+
   /* book_unknown / booknow_unknown — see botBookDoubts(). The strongest thing the app
      can say, because it is the one case where it cannot say anything else honestly. */
   const doubts = botBookDoubts();
@@ -2888,13 +3218,36 @@ function syncBotAlerts(){
       if(a.id.indexOf(pre) === 0 && !live[a.id.slice(pre.length)]) dropAlert(a.id);
     });
   });
+  /* "Couldn't confirm that" is raised by confirmBooking()'s catch AFTER it has already
+     withdrawn its pending record — so the one place that used to retire it could never
+     see that id again, and the notice was permanent unless the user happened to tap
+     Confirm successfully. It leaks on the likeliest path of all: /confirm takes longer
+     than the app's 12s client timeout while still committing, so the app announces a
+     failure for a confirmation that succeeded, and then there is no button left to tap.
+     A red banner insisting a confirmed class is unconfirmed and about to auto-cancel is
+     the false claim CONTRACT §7 forbids, and acting on it costs the class.
+     It keys on the bare FIT id, not on bookingKey(), so it needs its own sweep. */
+  const liveIds = {}, cst = confirmState();
+  realBookings().forEach(b => { const id = bookingId(b); if(id) liveIds[id] = true; });
+  alerts.filter(a => a.id.indexOf('confirmfail:') === 0).forEach(a=>{
+    const id = a.id.slice('confirmfail:'.length);
+    if(cst.conf[id] || !liveIds[id]) dropAlert(a.id);
+  });
 }
 function bookingStartMs(b){
   if(!b.date || !b.time) return null;
   const c = (timetable.classes||[]).find(x => x.date===b.date && x.time===b.time);
   if(c && c.start_iso) return new Date(c.start_iso).getTime();
-  /* no timetable match (e.g. half-hourly sauna slots) — resolve the offset properly */
-  const sameDay = (timetable.classes||[]).find(x => x.date===b.date && x.start_iso);
+  /* No timetable match (e.g. half-hourly sauna slots) — resolve the offset properly.
+     The donor class must be CLOSE IN TIME, not merely on the same date: 4 Oct 2026 holds
+     both +10:00 and +11:00, so borrowing from an arbitrary class that day puts the start
+     an hour out in either direction — and an hour is the whole late-cancel margin. */
+  const near = (x) => {
+    const a = Number(String(x.time||'').slice(0,2)), c = Number(String(b.time||'').slice(0,2));
+    return isFinite(a) && isFinite(c) && Math.abs(a - c) <= 2;
+  };
+  const sameDay = (timetable.classes||[]).find(x => x.date===b.date && x.start_iso && near(x))
+               || (timetable.classes||[]).find(x => x.date===b.date && x.start_iso && false);
   if(sameDay){
     const off = String(sameDay.start_iso).slice(-6);
     if(/^[+-]\d\d:\d\d$/.test(off)){
@@ -2966,9 +3319,57 @@ function renderBooked(){
           free = 'Late cancel = a strike'; freeCls = 'bad'; freeG = G.warnS;
         }
       }
+      /* ── confirm-or-it-cancels ───────────────────────────────────────────────────
+         Only rows the BOT booked and the user has not confirmed get any of this. A class
+         he booked himself — here, in the FIT app, or at reception — is never on the
+         roster, so it renders exactly as it always did.
+
+         The line says what will happen and when, in Sydney wall-clock terms, and it tells
+         the truth about whether the sweep is actually armed: during the dry run it must
+         not promise a cancellation that will not happen (CONTRACT §7). */
+      const nc = needsConfirm(b);
+      let cf = '', cfCls = 'amb', cfAt = null;
+      if(nc){
+        const dl = confirmDeadlineMs(b), now = Date.now();
+        const toStart = startMs ? startMs - now : null;
+        if(toStart !== null && toStart <= CONFIRM_FLOOR_MS){
+          /* Past the point where cancelling is free. The bot will REFUSE to cancel this —
+             a cancel inside FIT's last hour is a late cancel, which is a strike exactly
+             like a no-show — so the only two ways out are his. Say both. */
+          cf = 'NOT CONFIRMED, and now too close to cancel safely — go to this class, or '+
+               'cancel it in the FIT app and take the strike';
+          cfCls = 'bad';
+        } else if(dl === null){
+          cf = 'Confirm this — its start time couldn’t be read, so it will NOT be '+
+               'cancelled for you if you don’t';
+          cfCls = 'amb';
+        } else if(dl - now <= 0){
+          /* Red only when it is actually about to happen. In test mode this is a fact
+             about a mechanism that is switched off, and spending the red on it is how a
+             colour stops meaning anything. */
+          cf = sweepArmed
+            ? 'Past the confirm deadline — this cancels itself at the next check'
+            : 'Past the confirm deadline — it would cancel itself, but auto-cancel is off';
+          cfCls = sweepArmed ? 'bad' : 'amb';
+        } else if(dl - now < 12*3600000){
+          cfAt = dl;
+          cf = (sweepArmed ? 'Cancels itself in ' : 'Would cancel itself in ') +
+               relTime(dl - now) + ' — confirm to keep it';
+        } else {
+          cf = 'Confirm by ' + sydStampShort(dl) +
+               (sweepArmed ? ' or this cancels itself'
+                           : ' — auto-cancel is in test mode, nothing is cancelled yet');
+        }
+      }
       /* a row carrying a bad-news warning is a row the app previously hid and has had to
          put back. Make that unmissable rather than glitch-like. */
-      return '<div class="crow'+(bw && bw.tone === 'bad' ? ' alarm' : '')+'">'+
+      /* The row's tint is the loudest thing on it, so it follows the worst news the row
+         carries — from the bot's log OR from the confirm state the app worked out itself.
+         An unconfirmed booking that is now too close to cancel safely is the single worst
+         state this screen has: it is a no-show the system can no longer prevent. It must
+         not sit in the same calm amber as one with two days to run. */
+      const bad = (bw && bw.tone === 'bad') || cfCls === 'bad';
+      return '<div class="crow'+(bad ? ' alarm' : (nc ? ' tocheck' : ''))+'">'+
         '<div class="cbody">'+
           '<div class="cname">'+esc(b.name||'Class')+'</div>'+
           '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(stk?(SCOLOR[stk]||'var(--ink3)'):'var(--ink3)')+'"></i>'+
@@ -2976,6 +3377,11 @@ function renderBooked(){
           (free ? '<div class="cmeta"><span class="cst '+freeCls+(freeCls==='bad'?' longform':'')+'"'+
                   (freeAt?' data-cd="'+freeAt+'" data-cdmode="free"':'')+'>'+
                   (freeG||G.clock)+'<span>'+esc(free)+'</span></span></div>' : '')+
+          /* the confirm deadline. Longform because it wraps — the second half ("or this
+             cancels itself") is the half that changes what he does. */
+          (cf ? '<div class="cmeta"><span class="cst '+cfCls+' longform"'+
+                (cfAt?' data-cd="'+cfAt+'" data-cdmode="confirm"':'')+'>'+G.warnS+
+                '<span>'+esc(cf)+'</span></span></div>' : '')+
           /* the bot's last word on this booking, if it was bad news. Persistent: it stays
              on the row for as long as the booking it warns about is still on the account. */
           (bw ? '<div class="cmeta"><span class="cst '+esc(bw.tone)+' longform">'+G.warnS+
@@ -2986,14 +3392,40 @@ function renderBooked(){
             ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
               '<span>This one can only be cancelled in the FIT app</span></span></div>' : '')+
         '</div>'+
-        '<div class="cact">'+
-          (!pending && isCancellable(b) ? '<button class="btn-sm redtxt" data-cancel="'+i+'">Cancel</button>' : '')+
+        '<div class="cact'+(nc && !pending && isCancellable(b) ? ' stack' : '')+'">'+
+          /* Confirm comes first and is the filled button: keeping the class is the action
+             the row is asking for, and the destructive one stays the quiet red text button
+             it has always been. */
+          /* Keyed on the row's own identity, never on its position. An index is only
+             correct while the list the tap resolves against is the exact list that was
+             rendered, and this screen re-renders on a 45s poll, a 5-minute sweep of past
+             classes, and every countdown flip. Identity removes the whole class of bug
+             rather than making it rare. */
+          (nc ? '<button class="btn-sm ink" data-confirm="'+esc(bookingKey(b))+'">Confirm</button>' : '')+
+          (!pending && isCancellable(b) ? '<button class="btn-sm redtxt" data-cancel="'+esc(bookingKey(b))+'">Cancel</button>' : '')+
         '</div>'+
       '</div>';
     }).join('') + '</div>'+
     '<div class="gfoot">Cancelling takes the class off your FIT account. It leaves this list '+
     'straight away, and comes back with a warning if FIT didn’t take it. You can also cancel '+
-    'in the FIT app.</div>';
+    'in the FIT app.'+
+    /* Only shown when it is actually relevant. A standing explanation of a mechanism that
+       is not currently doing anything is chrome; the same words next to an amber row that
+       is counting down are the reason the row makes sense. */
+    /* Only claim the auto-cancel for rows that will actually get one. A row inside the
+       late-cancel floor, or one whose start time cannot be read, says on itself that it
+       will NOT be cancelled — a footer promising the opposite on the same screen is the
+       kind of contradiction that makes the whole panel stop being read. */
+    (bks.some(b => needsConfirm(b) && confirmDeadlineMs(b) !== null &&
+                   (bookingStartMs(b) - Date.now()) > CONFIRM_FLOOR_MS)
+      ? ' <b>The highlighted rows were booked for you from your picks.</b> Confirm one and it '+
+        'stays; leave it and it ' + (sweepArmed ? 'cancels' : 'would cancel') +
+        ' itself 4 hours before the class, so it can’t become a no-show. Anything you '+
+        'booked yourself is never touched.' +
+        (sweepArmed ? '' : ' Auto-cancel is in test mode right now — nothing is actually '+
+                           'cancelled yet.')
+      : '')+
+    '</div>';
   } else {
     rows = '<div class="emptystate"><div class="eg">'+G.big_chk+'</div>'+
       '<div class="et">Nothing booked</div>'+
@@ -3548,10 +3980,61 @@ function withdrawPending(bucket, key){
   return p;
 }
 
-async function cancelBooking(i){
-  const list = ((bookings&&bookings.bookings)||[]).slice()
-    .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
-  const b = list[i]; if(!b) return;
+/* "Yes, I am going to this one." Instant and silent, like every other action here — no
+   sheet, no spinner. Keeping a class you already have is not a decision that needs
+   confirming twice, and the destructive direction (doing nothing) is the one that is
+   already guarded by a deadline the row spells out.
+
+   The one thing that MUST be loud is failure: an unconfirmed class gets cancelled, so a
+   confirm that silently did not stick would lose him the class. Hence the optimistic
+   confirm is withdrawn on any error at all — definite or unknown — which puts the Confirm
+   button straight back. Re-tapping is free: the Worker is idempotent and answers
+   `already:true` for a confirmation it already holds. */
+async function confirmBooking(rowKey){
+  /* Resolved by identity out of the LIVE list, so a re-render between the render and the
+     tap cannot move the target. If the row is no longer there, nothing happens — which is
+     right: it has been cancelled, swept, or has already been confirmed elsewhere. */
+  const b = bookingList().find(x => bookingKey(x) === rowKey); if(!b) return;
+  const id = bookingId(b);
+  /* Without FIT's id there is nothing to confirm AGAINST — and equally nothing the sweep
+     could ever have matched, so such a row never shows this button. Belt and braces. */
+  if(!id){ toast('This booking has no id the app can read, so it can’t be confirmed here.', 4200); return; }
+  if(pendingConfirms.some(p => p.id === id)) return;
+
+  pendingConfirms.push({id: id, at: Date.now(), b: b});
+  rerenderKeepScroll();
+
+  try{
+    await wapi('/confirm', {booking_id: id});
+    /* Nothing is written into confirmData here, deliberately. The pending record already
+       makes the row look confirmed (confirmState() unions it in), and confirmData is the
+       SERVER's answer — writing a local copy of a confirmation into it would mean the app
+       kept asserting "confirmed" out of its own memory even after the server had failed
+       to produce it, which is the one belief that silently loses the class. The pending
+       record is released only when the server actually agrees, or it times out and the
+       row goes back to asking. */
+    startFastPoll();
+  }catch(e){
+    if(handleApiErr(e)) return;
+    /* Withdraw in BOTH directions. If the write actually landed, the next /data brings the
+       confirmation back and the button disappears again; if it did not, he is looking at a
+       button that still needs pressing. The wrong belief here — "confirmed" when it is not
+       — silently loses him the class four hours before it starts. */
+    pendingConfirms = pendingConfirms.filter(p => p.id !== id);
+    announce({id:'confirmfail:'+id, tone:'bad', tab:'booked',
+              title:'Couldn’t confirm that',
+              body:(b.name||'That class')+' is still unconfirmed'+
+                   (sweepArmed ? ', so it will cancel itself 4 hours before it starts. ' : '. ')+
+                   'Tap Confirm again — it is safe to tap more than once.'});
+    rerenderKeepScroll();
+  }
+}
+
+async function cancelBooking(rowKey){
+  /* By identity, not by index — see confirmBooking(). This used to take the position of
+     the row in a re-derived sorted copy, which is correct only while nothing re-renders
+     between drawing the button and tapping it. */
+  const b = bookingList().find(x => bookingKey(x) === rowKey); if(!b) return;
   const startMs = bookingStartMs(b);
   /* correctness #3 — judge against the instant the BOT will POST, not against now */
   const atRun = startMs ? (startMs - (Date.now() + CANCEL_LATENCY_MS)) : null;
@@ -3985,7 +4468,8 @@ document.addEventListener('click', function(e){
     rerenderBook();
     return;
   }
-  const cn = T('[data-cancel]'); if(cn){ cancelBooking(Number(cn.dataset.cancel)); return; }
+  const cf = T('[data-confirm]'); if(cf){ confirmBooking(cf.dataset.confirm); return; }
+  const cn = T('[data-cancel]'); if(cn){ cancelBooking(cn.dataset.cancel); return; }
 
   /* dismissing a persistent notice is the user saying "I have dealt with this" — it is the
      only thing that removes one that has not resolved by itself */
@@ -4035,6 +4519,7 @@ setInterval(function(){
        the page, hidden or not */
     if(!booted || document.hidden) return;
     const now = Date.now();
+    if(pointerHeld && now - pointerHeld > 1500) releasePointer();
     let flip = false;
     const nodes = document.querySelectorAll('[data-cd]');
     for(let i=0;i<nodes.length;i++){
@@ -4044,10 +4529,15 @@ setInterval(function(){
       if(mode === 'hero'){ el.textContent = cdText(left); }
       else if(mode === 'pick'){ const s = el.lastElementChild; if(s) s.textContent = 'Books in '+relTime(left); }
       else if(mode === 'free'){ const s = el.lastElementChild; if(s) s.textContent = 'Free cancel for '+relTime(left); }
+      else if(mode === 'confirm'){
+        const s = el.lastElementChild;
+        if(s) s.textContent = (sweepArmed ? 'Cancels itself in ' : 'Would cancel itself in ')+
+                              relTime(left)+' — confirm to keep it';
+      }
     }
     if(flip && !flipQueued){
       flipQueued = true;
-      setTimeout(()=>{ flipQueued = false; heroCache = null; renderAll(); }, 500);
+      setTimeout(()=>{ flipQueued = false; heroCache = null; renderAllIdle(); }, 500);
     }
   }catch(e){}
 }, 1000);
@@ -4059,7 +4549,7 @@ setInterval(function(){
     heroCache = null;
     indexDates();
     const p = $('#page-'+activeTab), s = p ? p.scrollTop : 0;
-    renderAll();
+    renderAllIdle();
     if(p) p.scrollTop = s;
   }catch(e){}
 }, 300000);
