@@ -249,18 +249,12 @@ svg{display:block;flex:none}
 .navbtn:active{opacity:.4}
 @keyframes spin{to{transform:rotate(360deg)}}   /* the PTR ring is the only spinner left */
 
-.flightbar{position:absolute;left:0;right:0;bottom:-2px;height:2px;overflow:hidden;display:none;pointer-events:none}
-.flightbar.on{display:block}
-.flightbar i{
-  position:absolute;inset:0;display:block;
-  background:linear-gradient(90deg,transparent,var(--amber-rail),transparent);
-  transform:translateX(-100%);animation:flight 1.5s cubic-bezier(.45,0,.25,1) infinite;
-}
-@keyframes flight{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-
-/* The freshness pill and its Sync button are gone: syncing is entirely automatic, and the
-   only remaining hint that work is happening is .flightbar above plus the "From your FIT
-   account, updated …" line on Booked. */
+/* The in-flight hairline (.flightbar / @keyframes flight) is GONE, along with the freshness
+   pill, its Sync button, the "Syncing with FIT…" subtitle and the data-age line. Talking to
+   FIT is background work and background work gets NO chrome: no bar, no spinner, no status
+   line, no colour change. Data simply updates when it updates. The only things that may
+   appear are (a) the pull-to-refresh ring, which answers a deliberate gesture, and (b)
+   failures — which are loud, on the row they belong to, and persistent. */
 
 /* ── pull to refresh ─────────────────────────────────────────── */
 .ptr{
@@ -493,6 +487,11 @@ svg{display:block;flex:none}
 .crow + .crow::before{content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2)}
 .crow:active{background:var(--fill)}
 .crow.ispick{background:var(--amber-bg)}
+/* A booking the app hid, and then had to put back because FIT still has it. The row coming
+   back IS the alarm, so it must not look like the list glitched: red rule, red tint, and
+   the reason on the row itself. Nothing else in the app uses this treatment. */
+.crow.alarm{background:var(--bad-bg);box-shadow:inset 3px 0 0 -.5px var(--bad)}
+.crow.alarm + .crow::before,.crow + .crow.alarm::before{display:none}
 .crow.flash{animation:flash 1.6s ease}
 @keyframes flash{0%,55%{background:var(--amber-bg)}100%{background:transparent}}
 .ctime{flex:none;width:45px;min-width:0}
@@ -802,10 +801,10 @@ svg{display:block;flex:none}
       <div class="nav-spacer"></div>
       <div class="nav-title" id="navTitle">Book</div>
       <!-- Nothing sits opposite the ⓘ any more: there is no manual sync, so there is
-           nothing to tap. The hairline below is the only in-flight signal. -->
+           nothing to tap — and nothing below it either. The app never shows that it is
+           working; it only ever shows that something went wrong. -->
       <div class="navbtn" aria-hidden="true"></div>
     </div>
-    <div class="flightbar" id="flightbar"><i></i></div>
   </header>
 
   <div class="ptr" id="ptr" aria-hidden="true"><div class="pring">
@@ -944,7 +943,6 @@ let selDate = null;
 let allDates = [];
 let weekStart = null;                  // Monday (YYYY-MM-DD) of the week on screen
 let scrollMemo = {book:0, booked:0, picks:0};
-let inFlight = 0;
 let heroCache = null;
 
 /* live-data machinery (§3) */
@@ -1228,6 +1226,18 @@ function persistStickyWarn(){
     else localStorage.removeItem(stickyWarnKey());
   }catch(e){}
 }
+/* Write a row warning the app worked out for itself (rather than read out of the bot log)
+   into the SAME member-scoped persisted store, so it behaves identically: it is drawn on
+   the booking row it is about, it survives a relaunch, and it retires itself when the
+   booking leaves the FIT account or the bot logs a settling outcome for it. This is how a
+   cancel that provably did not happen stays loud without the app having to keep anything
+   in memory. */
+function setStickyRowWarn(b, warn){
+  const k = (bookingRowKeys(b) || [])[0];
+  if(!k || !warn) return;
+  stickyWarn[k] = warn;
+  persistStickyWarn();
+}
 function pushAlert(a){
   if(!a || !a.id) return;
   const i = alerts.findIndex(x => x.id === a.id);
@@ -1404,8 +1414,8 @@ function bailToSetup(msg){
   booted = false;
   stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
   fastUntil = 0;
-  /* F24 — the in-flight hairline was left animating behind the setup screen forever */
-  clearFlight();
+  /* F24 — these timers were left running behind the setup screen forever */
+  clearDispatchWatch();
   closeSheet();
   /* This lands on the sign-in screen, and the next person to use it may not be the one
      who was just here. Erase EVERYTHING — draft picks, saved picks + sha, bookings,
@@ -1812,7 +1822,9 @@ async function maybeKickSnipe(){
   if(imminent){
     try{
       await dispatch('snipe.yml');
-      beginFlight('A pick opens within the hour — booking run started now.');
+      /* silently — "a booking run started" is background work, and the row on Picks says
+         what it needs to say by itself. Only the failure below speaks. */
+      watchDispatch();
     }catch(e){
       /* correctness #19f — this used to swallow everything. It is the mechanism that
          removes the cron lead-time requirement; if it fails, "the bot will book them
@@ -1923,14 +1935,19 @@ function reconcilePending(){
       return false;
     }
     if(now - p.at > SETTLE_MS){
-      /* Still on the account long after the bot should have acted: leave the row in place
-         (that is the truth) and say so — as a notice that survives the next message and
-         the next launch, not as a 5-second toast. A cancel the user believes happened and
-         which did not is a no-show, and three of those in 7 days is a 7-day ban. */
-      announce({id:'cancelfail:'+p.key, tone:'bad', tab:'booked',
-                title:'That cancel didn’t go through',
-                body:(p.b && p.b.name ? p.b.name : 'That class')+' is STILL on your FIT '+
-                     'account. Cancel it in the FIT app, or it becomes a no-show.'});
+      /* Still on the account long after the bot should have acted. Everything up to this
+         moment was silent — the row simply vanished and the app behaved as though it were
+         cancelled. This is the moment that stops being true, and it is the ONLY moment the
+         user hears anything: the row is left where it is (that is the truth — it is still
+         booked) and it comes back carrying a persistent warning of its own.
+
+         The row reappearing is the alarm; the warning on it says why, so it cannot read as
+         a glitch. It goes into stickyWarn, not into a toast and not into a dismissable
+         notice: a cancel the user believes happened and which did not is a no-show, three
+         of those in 7 days is a 7-day ban, and the warning must therefore outlive being
+         backgrounded, relaunched, or tapped past. */
+      setStickyRowWarn(p.b, {tone:'bad', text:'DIDN’T CANCEL — this is still booked. '+
+        'Cancel it in the FIT app or it becomes a no-show'});
       dropAlert('cancelunknown:'+p.key);
       settled = true;
       return false;
@@ -1980,36 +1997,31 @@ function rerenderKeepScroll(){
 }
 
 /* ════════════════════════════════════════════════════════════════
-   In-flight feedback
+   After a dispatch — invisible
    ════════════════════════════════════════════════════════════════ */
-/* F24 — these timers were untracked and the reload did not check document.hidden, so a
-   backgrounded app still burnt four requests on a screen nobody was looking at, and a
-   session bail-out mid-booking left the amber hairline animating forever. */
+/* This used to be beginFlight()/clearFlight(): an amber hairline under the nav bar plus a
+   "Cancelling on FIT — confirming in about a minute" toast. Both are gone. What is NOT gone
+   is the thing they were bolted to — a late re-read of the data once the workflow has had
+   time to run, which is one of the ways an optimistic row gets confirmed. Deleting the bar
+   must not delete the check, so the two are separated: this schedules the re-read and shows
+   nothing at all.
+
+   F24 — these timers were untracked and the reload did not check document.hidden, so a
+   backgrounded app still burnt requests on a screen nobody was looking at, and a session
+   bail-out mid-booking left timers running against a signed-out app. */
 let flightTimers = [];
-function clearFlight(){
+function clearDispatchWatch(){
   flightTimers.forEach(clearTimeout); flightTimers = [];
-  inFlight = 0;
-  try{ $('#flightbar').classList.remove('on'); }catch(e){}
 }
-function beginFlight(msg, ms){
-  inFlight++;
-  $('#flightbar').classList.add('on');
-  if(msg) toast(msg, 4200);
+function watchDispatch(ms){
   const wait = ms || 75000;
-  const track = fn => {
-    const id = setTimeout(()=>{
-      flightTimers = flightTimers.filter(x => x !== id);   // don't accumulate dead ids
-      fn();
-    }, wait);
-    flightTimers.push(id);
-  };
-  track(()=>{
-    inFlight = Math.max(0, inFlight-1);
-    if(!inFlight) $('#flightbar').classList.remove('on');
-  });
-  /* match pollAfterDispatch: never burn 4 requests for a screen nobody is looking at —
+  /* match pollAfterDispatch: never burn a request for a screen nobody is looking at —
      visibilitychange already re-loads on the way back in */
-  track(()=>{ if(!document.hidden) loadAll(true); });
+  const id = setTimeout(()=>{
+    flightTimers = flightTimers.filter(x => x !== id);   // don't accumulate dead ids
+    if(!document.hidden) loadAll(true);
+  }, wait);
+  flightTimers.push(id);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -2053,18 +2065,9 @@ function dataUpdatedMs(){
 }
 function dataAgeMs(){ const t = dataUpdatedMs(); return t === null ? Infinity : Math.max(0, Date.now()-t); }
 function isStale(){ return dataAgeMs() > STALE_MS; }
-function ageLong(ms){
-  if(!isFinite(ms)) return 'never synced';
-  const m = Math.floor(ms/60000);
-  if(m < 1) return 'updated just now';
-  if(m === 1) return 'updated 1 min ago';
-  if(m < 60) return 'updated '+m+' min ago';
-  const h = Math.floor(m/60);
-  if(h === 1) return 'updated 1 hour ago';
-  if(h < 24) return 'updated '+h+' hours ago';
-  const d = Math.floor(h/24);
-  return 'updated '+d+(d===1?' day ago':' days ago');
-}
+/* ageLong() — "updated 4 min ago" / "never synced" — is DELETED with the Booked subtitle
+   that was its only caller. dataAgeMs()/isStale() above are untouched: the app still
+   decides when to sync from the age of the data, it just never mentions it. */
 let postPoll = [], syncBaseline = null;
 function clearPostPoll(){ postPoll.forEach(clearTimeout); postPoll = []; }
 /* after a dispatch the run takes ~60–75s; poll across that window, non-blocking */
@@ -2074,10 +2077,10 @@ function pollAfterDispatch(){
     postPoll.push(setTimeout(()=>{ if(!document.hidden) loadAll(true); }, ms));
   });
   /* kept as the fast path while the app stays open; reapSync() is the backstop that
-     survives being backgrounded, so this timer being destroyed is no longer fatal */
-  /* the Booked subtitle is the only thing that reads `syncing`, so redraw once when the
-     latch drops — in place, without throwing the reader out of their scroll position */
-  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; syncStartedAt = 0; rerenderKeepScroll(); } }, 115000));
+     survives being backgrounded, so this timer being destroyed is no longer fatal.
+     `syncing` no longer draws ANYTHING — nothing reads it but autoSync()'s re-entry guard
+     and the fast poll's stop condition — so dropping the latch needs no redraw. */
+  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; syncStartedAt = 0; } }, 115000));
 }
 /* A never-synced member is stale FOREVER until a run writes their bookings.json, and there
    is one way that never happens: the Worker only creates data/<member>/ on their first
@@ -2109,7 +2112,7 @@ async function autoSync(force){
   try{
     await dispatch('refresh.yml');
     syncing = true; syncStartedAt = Date.now();
-    beginFlight(null, 78000);            // subtle hairline only — never a blocking spinner
+    watchDispatch(78000);                // no chrome of any kind — just a late re-read
     pollAfterDispatch();
     return true;
   }catch(e){
@@ -2745,6 +2748,12 @@ function botRowWarnings(){
   if(lastDataJson !== null){
     const live = {};
     realBookings().forEach(b => bookingRowKeys(b).forEach(k => { live[k] = true; }));
+    /* A row this app is optimistically HIDING is not a row that has left the FIT account —
+       it is a row we have decided not to draw yet. Counting it as gone would let a retry of
+       a cancel that already failed once erase the very warning that says it failed, for as
+       long as the retry is pending, and permanently if the app were killed in that window.
+       The warning belongs to the booking, and the booking is still there. */
+    pendingCancels.forEach(p => { if(p && p.b) bookingRowKeys(p.b).forEach(k => { live[k] = true; }); });
     Object.keys(stickyWarn).forEach(k=>{ if(!live[k]) delete stickyWarn[k]; });
   }
   Object.keys(stickyWarn).forEach(k=>{ if(!out[k]) out[k] = stickyWarn[k]; });
@@ -2896,37 +2905,25 @@ function bookingStartMs(b){
   return sydWallToMs(b.date, b.time);
 }
 
-/* ── a cancel the app has NOT been able to confirm ───────────────────────────────────
-   The row leaves the list the instant Cancel is tapped, which is what makes the app feel
-   like an app — but until the server agrees, that empty space is a claim the app cannot
-   back. Offline it could sit there for hours. So say it, in words, on the screen the row
-   left: this is not done yet, and it is still booked until it is confirmed. */
-function pendingCancelHTML(){
-  if(!pendingCancels.length) return '';
-  const off = !!loadError;
-  return '<div class="group" style="margin-top:12px">' + pendingCancels.map(p=>{
-    const nm = (p.b && p.b.name) ? p.b.name : 'That class';
-    const when = (p.b && p.b.date) ? shortDate(p.b.date) +
-      (p.b.time ? ' · ' + (p.b.time_raw || fmt12(p.b.time).full) : '') : '';
-    const waited = relTime(Date.now() - p.at);
-    return '<div class="rulerow"><div class="ri" data-tone="'+(off?'bad':'amber')+'">'+G.warn+'</div>'+
-      '<div class="rt"><b>Cancelling '+esc(nm)+' — not confirmed</b><span>'+
-      (when ? esc(when)+'. ' : '')+
-      (off
-        ? 'You are offline, so this cancel has NOT been confirmed with FIT. Treat the class as STILL BOOKED until this says otherwise — if it did not go through and you do not attend, it is a no-show.'
-        : 'Waiting for FIT to confirm ('+esc(waited)+'). It is still on your FIT account until this clears.')+
-      '</span></div></div>';
-  }).join('') + '</div>';
-}
+/* pendingCancelHTML() is GONE. It drew a notice naming the class and how long the cancel
+   had been waiting — i.e. it narrated background work on the one screen where the whole
+   point is that the row went away. A pending cancel is now completely invisible: the row
+   disappears and the app behaves as though it is cancelled, because that is what happens
+   in every case except one. That one case — reconcilePending() proving the booking is
+   STILL there after SETTLE_MS, or the bot logging cancel_failed / cancel_unknown — puts
+   the row back with a persistent alarm on it, which is far louder than a progress notice
+   and costs nothing when everything works. */
 
 function renderBooked(){
   const w = $('#w-booked');
   const bks = ((bookings && bookings.bookings) || []).slice()
     .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
-  const bms = bookings && bookings.updated ? new Date(bookings.updated).getTime() : NaN;
-  const upd = syncing ? 'Syncing with FIT…'
-    : (isFinite(bms) ? 'From your FIT account, ' + ageLong(Math.max(0, Date.now()-bms))
-                     : 'Not synced yet');
+  /* The subtitle used to be "Syncing with FIT…" / "From your FIT account, updated 4 min
+     ago" / "Not synced yet" — a live readout of whether the app was talking to FIT and how
+     long ago it last managed to. All three are gone: they made a background job the user's
+     problem, and the age of a list is not something he can act on. What replaces them is
+     one flat sentence about where the list comes from, which never changes. */
+  const upd = 'Booked by you and by the bot';
 
   const warn = botRowWarnings();
   let rows = '';
@@ -2943,15 +2940,22 @@ function renderBooked(){
       const when = (b.date ? shortDate(b.date) : (b.date_raw||'')) + ' · ' +
                    (b.time_raw || (b.time ? fmt12(b.time).full : ''));
       const startMs = bookingStartMs(b);
-      /* an optimistic row: it is on screen because the user just asked for it, not because
-         FIT has confirmed it. Say so, and offer no Cancel until it is real — cancelling
-         something that does not exist yet is how you end up with neither. */
+      /* An optimistic row: it is on screen because the user just asked for it, not because
+         FIT has confirmed it. It used to announce that with an amber "Booking on FIT…"
+         line — a placeholder that told the user about a workflow he cannot influence. It
+         now draws as an ORDINARY booked row, because in the overwhelming majority of cases
+         that is exactly what it is about to be, and because the failure direction here is
+         mild: FIT turns out not to have it, the row is withdrawn with a warning, and he
+         turns up to a class without a spot. Annoying — not a strike. (Contrast a pending
+         CANCEL, where believing the optimistic answer wrongly IS a no-show; that one is
+         invisible too, but it comes back with an alarm rather than a quiet withdrawal.)
+         The one thing that must not soften is the guard: no Cancel until FIT confirms it,
+         because cancelling something that does not exist yet is how you end up with
+         neither. That guard is invisible — the button is simply absent. */
       const pending = !!b.__pending;
       /* correctness #3 — measure against when the BOT will reach FIT, not against now */
       let free = '', freeCls = 'go', freeAt = null, freeG = null;
-      if(pending){
-        free = 'Booking on FIT…'; freeCls = 'amb'; freeG = G.boltL;
-      } else if(startMs){
+      if(startMs){
         const freeUntil = startMs - 3600000, dt = freeUntil - Date.now();
         if(dt > CANCEL_LATENCY_MS){
           freeAt = freeUntil - CANCEL_LATENCY_MS;
@@ -2962,7 +2966,9 @@ function renderBooked(){
           free = 'Late cancel = a strike'; freeCls = 'bad'; freeG = G.warnS;
         }
       }
-      return '<div class="crow">'+
+      /* a row carrying a bad-news warning is a row the app previously hid and has had to
+         put back. Make that unmissable rather than glitch-like. */
+      return '<div class="crow'+(bw && bw.tone === 'bad' ? ' alarm' : '')+'">'+
         '<div class="cbody">'+
           '<div class="cname">'+esc(b.name||'Class')+'</div>'+
           '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(stk?(SCOLOR[stk]||'var(--ink3)'):'var(--ink3)')+'"></i>'+
@@ -2999,7 +3005,6 @@ function renderBooked(){
     '<div class="lsub">'+esc(upd)+'</div>'+
     offlineBanner()+
     botStaleNote()+
-    pendingCancelHTML()+
     alertsHTML('booked')+
     '<div style="height:2px"></div>'+
     rows+
@@ -3034,12 +3039,21 @@ function pickRowHTML(p, dupe){
       nextTxt = 'Open '+relTime(openFor)+' — not booked yet';
       nextCls = 'amb'; g = G.warnS; wide = true;
     } else {
-      nextTxt = 'Open now — booking'; nextCls = 'go'; g = G.bolt;
+      /* was "Open now — booking": the same background narration, and it also made a pick
+         the app had just optimistically booked distinguishable from one it had not. Both
+         now read "Open now" — the state of the window, which is a fact about the class. */
+      nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt;
     }
   }
   else if(st.kind === 'booking'){
-    /* the app has asked FIT and has NOT been answered. Not a tick. */
-    nextTxt = 'Booking… not confirmed yet'; nextCls = 'amb'; g = G.boltL; wide = true;
+    /* The app has asked FIT and has NOT been answered. This used to read "Booking… not
+       confirmed yet" — the Picks-tab twin of the amber placeholder on Booked, and the same
+       narration of a workflow in progress. It now reads exactly as any other pick whose
+       window is open: quiet, and identical whether or not the app happens to be mid-request.
+       It is still NOT a tick — pickState() only returns 'booked' from realBookings(), so an
+       optimistic row can never turn this green — and if FIT never confirms it, the settle
+       window withdraws the row and warns, which is the surface that matters. */
+    nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt;
   }
   else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
   else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
@@ -3207,7 +3221,7 @@ function doSignOut(){
   booted = false;
   stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
   fastUntil = 0;
-  clearFlight();
+  clearDispatchWatch();
   closeSheet();
   /* Everything in memory AND in storage belongs to the member who just left — the draft
      picks above all, which used to sit under one global key and were restored into the
@@ -3470,7 +3484,9 @@ async function bookNow(bid, fromSheet){
   /* Guard the DISPATCH, not just the row. The row guard alone let a double tap send two
      booknow.yml runs: the second one books nothing (FIT already has it) but it is a wasted
      run, and against a slower first run it is a genuine race. */
-  if(hasPending(key)){ toast('Already booking that one — hold on.', 2600); return; }
+  /* the guard stays — a double tap must never fire two booknow.yml runs — but it no
+     longer reports on a workflow. The row is already on Booked; say only that. */
+  if(hasPending(key)){ toast('That one is already on your Booked list.', 2600); return; }
   if(alreadyBookedSlot(c)){ toast('That class is already on your FIT account.', 3000); return; }
   const before = bookingKeySnapshot();
   bookingList().push(optimistic);
@@ -3485,7 +3501,7 @@ async function bookNow(bid, fromSheet){
        booknow.yml already declares a `date` input (it is used for cancel), so sending it
        is safe whether or not the bot-side patch has landed. */
     await dispatch('booknow.yml', {day:c.day, time:c.time, studio:c.studio, date:c.date});
-    beginFlight('Booking on FIT — confirming in about a minute.', 78000);
+    watchDispatch(78000);
     startFastPoll();                     // …and confirm it every 8s rather than every 45
   }catch(e){
     if(handleApiErr(e)) return;          // 401/403: the session is gone, so is the state
@@ -3572,7 +3588,9 @@ async function cancelBooking(i){
      date|time|guessed-studio, which two different bookings could share — so the re-find
      below spliced the WRONG row off the screen while the dispatch cancelled the other. */
   const key = bookingKey(b);
-  if(hasPending(key)){ toast('Already cancelling that one — hold on.', 2600); return; }
+  /* unreachable in practice (the row left the list on the first tap) but the dispatch
+     guard stays. It speaks in the app's terms, not the bot's. */
+  if(hasPending(key)){ toast('That booking has already been cancelled.', 2600); return; }
   const live = bookingList();
   const idx = live.findIndex(x => bookingKey(x) === key);
   const snapshot = idx >= 0 ? live[idx] : b;
@@ -3587,7 +3605,7 @@ async function cancelBooking(i){
        when the row cannot be classified, so the bot cannot match the wrong studio. */
     await dispatch('booknow.yml', {day:'MON', time:b.time, studio:studioFromBooking(b),
                                    action:'cancel', date:b.date, booking_id:fitId});
-    beginFlight('Cancelling on FIT — confirming in about a minute.', 78000);
+    watchDispatch(78000);
     startFastPoll();
   }catch(e){
     if(handleApiErr(e)) return;
