@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v6';   // v6: confirm-or-it-cancels on the Booked tab
+const CACHE = 'fit-booker-v7';   // v7: four-week planning, rolling date strip, states not stopwatches
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

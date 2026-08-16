@@ -1137,6 +1137,10 @@ function endLabel(c){
 
 /* availability wording from `avail` + `notfull` */
 function availInfo(c){
+  /* A projected class is the app's own guess that a weekly slot repeats. FIT has not said
+     whether it runs, let alone how full it is, so there is nothing honest to put here —
+     and an empty label is also one less thing on the screen. */
+  if(c && c.projected) return {full:false, label:'', cls:'', long:'', projected:true};
   const a = String(c.avail||'');
   if(!c.notfull){
     if(a.indexOf('waitlist')>=0 && a.indexOf('no_waitlist')<0)
@@ -1522,7 +1526,10 @@ async function loadAllInner(silent){
     } catch(e){}
 
     const tt = d.timetable;
-    if(tt && Array.isArray(tt.classes)) timetable = tt;
+    /* projection is applied HERE, once, rather than in every reader — so `timetable` is the
+       single list everything else already walks, and the change-detection hash above still
+       compares the SERVER's payload rather than our derived copy. */
+    if(tt && Array.isArray(tt.classes)) timetable = withProjection(tt);
     const bk = d.bookings;
     if(bk && Array.isArray(bk.bookings)) bookings = bk;
     /* the server's list is authoritative, so an optimistic row has to be re-applied to
@@ -1624,27 +1631,53 @@ function indexDates(){
   allDates = all.filter(d => d >= today);
   if(!allDates.length) allDates = all;
   if(!selDate || allDates.indexOf(selDate) < 0){
-    if(allDates.indexOf(today) >= 0 && dayHasClasses(today)) selDate = today;
+    /* AUDIT (round 2) — jumping to the first date overall threw a reader who was three weeks
+       out all the way back to today, mid-read, on a 45s poll. Land on the nearest surviving
+       day ON OR AFTER the one that was taken away; only fall back to today if there is none. */
+    const near = selDate ? allDates.filter(d => d >= selDate && dayHasClasses(d))[0] : '';
+    if(near) selDate = near;
+    else if(allDates.indexOf(today) >= 0 && dayHasClasses(today)) selDate = today;
     else selDate = allDates.filter(dayHasClasses)[0] || allDates[0] || today;
+    /* AUDIT — the selected day was just TAKEN AWAY (FIT published the real week and closed
+       that day, or it fell into the past). The strip was left where it was, so it pointed at
+       a week in September with nothing selected while the list underneath was today's,
+       live Book buttons and all. If the day moves, the strip moves with it. Paging by hand
+       does not come through here, so browsing ahead is never yanked back. */
+    weekStart = null;
   }
   syncWeek();
 }
 
 /* ── one-week-at-a-time strip: paging bounds (§2) ───────────────── */
-function firstWeek(){ return mondayOf(sydToday()); }          // never a fully-past week
-function lastWeek(){
-  const last = allDates.length ? allDates[allDates.length-1] : sydToday();
-  const m = mondayOf(last);
-  return m < firstWeek() ? firstWeek() : m;
-}
+/* The strip is a ROLLING seven days from today, not a Monday-anchored calendar week.
+   Anchored to Monday it spent most of a Sunday showing six dead, greyed-out cells and put
+   "today" in the last column — the one day that always matters, hardest to reach. There is
+   no such thing as a past day on this screen any more: a day you cannot book is a day with
+   nothing to say. */
+function firstWeek(){ return sydToday(); }
+function lastWeek(){ return addDays(sydToday(), PLAN_DAYS - 7); }
 function clampWeek(ws){
   const a = firstWeek(), b = lastWeek();
   return ws < a ? a : (ws > b ? b : ws);
 }
+/* AUDIT — setDay() and jumpToClass() still did clampWeek(mondayOf(date)), the calendar-week
+   model this section replaced. One tap on any cell re-anchored the strip to that date's
+   MONDAY, which slid the whole strip and threw TODAY off it entirely — 6 taps out of 7 on a
+   Sunday, the exact day the rolling strip was written to fix. The page a date belongs to is
+   its offset from TODAY in whole weeks, and nothing else. */
+function pageOf(ds){
+  const today = sydToday();
+  const off = Math.floor((toUTC(ds) - toUTC(today)) / 86400000 / 7) * 7;
+  return clampWeek(addDays(today, Math.max(0, off)));
+}
+
 /* the visible week defaults to the one holding the selected day and is never a week
    that is entirely in the past */
 function syncWeek(){
-  if(!weekStart) weekStart = mondayOf(selDate || sydToday());
+  const today = sydToday();
+  /* snap to whichever seven-day page holds the selected day, counting from today */
+  const d = selDate || today;
+  if(!weekStart) weekStart = pageOf(d);
   weekStart = clampWeek(weekStart);
 }
 
@@ -1827,6 +1860,80 @@ async function savePicks(){
    correctness #19d — the old scan also walked DEVICE-local days and used setHours(), so
    every countdown shifted if the phone left Sydney while the date strip stayed on Sydney
    dates. Both are solved by doing the whole thing in Sydney wall clock. */
+/* ── planning horizon ────────────────────────────────────────────────────────────────
+   FIT publishes exactly two weeks. That is all the bot ever needs — a class cannot be
+   booked until 7 days and 1 hour before it starts — but it is not enough to PLAN with:
+   for most of a week the far end of the strip is empty and there is nothing to tap.
+
+   So beyond the published horizon the app repeats the last published week forward. A
+   projected class is a pattern, not a listing, and the app never claims otherwise:
+
+     - it carries no availability, because FIT has not said (see availInfo)
+     - it has no `bid`, and Book is refused on it outright
+     - it is never projected inside the bookable window, so it can never stand in for a
+       class you could actually be booking right now
+     - a real class always wins for the same date+time+studio
+
+   The only thing it is used for is adding a pick, and a recurring pick does not depend on
+   the date existing at all. If a projected class turns out not to run, the pick row says
+   "Not on the timetable" once the real week lands — the surface that already existed. */
+const PLAN_DAYS = 28;        // how far ahead the strip lets you plan
+const PROJECT_MIN_LEAD = 8;  // never project inside the 7d+1h bookable window
+
+function withProjection(tt){
+  const real = (tt && Array.isArray(tt.classes)) ? tt.classes : [];
+  if(!real.length) return tt;
+  const today = sydToday(), horizon = addDays(today, PLAN_DAYS - 1);
+  const floor = addDays(today, PROJECT_MIN_LEAD);
+  const have = {};
+  let last = '';
+  real.forEach(c=>{
+    if(!c || !c.date) return;
+    have[c.date+'|'+c.time+'|'+c.studio] = 1;
+    if(c.date > last) last = c.date;
+  });
+  if(!last || last >= horizon) return tt;
+  const src = real.filter(c => c && c.date > addDays(last, -7) && c.date <= last);
+  if(!src.length) return tt;
+  const out = real.slice();
+  for(let shift = 7; shift <= PLAN_DAYS + 7; shift += 7){
+    let added = 0;
+    for(const c of src){
+      const d = addDays(c.date, shift);
+      if(d > horizon || d < floor) continue;
+      if(have[d+'|'+c.time+'|'+c.studio]) continue;
+      const startMs = sydWallToMs(d, c.time), opensMs = opensMsForSyd(d, c.time);
+      if(startMs === null || opensMs === null) continue;   // DST gap: say nothing
+      have[d+'|'+c.time+'|'+c.studio] = 1;
+      /* AUDIT — every projected row used to carry bid:''. bid is this app's ROW KEY:
+         findClass() resolves data-bid, and `''` matched the FIRST projected row in the
+         array for every one of them. Tapping the repeat glyph on a Wednesday Cycle class
+         opened the sheet for a Sunday Reformer class and saved a recurring pick for it.
+         The key must be unique. It is deliberately not numeric so it can never be mistaken
+         for one of FIT's own booking ids by anything downstream. */
+      out.push(Object.assign({}, c, {
+        date: d, projected: true,
+        bid: 'p-' + d + '-' + String(c.time).replace(':', '') + '-' + c.studio,
+        avail: '', notfull: true,
+        /* FIT has not rostered this week. Copying last week's instructor and duration
+           forward asserts two facts nobody has published, on a row whose whole point is
+           that it is a guess. Drop them; the sheet says so in words instead. */
+        staff: '', end: '',
+        start_iso: new Date(startMs).toISOString(),
+        opens_iso: new Date(opensMs).toISOString(),
+      }));
+      added++;
+    }
+    /* AUDIT (round 2) — this used to `break` on the first shift that added nothing. When the
+       last published date is TODAY every shift-7 date lands below PROJECT_MIN_LEAD, so the
+       loop stopped before trying shifts 14 and 21 and produced no projection at all — and
+       with the occ.length gate below, every healthy pick then read "Not on the timetable".
+       The loop is bounded by the horizon already; there is nothing to break out of. */
+    void added;
+  }
+  return Object.assign({}, tt, {classes: out});
+}
+
 function opensMsForSyd(dateStr, hhmm){
   const a = String(hhmm).split(':').map(Number);
   if(a.length < 2 || isNaN(a[0]) || isNaN(a[1])) return null;
@@ -1845,11 +1952,23 @@ function scanOpens(p, horizonDays){
     if(dowMon0(ds) !== wd) continue;
     const opens = opensMsForSyd(ds, p.time);
     if(opens === null) continue;                    // e.g. inside the DST gap — say nothing
-    if(opens >= now - 20*60000) return opens;
+    if(opens >= now - BOOK_GRACE_MS) return opens;
   }
   return null;
 }
-function bookableOpensMs(p){ return scanOpens(p, 10); }
+/* The bot's grace, in one place. fitbot.bookable_occurrence() books an occurrence only
+   while its window opened within the last 20 minutes; scanOpens() below has always mirrored
+   that. pickState() did NOT, which is the whole of the bug this constant exists to close:
+   the row walked the timetable, took the first future class, and reported its long-expired
+   window as "Open 6d 14h — not booked yet" for a pass the bot had correctly abandoned days
+   earlier — while the hero, using scanOpens, simultaneously said the truth. Every surface
+   that asks "when does this pick next book?" now goes through the same rule. */
+const BOOK_GRACE_MS = 20 * 60000;
+/* AUDIT — the horizon was 10 days against fitbot.bookable_occurrence()'s 17, with the bot
+   carrying an explicit comment that "a short scan returns None for a perfectly healthy
+   pick". 17 days is at least two occurrences of any weekday, so the answer no longer
+   depends on which day of the week it is asked. */
+function bookableOpensMs(p){ return scanOpens(p, 17); }
 /* display-only: identical maths, longer horizon, so a countdown always exists */
 function nextWindowMs(p){ return scanOpens(p, 21); }
 
@@ -2446,6 +2565,69 @@ function pickNameDrift(p){
   const bad = pickOccurrences(p).filter(c => String(c.name||'').toLowerCase().indexOf(want) < 0);
   return bad.length ? bad[0] : null;
 }
+/* ── "this one didn't book", as a fact rather than a guess ───────────────────────────
+   The row used to infer a failure from a stopwatch: window open more than ten minutes and
+   still not on the account. That fired constantly for picks added after their own window
+   opened — nobody's failure — and it could not tell a full class from a portal refusal.
+   The bot already logs exactly what happened, so read that instead. It says nothing until
+   there is something to say, which is the whole design of this screen.
+
+   Retires itself: a later `booked` for the same occurrence clears it, and so does the
+   class date passing. */
+const PICK_MISS_KINDS = {
+  snipe_full:1, snipe_failed:1, snipe_rejected:1,
+  /* AUDIT — these three were mapped to NO surface anywhere. `snipe_late` is the bot's only
+     declaration of a genuine, still-actionable miss ("this run woke AFTER the booking window
+     opened and NOTHING was booked"), and the pickState grace now skips exactly the
+     occurrence it is about, so the row reads "Booking scheduled" over the top of it. The
+     activity log that used to carry them is gone by design. They belong here. */
+  snipe_late:1, snipe_notfound:1, snipe_skipped_studio_limit:1,
+};
+const PICK_MISS_TEXT = {
+  snipe_full:     'the class was already full when booking opened',
+  snipe_rejected: 'FIT refused it',
+  snipe_failed:   'the booking didn’t go through — check the FIT app',
+  snipe_late:     'the bot woke after the window had opened — book it in the FIT app if it’s still free',
+  snipe_notfound: 'FIT didn’t have this class at that time',
+  snipe_skipped_studio_limit: 'another class in this studio was already booked that day',
+};
+function pickMiss(p){
+  const log = Array.isArray(logdata) ? logdata : [];
+  const today = sydToday(), now = Date.now();
+  /* AUDIT — this used to keep ONE `hit`, overwritten by every later miss, and retired only
+     by a `booked` for that same date. So a success in week 2 silently cleared an unresolved
+     failure in week 1, and a class booked any other way (in the FIT app, by Book now, by
+     book_recovered which carries no `pick`) left the row asserting a miss underneath a green
+     "Booked for" tick. Track misses PER OCCURRENCE, retire each against the account as well
+     as the log, and report the SOONEST one still standing. */
+  const held = {};
+  realBookings().forEach(b=>{
+    if(!b || !b.date) return;
+    const st = studioOfBooking(b);
+    if(st && b.time) held[b.date+'|'+st+'|'+b.time] = 1;
+  });
+  const misses = {};
+  for(let i = 0; i < log.length; i++){          // array order IS the chronology
+    const e = log[i];
+    if(!e || !e.pick) continue;
+    if(String(e.pick.day) !== p.day || String(e.pick.time) !== p.time ||
+       String(e.pick.studio) !== p.studio) continue;
+    if(pickDate(p) && String(e.pick.date || '') !== pickDate(p)) continue;
+    const d = String(e.date || e.pick.date || '');
+    if(!d || d < today) continue;                // that class has been and gone
+    /* the class itself, not just its date: a 6am miss stayed on the row until midnight */
+    const startMs = sydWallToMs(d, p.time);
+    if(startMs !== null && startMs <= now) continue;
+    if(held[d+'|'+p.studio+'|'+p.time]) continue;         // it is on the account now
+    if(e.kind === 'booked' || e.kind === 'book_recovered'){ delete misses[d]; continue; }
+    /* already_booked means the account already holds THIS slot — satisfied, not missed */
+    if(e.kind === 'snipe_skipped_studio_limit' && e.already_booked){ delete misses[d]; continue; }
+    if(PICK_MISS_KINDS[e.kind]) misses[d] = e.kind;
+  }
+  const days = Object.keys(misses).sort();
+  return days.length ? {date: days[0], kind: misses[days[0]]} : null;
+}
+
 /* Single source of truth shared by the hero and the Picks list, so the two can
    never disagree about the same pick. */
 function pickState(p){
@@ -2464,24 +2646,74 @@ function pickState(p){
     if(!b || !b.date) return;
     const st = studioOfBooking(b);
     if(!st) return;
+    /* AUDIT (round 2) — sameStudio took rows whose time cell never parsed (fitbot's
+       parse_bookings leaves time:"" when FIT changes the column layout). Such a row cannot
+       be told apart from the pick's OWN class, so `blocked` inverted a real booking into a
+       red "won't book". A booking this app cannot place in time is not evidence of anything
+       — the same rule studioOfBooking() already follows for the studio. */
+    if(!b.time) return;
     sameStudio[b.date+'|'+st] = b;
-    if(b.time) exact[b.date+'|'+st+'|'+b.time] = b;
+    exact[b.date+'|'+st+'|'+b.time] = b;
   });
-  let blocked = null;
+  /* An occurrence of this pick is on the account. That is the single most useful thing this
+     row can say, and it outranks everything below — "Booking scheduled" carries no news for
+     a pick that is always scheduled, while "Booked for Wed" does.
+
+     AUDIT (round 2) — this was a check INSIDE the loop, so a blocked earlier occurrence
+     returned first and hid it. Consecutive weekly windows open an hour before the previous
+     class starts, so for that hour every week occurrence 2 is booked while occurrence 1 is
+     still in the future: the row shouted about a clash and never said he had a class. It is
+     a pre-scan now, so nothing can get in front of it. */
   for(let i=0;i<occ.length;i++){
     const c = occ[i];
-    if(exact[c.date+'|'+c.studio+'|'+c.time]) continue;   // the bot already won this one
+    if(exact[c.date+'|'+c.studio+'|'+c.time]) return {kind:'booked', opens:null, cls:c};
+  }
+  let stale = null;
+  for(let i=0;i<occ.length;i++){
+    const c = occ[i];
     /* asked for, not answered: show the truthful in-between state rather than either a
        tick or a countdown */
     if(pendingBookFor(c.date, c.time, c.studio)) return {kind:'booking', opens:null, cls:c};
+    /* AUDIT — this used to record `blocked` and keep looking, so it only ever surfaced if
+       EVERY later occurrence also fell through. With four weeks of projected occurrences
+       there is always a later one whose window is in the future, which made the warning
+       unreachable for recurring picks: the bot logs snipe_skipped_studio_limit and refuses
+       to book, and the row said "Booking scheduled". FIT allows one class per studio per
+       day; the soonest occurrence being blocked is a fact about a date the owner can still
+       act on, so it is reported where it happens, exactly like `booked` above. */
     const other = sameStudio[c.date+'|'+c.studio];
-    if(other){ if(!blocked) blocked = {cls:c, by:other}; continue; }
+    if(other) return {kind:'blocked', opens:null, cls:c, by:other};
     const o = new Date(c.opens_iso).getTime();
     if(!isFinite(o)) continue;
+    /* THE FIX. An occurrence whose window opened longer ago than the bot's grace is one no
+       pass will ever take — reporting it as "not booked yet" is a countdown for a run that
+       cannot happen, and it fires for every recurring pick added after its own window
+       opened, which is the normal way a pick gets added. Skip it and keep looking. */
+    if(o < now - BOOK_GRACE_MS){ if(!stale) stale = c; continue; }
     return {kind: o <= now ? 'open' : 'waiting', opens:o, cls:c};
   }
-  if(blocked) return {kind:'blocked', opens:null, cls:blocked.cls, by:blocked.by};
-  if(occ.length) return {kind:'booked', opens:null, cls:occ[0]};
+  /* Nothing left that the bot can still act on. A RECURRING pick keeps going past the end of
+     the published timetable, so fall back to the same rule the bot uses — but ONLY if this
+     slot actually exists somewhere in the four weeks the app can see.
+
+     AUDIT — the fallback used to run unconditionally. pickOpensMs() is pure calendar
+     arithmetic that never checks the slot exists, so a pick for a class FIT has deleted read
+     "Booking scheduled" — and, because the scan is a fixed number of days, whether it did
+     depended on the WEEKDAY: the same untouched Wednesday pick said "Not on the timetable"
+     on a Sunday and "Booking scheduled" on the Monday. */
+  /* AUDIT (round 2) — the gate must not fire when the app simply has no forward timetable to
+     check against (never synced, or a scrape old enough that every date it holds is past).
+     The bot works from its own scrape, not this copy, so "scheduled" is the true answer
+     there and "Not on the timetable" would be the app asserting something it cannot know. */
+  if(occ.length || !allDates.length){
+    const beyond = pickOpensMs(p);
+    if(beyond !== null) return {kind:'waiting', opens:beyond, cls:null};
+    /* The class is still on the timetable, still in the future, and its booking window has
+       closed with nothing booked — the bot's run was late or down. There is no next window
+       for a one-off, so nothing above this can speak for it, and it used to fall all the way
+       through to "Not on the timetable", which is false and points the wrong way. */
+    if(stale) return {kind:'missed', opens:null, cls:stale};
+  }
   /* a one-off whose date has already gone — or is earlier today — is spent, not broken */
   if(isOneOff(p) && pickDate(p) <= sydToday()) return {kind:'expired', opens:null, cls:null};
   return {kind:'missing', opens:null, cls:null};
@@ -2555,6 +2787,27 @@ function heroHTML(){ return '<div class="herowrap">'+heroInner()+'</div>'; }
 function heroInner(){
   const nw = nextPickWindow();
   if(!nw){
+    /* AUDIT — this branch keys on "no next window", not on "no picks", so a one-off whose
+       window has closed put "No picks yet" directly above a list showing that very pick.
+       Say what is true of the picks themselves; the row underneath carries the detail. */
+    const n0 = picks.length;
+    if(n0){
+      /* AUDIT (round 2) — "Nothing lined up right now" is false for the commonest way to
+         reach this branch: a one-off the bot has already WON has no next window. The hero
+         and the row below it must never describe the same picks differently, so read the
+         rows' own states rather than inventing a second story about them. */
+      const kinds = picks.map(p => pickState(p).kind);
+      const needy = kinds.filter(k => k==='missed' || k==='blocked' || k==='missing').length;
+      const bookedN = kinds.filter(k => k==='booked').length;
+      const sub0 = needy ? (needy===1 ? '1 pick needs you' : needy+' picks need you')+' — open Picks.'
+                 : bookedN === n0 ? (n0===1 ? 'Booked.' : 'All booked.')
+                 : 'Open Picks for the detail.';
+      return '<button class="hero" data-act="goPicks">'+
+        '<span class="hk">Auto-booking</span>'+
+        '<span class="hbig">'+(n0 === 1 ? '1 pick' : n0 + ' picks')+'</span>'+
+        '<span class="hsub">'+esc(sub0)+'</span>'+
+        '<span class="hchev">'+G.chevBig+'</span></button>';
+    }
     return '<button class="hero none" data-act="goPicks">'+
       '<span class="hk">Auto-booking</span>'+
       '<span class="hbig">No picks yet</span>'+
@@ -2576,10 +2829,15 @@ function heroInner(){
   const sub = name + ' · ' + wd + ' ' + fmt12(time).full +
               ' · ' + (c ? (SLABEL[studio]||studio) : 'not on timetable');
   const jump = c ? (' data-act="jump" data-date="'+esc(c.date)+'" data-bid="'+esc(c.bid)+'"') : ' data-act="goPicks"';
+  /* was a live countdown to the next booking window. Same reasoning as the pick rows: the
+     number cannot be acted on, and a permanently ticking clock makes a background job feel
+     like something that needs watching. What is worth knowing is that something IS lined
+     up, and which class it is. */
+  const n = picks.length;
   return '<button class="hero"'+jump+'>'+
-    '<span class="hk">Next window opens</span>'+
-    '<span class="hbig tnum" data-cd="'+nw.opens+'">'+esc(cdText(left))+'</span>'+
-    '<span class="hsub">'+esc(sub)+'</span>'+
+    '<span class="hk">Auto-booking</span>'+
+    '<span class="hbig">'+(n === 1 ? '1 pick' : n + ' picks')+'</span>'+
+    '<span class="hsub">'+esc('Next up: ' + sub)+'</span>'+
     '<span class="hchev">'+G.chevBig+'</span></button>';
 }
 
@@ -2587,18 +2845,18 @@ function heroInner(){
 function railHTML(){
   const today = sydToday();
   return weekDates(weekStart).map(d=>{
-    const past = d < today;
-    const st = past ? [] : studiosOn(d);
+    const st = studiosOn(d);
     const cls = ['dcell'];
-    if(past) cls.push('past');
-    else{
-      if(d === selDate) cls.push('sel');
-      if(d === today) cls.push('today');
-      if(!st.length) cls.push('noclass');
-    }
+    /* The strip starts at today, so this cannot fire — which is exactly why it stays. It is
+       what makes the tap handler's `past` guard, and the .dcell.past rule, load-bearing
+       rather than decorative if the anchor is ever wrong again. */
+    if(d < today) cls.push('past');
+    if(d === selDate) cls.push('sel');
+    if(d === today) cls.push('today');
+    if(!st.length) cls.push('noclass');
     const pips = st.slice(0,5).map(s=>'<i style="background:'+SCOLOR[s]+'"></i>').join('');
-    return '<button class="'+cls.join(' ')+'" data-date="'+d+'"'+(past?' disabled aria-disabled="true"':'')+
-         ' aria-label="'+esc(longDate(d))+(past?' — past':'')+'">'+
+    return '<button class="'+cls.join(' ')+'" data-date="'+d+'"'+
+         ' aria-label="'+esc(longDate(d))+'">'+
          '<span class="dw">'+(d===today?'TODAY':WD_SHORT[dowMon0(d)].toUpperCase())+'</span>'+
          '<span class="dn">'+dayNum(d)+'</span>'+
          '<span class="pips">'+pips+'</span></button>';
@@ -2606,11 +2864,11 @@ function railHTML(){
 }
 function weekHeadHTML(){
   const canPrev = weekStart > firstWeek(), canNext = weekStart < lastWeek();
-  const thisWk = weekStart === mondayOf(sydToday());
+  const thisWk = weekStart === sydToday();
   return '<div class="weekhead">'+
     '<button class="wknav" data-week="-1"'+(canPrev?'':' disabled')+' aria-label="Previous week">'+
       '<svg viewBox="0 0 9 15" width="9" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleX(-1)"><path d="m1.6 1.6 5.6 5.9-5.6 5.9"/></svg></button>'+
-    '<span class="wklabel"><b>'+esc(weekLabel(weekStart))+'</b>'+(thisWk?' · this week':'')+'</span>'+
+    '<span class="wklabel"><b>'+esc(weekLabel(weekStart))+'</b>'+(thisWk?' · next 7 days':'')+'</span>'+
     '<button class="wknav" data-week="1"'+(canNext?'':' disabled')+' aria-label="Next week">'+
       '<svg viewBox="0 0 9 15" width="9" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m1.6 1.6 5.6 5.9-5.6 5.9"/></svg></button>'+
   '</div>';
@@ -2638,29 +2896,34 @@ function classRowHTML(c, bookedStudios){
 
   let stTxt, stCls = '', stG = '';
   if(av.full){
-    stTxt = av.label + (open ? '' : ' · opens ' + relTime(opensMs - Date.now()));
-    stCls = 'bad';
+    stTxt = av.label; stCls = 'bad';
   } else if(open){
     stTxt = 'Open now'; stCls = 'go'; stG = G.bolt;
+  } else if(av.projected){
+    /* AUDIT — beyond FIT's published fortnight this row is the app's own guess, and it used
+       to be indistinguishable from a published class: same layout, an instructor name, and
+       only an ABSENCE (no status pill) to mark it. "Do less and say so loudly" means saying
+       it, not leaving a gap where the claim would be. */
+    stTxt = 'Not published yet'; stCls = ''; stG = G.clock;
   } else {
-    const dt = opensMs - Date.now();
-    stTxt = dt < 36*3600000 ? 'Opens in '+relTime(dt)
-                            : 'Opens '+WD_SHORT[dowMon0(isoDateStr(c.opens_iso))]+' '+isoClock(c.opens_iso);
-    stCls = 'amb'; stG = G.clock;
+    /* was "Opens in 3d 4h" / "Opens Sat 3:15pm". The exact moment a booking window opens
+       is the bot's problem, not the reader's — they either want the class or they don't,
+       and the pick is how they say so. */
+    stTxt = 'Not open yet'; stCls = 'amb'; stG = G.clock;
   }
 
   const staff = c.staff && String(c.staff).trim() ? String(c.staff).trim() : '';
   const tail = (SLABEL[c.studio]||c.studio) + (staff ? ' · ' + staff : '');
   /* CONTRACT §5 gates Book on window-open + not-full only. A same-day booking in the
      same studio is a WARNING (bookings.json can be up to 8 hours stale), never a block. */
-  const canBook = open && !av.full;
+  const canBook = open && !av.full && !c.projected;
 
   return '<div class="crow'+(picked?' ispick':'')+(once?' once':'')+(av.full?' isfull':'')+'" data-bid="'+esc(c.bid)+'" id="row-'+esc(c.bid)+'">'+
     '<div class="ctime"><b>'+esc(t.h)+'</b><span>'+t.ap.toUpperCase()+'</span></div>'+
     '<div class="cbody">'+
       '<div class="cname">'+esc(c.name || c.studio)+'</div>'+
       '<div class="cmeta">'+
-        '<span class="cst '+stCls+'">'+stG+'<span>'+esc(stTxt)+'</span></span>'+
+        (stTxt ? '<span class="cst '+stCls+'">'+stG+'<span>'+esc(stTxt)+'</span></span>' : '')+
         '<span class="ctail"><i class="sdot" style="background:'+(SCOLOR[c.studio]||'var(--ink3)')+'"></i>'+
           '<span>'+esc(tail)+'</span></span>'+
       '</div>'+
@@ -2685,6 +2948,15 @@ function classRowHTML(c, bookedStudios){
 /* ── Book screen ────────────────────────────────────────────── */
 function renderBook(){
   const w = $('#w-book');
+  /* AUDIT — weekStart was re-clamped only in syncWeek(), reached only from indexDates(). The
+     studio chip, the day swipe and the idle re-render all call renderBook() directly, so an
+     app left open across Sydney midnight kept yesterday's anchor and drew two dead days as
+     ordinary live cells — and they were tappable, because removing the `past` branch removed
+     the guard with it. One clamp here covers every path into the strip. */
+  /* pageOf() also RE-ALIGNS: clampWeek alone only bounds, so an anchor left over from
+     yesterday stayed a day off the page grid and tapping the leftmost cell slid the strip
+     backwards a week. pageOf is idempotent on an anchor that is already aligned. */
+  weekStart = pageOf(weekStart || firstWeek());
   if(!allDates.length){
     w.innerHTML = '<div class="ltitle">Book</div>'+ offlineBanner() +
       '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
@@ -2705,10 +2977,20 @@ function renderBook(){
   ];
   let listHTML = '';
   if(!list.length){
+    /* AUDIT — "already started" was the only wording here, and with a 28-day strip it was
+       routinely shown for a date three weeks away. On a future day an empty list means FIT
+       has not published (or has closed) that day, which is a different fact. */
+    /* AUDIT (round 2) — the discriminator is not "is this day in the future" but "did this
+       day ever have classes". Today with nothing published is the one case where "every
+       class has already started" is both false and least obviously so. */
+    const anyThatDay = (timetable.classes||[]).some(c => c && c.date === selDate);
     listHTML = '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
-      '<div class="et">Nothing left here</div><div class="es">'+
-      (studioFilter==='all' ? 'Every class on this day has already started.'
-        : 'No '+esc(SLABEL[studioFilter]||studioFilter)+' classes left on this day — try All.')+'</div></div>';
+      '<div class="et">'+(anyThatDay ? 'Nothing left here' : 'Nothing here')+'</div><div class="es">'+
+      (studioFilter==='all'
+        ? (anyThatDay ? 'Every class on this day has already started.'
+                      : 'FIT hasn’t published any classes for this day.')
+        : 'No '+esc(SLABEL[studioFilter]||studioFilter)+' classes '+(anyThatDay?'left on':'on')+
+          ' this day — try All.')+'</div></div>';
   } else {
     buckets.forEach(b=>{
       const rows = list.filter(b.f);
@@ -2880,9 +3162,16 @@ const BOT_LOG_SURFACE = {
   booknow_notfound:'', booknow_ambiguous:'', scrape_error:'', cred_fallback:'',
   form_checkbox_skipped:'', picks_unreadable:'', pick_removed:'', pick_bad_date:'',
   pick_day_mismatch:'', pick_name_drift:'', pick_unusable:'',
-  snipe_notfound:'', snipe_waiting:'', snipe_full:'', snipe_rejected:'', snipe_failed:'',
-  snipe_nopicks:'', snipe_skipped:'', snipe_nothing_due:'', snipe_late:'',
-  snipe_skipped_studio_limit:'',
+  /* a booking pass that genuinely failed — shown on the pick row it belongs to, by
+     pickMiss(), which replaced a stopwatch that guessed at this */
+  snipe_full:'row', snipe_rejected:'row', snipe_failed:'row',
+  /* AUDIT — these three were '' under the note "a pick shows its own state on Picks". After
+     the pickState grace it no longer did: the occurrence they are about is skipped, so the
+     row read "Booking scheduled" while a real, still-fixable miss went unsaid on every
+     surface. They are pickMiss() kinds now, and pickMiss draws on the row. */
+  snipe_late:'row', snipe_notfound:'row', snipe_skipped_studio_limit:'row',
+  snipe_waiting:'',
+  snipe_nopicks:'', snipe_skipped:'', snipe_nothing_due:'',
 
   /* ── confirm-or-it-cancels ────────────────────────────────────────────────────────
      The sweep cancels bot-booked classes the user never confirmed. Every one of these
@@ -3457,25 +3746,26 @@ function pickRowHTML(p, dupe){
   const once = isOneOff(p);
   const st = pickState(p);
   const drift = pickNameDrift(p);
+  let miss = pickMiss(p);
+  /* AUDIT (round 2) — snipe_skipped_studio_limit drives BOTH the blocked line and this one,
+     so the same fact was rendered twice, in two tones, on a screen whose whole rule is that
+     only failures show. The blocked line is the better of the two: it names the class that
+     is in the way and the time it is at. */
+  if(miss && st.kind === 'blocked' && miss.kind === 'snipe_skipped_studio_limit' &&
+     st.cls && miss.date === st.cls.date) miss = null;
   let nextTxt, nextCls = 'amb', g = G.clock, opens = null, wide = false;
   if(st.kind === 'open'){
     /* The window is open and the class is still not on the account. For the first few
        minutes that is just the bot on its way. After that it is a failure — and the
        activity log that used to be the only place it was ever visible is gone, so it has
        to be said on the row it belongs to. */
-    const openFor = st.opens === null ? 0 : Date.now() - st.opens;
-    if(openFor > 10*60000){
-      /* amber, not red: much the commonest cause is a pick added AFTER this occurrence's
-         window opened, which is nobody's failure — and the bot's own grace is 20 minutes,
-         so no pass can rescue it either. If it keeps saying this, the class is full. */
-      nextTxt = 'Open '+relTime(openFor)+' — not booked yet';
-      nextCls = 'amb'; g = G.warnS; wide = true;
-    } else {
-      /* was "Open now — booking": the same background narration, and it also made a pick
-         the app had just optimistically booked distinguishable from one it had not. Both
-         now read "Open now" — the state of the window, which is a fact about the class. */
-      nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt;
-    }
+    /* The old branch here read "Open 6d 14h — not booked yet" once the window had been
+       open ten minutes. It was a stopwatch standing in for information the app did not
+       have, and after the pickState fix the state it was guessing about cannot occur:
+       an occurrence past the bot's grace is skipped, so reaching here means the window is
+       genuinely open NOW and a pass is due. Whether one actually failed is a fact, and
+       facts come from the bot's log — see pickMiss(). */
+    nextTxt = 'Booking now'; nextCls = 'go'; g = G.bolt;
   }
   else if(st.kind === 'booking'){
     /* The app has asked FIT and has NOT been answered. This used to read "Booking… not
@@ -3485,15 +3775,25 @@ function pickRowHTML(p, dupe){
        It is still NOT a tick — pickState() only returns 'booked' from realBookings(), so an
        optimistic row can never turn this green — and if FIT never confirms it, the settle
        window withdraws the row and warns, which is the surface that matters. */
-    nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt;
+    nextTxt = 'Booking now'; nextCls = 'go'; g = G.bolt;
   }
-  else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
+  /* No countdown. How many hours until a background job runs is not a thing the owner of
+     this app can act on, and it was the last stopwatch left on the screen. Scheduled or
+     not scheduled is the whole of what matters. */
+  else if(st.kind === 'waiting'){ nextTxt = 'Booking scheduled'; nextCls = ''; g = G.clock; }
   else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
   else if(st.kind === 'blocked'){
     /* correctness #10 — say WHY it will not book, instead of a green tick that claims the
        bot got it. FIT allows one class per studio per day, so this pick is skipped. */
     nextTxt = 'Won’t book '+shortDate(st.cls.date)+' — '+(SLABEL[p.studio]||p.studio)+
               ' already booked at '+(st.by.time_raw || (st.by.time ? fmt12(st.by.time).full : 'another time'));
+    nextCls = 'bad'; g = G.warnS; wide = true;
+  }
+  else if(st.kind === 'missed'){
+    /* The class is on the timetable, still in the future, and its booking window closed with
+       nothing booked — the bot's run was late or down. Nothing else on this screen can say
+       so: there is no next window for a one-off, and the occurrence itself is skipped. */
+    nextTxt = 'Booking window closed — book it in the FIT app';
     nextCls = 'bad'; g = G.warnS; wide = true;
   }
   else if(st.kind === 'expired'){ nextTxt = 'Date has passed'; nextCls = ''; g = G.warnS; }
@@ -3513,7 +3813,7 @@ function pickRowHTML(p, dupe){
     '<div class="cbody">'+
       '<div class="cname">'+esc(p.name || SLABEL[p.studio] || p.studio)+'</div>'+
       '<div class="cmeta">'+
-        '<span class="cst '+nextCls+(wide?' longform':'')+'"'+(opens?' data-cd="'+opens+'" data-cdmode="pick"':'')+'>'+
+        '<span class="cst '+nextCls+(wide?' longform':'')+'">'+
           g+'<span>'+esc(nextTxt)+'</span></span>'+
         (once
           ? '<span class="onceTag">'+esc(shortDate(pickDate(p)))+' only</span>'
@@ -3526,6 +3826,10 @@ function pickRowHTML(p, dupe){
         '<span>Two '+esc(SLABEL[p.studio]||p.studio)+' picks on '+esc(p.day)+' — FIT allows one per day</span></span></div>' : '')+
       (drift ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
         '<span>This slot is now “'+esc(drift.name)+'” — the bot matches on name, so re-pick it or it will never book</span></span></div>' : '')+
+      (miss ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
+        '<span>Didn’t book '+esc(shortDate(miss.date))+' — '+
+        esc(PICK_MISS_TEXT[miss.kind] || 'the booking pass did not succeed')+
+        '</span></span></div>' : '')+
     '</div>'+
     '<div class="cact"><button class="ptog rm" data-remove="'+esc(p.day+'|'+p.time+'|'+p.studio+'|'+pickDate(p))+'" '+
       'aria-label="Remove this '+(once?'one-off':'weekly')+' pick"><span class="pk">'+G.xmark+'</span></button></div>'+
@@ -3744,20 +4048,18 @@ function openClassSheet(bid){
   const t = fmt12(c.time);
   const conflict = bookedStudiosOn(c.date)[c.studio];
 
+  /* The sheet is where a decision gets made, so it keeps the DATE the window opens — a
+     fact you could act on — but not a live countdown to it. */
   const windowVal = open
     ? '<span style="color:var(--go)">Open now</span>'
-    : ((opensMs - Date.now() < 36*3600000)
-        ? '<span style="color:var(--amber)">In ' + esc(relTime(opensMs - Date.now())) + '</span>'
-        : esc(shortDate(isoDateStr(c.opens_iso)) + ', ' + isoClock(c.opens_iso)));
+    : esc(shortDate(isoDateStr(c.opens_iso)) + ', ' + isoClock(c.opens_iso));
 
   let primary;
   if(av.full){
     primary = '<button class="btn" disabled>'+esc(av.long)+'</button>';
   } else if(!open){
-    const lockTxt = (opensMs - Date.now() < 36*3600000)
-      ? 'Opens in ' + relTime(opensMs - Date.now())
-      : 'Opens ' + shortDate(isoDateStr(c.opens_iso)) + ', ' + isoClock(c.opens_iso);
-    primary = '<button class="btn" disabled>'+G.lock+' '+esc(lockTxt)+'</button>';
+    primary = '<button class="btn" disabled>'+G.lock+' Opens '+
+      esc(shortDate(isoDateStr(c.opens_iso)))+'</button>';
   } else {
     /* a same-day booking in this studio is a caution, not a lock — bookings.json can be
        hours stale and FIT, not this app, is the authority on what is allowed */
@@ -3772,6 +4074,19 @@ function openClassSheet(bid){
       '</span></div></div></div>'
     : '';
 
+  /* AUDIT — a projected row is the app repeating the last published week. FIT has not
+     rostered it, so the sheet must not offer to pin a ONE-OFF to that date: a one-off for a
+     class that never appears is scheduled, attempted, logged snipe_notfound and never
+     retired. A recurring pick has no such problem — it does not depend on this date
+     existing at all — so that switch stays. */
+  const projNote = c.projected
+    ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri">'+G.clock+'</div>'+
+      '<div class="rt"><b>FIT hasn’t published this week yet</b><span>'+
+      'This is last week’s timetable shown again so you can plan. The class, its time and its '+
+      'instructor are not confirmed. You can still set it to auto-book every week — the bot books '+
+      'whatever FIT actually publishes for that slot.</span></div></div></div>'
+    : '';
+
   const html =
   '<div class="sheet-card"><div class="grabber"></div><div class="sheet-scroll">'+
     '<div class="detail-head">'+
@@ -3781,9 +4096,12 @@ function openClassSheet(bid){
       '<div class="detail-when">'+esc(longDate(c.date))+' · '+esc(t.full)+
         (dur ? ' – '+esc(endLabel(c)) : '')+'</div>'+
     '</div>'+
+    projNote+
     '<div>'+
       (c.staff && String(c.staff).trim() ? factRow('Instructor', esc(String(c.staff).trim())) : '')+
-      factRow('Availability', '<span style="color:'+(av.full?'var(--bad)':'var(--ink)')+'">'+esc(av.long)+'</span>')+
+      /* av.long is empty for a projected class, which rendered a labelled row with nothing
+         after it — a rendering fault, not a silence. Omit the row entirely instead. */
+      (av.long ? factRow('Availability', '<span style="color:'+(av.full?'var(--bad)':'var(--ink)')+'">'+esc(av.long)+'</span>') : '')+
       factRow('Booking window', windowVal)+
       (dur ? factRow('Duration', dur+' minutes') : '')+
     '</div>'+
@@ -3794,6 +4112,10 @@ function openClassSheet(bid){
         'aria-label="Auto-book every week">'+
         '<span class="sw" aria-hidden="true"><i></i></span></button>'+
     '</div>'+
+    /* AUDIT (round 2) — hiding the switch outright also hid an existing one-off pick, so the
+       sheet read as unpicked and the pick could not be turned off from there. Hide it only
+       when there is nothing to show: no pick to remove. */
+    (c.projected && !oneOff ? '' :
     '<div class="swrow">'+
       '<div class="rbody"><div class="rtitle">Auto-book just this one</div>'+
       '<div class="rsub"><span class="txt">'+
@@ -3802,7 +4124,7 @@ function openClassSheet(bid){
       '<button class="swtap" role="switch" aria-checked="'+oneOff+'" data-act="toggleonce" data-bid="'+esc(c.bid)+'" '+
         'aria-label="Auto-book just this one">'+
         '<span class="sw" aria-hidden="true"><i></i></span></button>'+
-    '</div>'+
+    '</div>')+
     '<div class="sheet-actions">'+ conflictNote + primary +
       '<button class="btn gray" data-act="close">Done</button>'+
     '</div>'+
@@ -4160,7 +4482,7 @@ function setDay(date, dir){
   const slide = $('#dayslide');
   if(slide && dir) slide.classList.add(dir > 0 ? 'out-l' : 'out-r');
   selDate = date;
-  weekStart = clampWeek(mondayOf(date));   // the strip follows the day, one week at a time
+  weekStart = pageOf(date);   // the strip follows the day, one rolling page at a time
   setTimeout(()=>{
     renderBook();
     const s2 = $('#dayslide');
@@ -4372,7 +4694,7 @@ function jumpToClass(date, bid){
   };
   switchTab('book');
   if(studioFilter !== 'all'){ studioFilter = 'all'; }
-  if(date !== selDate){ selDate = date; weekStart = clampWeek(mondayOf(date)); renderBook(); setTimeout(go, 60); }
+  if(date !== selDate){ selDate = date; weekStart = pageOf(date); renderBook(); setTimeout(go, 60); }
   else { renderBook(); setTimeout(go, 60); }
 }
 
@@ -4406,18 +4728,26 @@ async function handlePickToggle(bid, btn){
      asked for; two absences plus any third strike in the same rolling week is a 7-day ban.
      When the window is already open a one-off would book nothing extra, so say that rather
      than silently choosing weekly on his behalf. */
+  /* AUDIT (round 2) — the sheet stopped offering a one-off on a projected date, but THIS is
+     the route the empty state actually tells him to use ("tap the repeat glyph on any
+     class"), and it was unguarded. A one-off pinned to a week FIT has not published is
+     scheduled, attempted, logged snipe_notfound, and never retires itself. The weekly option
+     is safe — it does not depend on this date existing — so offer only that, and say why. */
+  const proj = !!c.projected;
   const choice = await actionSheet({
     title: (c.name || c.studio),
     message: longDate(c.date)+' · '+fmt12(c.time).full+' · '+(SLABEL[c.studio]||c.studio)+
              '\nHow should the bot book this?'+
-             (open ? '\nThis one is already open — use Book to take it now.' : ''),
-    actions: open
-      ? [{label:'Auto-book every '+c.day+' from next week', style:'default'}]
+             (open ? '\nThis one is already open — use Book to take it now.' : '')+
+             (proj ? '\nFIT hasn’t published this week yet — this is last week’s timetable '+
+                     'shown again, so it can only be booked as a weekly pick.' : ''),
+    actions: (open || proj)
+      ? [{label:'Auto-book every '+c.day+(open ? ' from next week' : ''), style:'default'}]
       : [{label:'Auto-book every '+c.day, style:'default'},
          {label:'Auto-book just '+shortDate(c.date)}]
   });
   if(choice === 0) once = false;
-  else if(choice === 1 && !open) once = true;
+  else if(choice === 1 && !open && !proj) once = true;
   else return;
 
   addPick(c.day, c.time, c.studio, c.name, once ? c.date : null);
@@ -4527,7 +4857,6 @@ setInterval(function(){
       const left = at - now;
       if(left <= 0){ flip = true; continue; }
       if(mode === 'hero'){ el.textContent = cdText(left); }
-      else if(mode === 'pick'){ const s = el.lastElementChild; if(s) s.textContent = 'Books in '+relTime(left); }
       else if(mode === 'free'){ const s = el.lastElementChild; if(s) s.textContent = 'Free cancel for '+relTime(left); }
       else if(mode === 'confirm'){
         const s = el.lastElementChild;
