@@ -160,8 +160,8 @@
    <div>, so it is selectable by default) and cancels the in-progress gesture. No native
    list behaves that way. Prose inside sheets stays selectable, where copying is a real
    thing to want. */
-.crow,.row,.rulerow,.logrow,.factrow,.swrow,.dcell,.chip,.tabbtn,.navbtn,.freshbtn,
-.wknav,.hero,.alertline,.bookpill,.ptog,.btn,.btn-sm,.as-btn,.grabber,.ghead,.gfoot,
+.crow,.row,.rulerow,.factrow,.swrow,.dcell,.chip,.tabbtn,.navbtn,
+.wknav,.hero,.bookpill,.ptog,.btn,.btn-sm,.as-btn,.grabber,.ghead,.gfoot,
 .dayhead,.weekhead,.nowrule,.ltitle,.lsub,.onceTag,#toast{
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
 }
@@ -247,8 +247,7 @@ svg{display:block;flex:none}
   display:flex;align-items:center;justify-content:center;color:var(--ink2);
 }
 .navbtn:active{opacity:.4}
-.navbtn.spin svg{animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}   /* the PTR ring is the only spinner left */
 
 .flightbar{position:absolute;left:0;right:0;bottom:-2px;height:2px;overflow:hidden;display:none;pointer-events:none}
 .flightbar.on{display:block}
@@ -259,19 +258,9 @@ svg{display:block;flex:none}
 }
 @keyframes flight{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 
-/* ── freshness pill (replaces the manual Sync button as the primary path) ── */
-.freshbtn{
-  height:44px;min-width:44px;flex:none;border-radius:22px;padding:0 10px;
-  display:flex;align-items:center;justify-content:center;gap:5px;
-  color:var(--ink3);font-size:12px;font-weight:650;letter-spacing:-.1px;
-  white-space:nowrap;max-width:132px;overflow:hidden;
-}
-.freshbtn .fx{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.freshbtn svg{width:15px;height:15px}
-.freshbtn:active{opacity:.45}
-.freshbtn.syncing{color:var(--amber)}
-.freshbtn.syncing svg{animation:spin 1s linear infinite}
-.freshbtn.stale{color:var(--amber)}
+/* The freshness pill and its Sync button are gone: syncing is entirely automatic, and the
+   only remaining hint that work is happening is .flightbar above plus the "From your FIT
+   account, updated …" line on Booked. */
 
 /* ── pull to refresh ─────────────────────────────────────────── */
 .ptr{
@@ -368,15 +357,6 @@ svg{display:block;flex:none}
   transition:transform .15s ease;
 }
 .herowrap{padding:7px var(--pr) 0 var(--pl);min-width:0}
-.alertline{
-  display:flex;align-items:center;gap:9px;width:100%;min-width:0;margin-top:6px;
-  min-height:46px;padding:0 12px 0 14px;border-radius:14px;
-  background:var(--go-bg);color:var(--go);text-align:left;
-}
-.alertline > span:first-of-type{flex:1;min-width:0;font-size:13.5px;font-weight:650;letter-spacing:-.15px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.alertline .ac{flex:none;opacity:.55}
-.alertline:active{opacity:.6}
 .hero:active{transform:scale(.99)}
 .hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber-rail)}
 .hero.go::before{background:var(--go)}
@@ -595,6 +575,8 @@ svg{display:block;flex:none}
   width:auto;flex:none;letter-spacing:-.2px;display:flex;align-items:center;justify-content:center;gap:5px;
 }
 .btn-sm.redtxt{color:var(--bad);background:var(--fill)}
+/* dismiss control on a persistent notice row */
+.rulerow > .btn-sm{align-self:center;background:var(--fill);color:var(--ink2);font-size:13.5px;padding:0 11px}
 .btn-sm.ink{background:var(--btn-ink);color:var(--btn-on)}
 .btn-sm:active{opacity:.5}
 
@@ -679,30 +661,13 @@ svg{display:block;flex:none}
 .rulerow .rt b{font-weight:680;display:block}
 .rulerow .rt span{color:var(--ink2);font-size:12.5px;line-height:17px;display:block;margin-top:2px}
 
-/* ── log rows ────────────────────────────────────────────────── */
-.logrow{display:flex;gap:11px;padding:10px 13px;align-items:center;min-width:0;position:relative;min-height:52px}
-.logrow + .logrow::before{content:'';position:absolute;left:13px;right:0;top:0;height:.5px;background:var(--hair2)}
-.logrow .li{width:26px;height:26px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center}
-/* correctness #8 — a "your pick was NOT booked" line must not read like routine chatter.
-   Tone alone was doing that job and both live in the same grey list, so a failed or
-   skipped run also gets a tinted plate and a coloured rail down its left edge. */
-.logrow.lv-bad{background:var(--bad-bg);box-shadow:inset 3px 0 0 -.5px var(--bad)}
-.logrow.lv-bad .lt{color:var(--bad);font-weight:680}
-.logrow.lv-warn{box-shadow:inset 3px 0 0 -.5px var(--amber-rail)}
-.logrow.lv-warn .lt{color:var(--amber)}
-.logrow.lv-good .lt{color:var(--go)}
-
 /* ── tinted icon tiles: background + a legible ink, always as a pair ─── */
-.ri[data-tone],.li[data-tone]{color:var(--tile-ink)}
-.ri[data-tone="go"],.li[data-tone="go"]{background:var(--go)}
-.ri[data-tone="bad"],.li[data-tone="bad"]{background:var(--bad)}
-.ri[data-tone="n3"],.li[data-tone="n3"]{background:var(--ink3)}
-.ri[data-tone="n2"],.li[data-tone="n2"]{background:var(--ink2)}
-.ri[data-tone="amber"],.li[data-tone="amber"]{background:var(--amber-rail);color:var(--on-amber)}
-.logrow .lb{flex:1;min-width:0}
-.logrow .lt{font-size:14.5px;letter-spacing:-.2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.logrow .ls{font-size:12.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.logrow .lw{font-size:12px;color:var(--ink3);flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ri[data-tone]{color:var(--tile-ink)}
+.ri[data-tone="go"]{background:var(--go)}
+.ri[data-tone="bad"]{background:var(--bad)}
+.ri[data-tone="n3"]{background:var(--ink3)}
+.ri[data-tone="n2"]{background:var(--ink2)}
+.ri[data-tone="amber"]{background:var(--amber-rail);color:var(--on-amber)}
 
 /* ── iOS switch ──────────────────────────────────────────────── */
 .swrow{display:flex;align-items:center;gap:12px;padding:10px 18px;min-height:58px;min-width:0;position:relative}
@@ -785,7 +750,7 @@ svg{display:block;flex:none}
 /* ── setup ───────────────────────────────────────────────────── */
 #app.setupmode .wrap{min-height:100%;display:flex;flex-direction:column}
 #app.setupmode .wrap{padding-bottom:calc(var(--sab) + 20px)}
-#app.setupmode .navbtn,#app.setupmode .freshbtn{opacity:0;pointer-events:none}
+#app.setupmode .navbtn{opacity:0;pointer-events:none}
 #app.setupmode .savebar,#app.setupmode .tabfade,#app.setupmode .ptr{display:none}
 .setup{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;
   padding:0 calc(24px + var(--sar)) 30px calc(24px + var(--sal))}
@@ -813,10 +778,8 @@ svg{display:block;flex:none}
 
 /* ── narrow phones (320) — last in the sheet so these actually win ───── */
 @media (max-width:359px){
-  /* buys back the few px that were eating the studio name in a booked/log row */
+  /* buys back the few px that were eating the studio name in a booked row */
   .cmeta{font-size:12px}
-  .logrow .ls{font-size:12px}
-  .logrow{gap:9px;padding:10px 11px}
   .crow{gap:8px;padding-left:10px}
   /* seven columns still have to fit — buy the px back from the gutters, not the cells */
   .rail{gap:4px;padding-left:calc(var(--pl) - 6px);padding-right:calc(var(--pr) - 6px)}
@@ -824,7 +787,6 @@ svg{display:block;flex:none}
   .dcell .dn{font-size:17px}
   .dcell .pips{gap:1.5px}
   .dcell .pips i{width:3.5px}
-  .freshbtn{max-width:104px;font-size:11.5px;padding:0 8px}
 }
 </style>
 </head>
@@ -839,10 +801,9 @@ svg{display:block;flex:none}
       </button>
       <div class="nav-spacer"></div>
       <div class="nav-title" id="navTitle">Book</div>
-      <button class="freshbtn" id="syncBtn" aria-label="Data freshness — tap for sync options">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>
-        <span class="fx" id="freshTxt">…</span>
-      </button>
+      <!-- Nothing sits opposite the ⓘ any more: there is no manual sync, so there is
+           nothing to tap. The hairline below is the only in-flight signal. -->
+      <div class="navbtn" aria-hidden="true"></div>
     </div>
     <div class="flightbar" id="flightbar"><i></i></div>
   </header>
@@ -911,26 +872,71 @@ const WORKER_URL = 'https://fit-login.joshrandall182.workers.dev';
 let session = '';
 /* Which member is signed in. Display/state only now — the Worker decides which folder a
    session may read and write, so nothing here can widen access. */
-let USER = 'josh', USERNAME = '';
+let USER = '', USERNAME = '';
 try {
   session  = localStorage.getItem('fitbooker_session') || '';
-  USER     = localStorage.getItem('fitbooker_user')  || 'josh';
+  USER     = localStorage.getItem('fitbooker_user')  || '';
   USERNAME = localStorage.getItem('fitbooker_name')  || '';
 } catch(e){ session = ''; }
-function signOut(){
-  try {
+
+/* ── per-member storage (correctness: cross-member leak) ─────────────────────────────
+   Two people share this phone. Anything keyed globally is a leak: the unsaved-picks
+   draft was restored into the OTHER member's session, one tap from writing his picks to
+   her account. Every key that holds member data is scoped by member key, and signing out
+   (or being bounced to sign-in) erases every trace of the member who left — in storage
+   AND in memory — before anyone else can be shown a screen. */
+function memberKey(base){ return 'fitbooker_'+base+'_'+(USER||'nobody'); }
+const MEMBER_KEY_PREFIXES = ['fitbooker_draft_picks', 'fitbooker_alerts', 'fitbooker_rowwarn'];
+/* keys from earlier builds that were global and must never be read again */
+const LEGACY_KEYS = ['fitbooker_draft_picks', 'fitbooker_lastsnipe', 'fitbooker_sniped'];
+function wipeStoredMemberData(){
+  try{
+    LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
+    const doomed = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && MEMBER_KEY_PREFIXES.some(p => k.indexOf(p) === 0)) doomed.push(k);
+    }
+    doomed.forEach(k => localStorage.removeItem(k));
     localStorage.removeItem('fitbooker_session');
     localStorage.removeItem('fitbooker_user');
     localStorage.removeItem('fitbooker_name');
-  } catch(x){}
-  session = ''; USERNAME = '';
+  }catch(x){}
 }
+/* Blank everything that belongs to a member — storage and memory both. Called by
+   doSignOut() AND by bailToSetup(): a 401 hands the phone back to the login screen just
+   as literally as tapping Sign out does, and the next person to sign in must not be able
+   to see, or act on, one byte of the last one's data. */
+function wipeMemberState(){
+  wipeStoredMemberData();
+  session = ''; USER = ''; USERNAME = ''; booted = false;
+  timetable = {updated:null, classes:[]};
+  bookings  = {updated:null, bookings:[]};
+  logdata = []; picks = []; picksSha = null; savedPicksJson = '[]';
+  lastDataJson = null;                 // cached payload comparison state
+  /* the next member to sign in gets their own three bootstrap syncs — the counter belongs
+     to a member's never-synced state, not to this page */
+  bootstrapSyncs = 0;
+  alerts = [];
+  stickyWarn = {};
+  pendingCancels = []; pendingBooks = [];
+  allDates = []; selDate = null; weekStart = null; heroCache = null;
+  loadError = null; freshFromServer = false;
+  scrollMemo = {book:0, booked:0, picks:0};
+  try{ $('#app').classList.remove('dirty'); }catch(e){}
+}
+function signOut(){ wipeMemberState(); }
 
 let timetable = {updated:null, classes:[]};
 let bookings  = {updated:null, bookings:[]};
 let logdata   = [];
 let picks = [], picksSha = null, savedPicksJson = '[]';
 let loadError = null, booted = false;
+/* Persistent, member-scoped notices. A settle decision ("that cancel didn't go through")
+   is strike-relevant: it may not be a toast that the next toast overwrites and that is
+   gone the moment the app is backgrounded. These are rendered as inline rows and stay
+   until the user dismisses them or the condition they describe resolves. */
+let alerts = [];
 
 let activeTab = 'book';
 let studioFilter = 'all';
@@ -946,6 +952,17 @@ const POLL_MS      = 45000;            // cheap Contents API read while visible
 const STALE_MS     = 15*60000;         // older than this ⇒ dispatch a real FIT sync
 const DISPATCH_MIN = 5*60000;          // never auto-dispatch refresh.yml more often
 const SYNC_MAX_MS  = 150000;           // a dispatch is "in flight" for at most this long
+/* After an action that changes state (book or cancel) the app polls hard until the server
+   agrees, so the optimistic row on screen is confirmed — or withdrawn — in seconds rather
+   than at the mercy of the 45s poll. */
+const FAST_POLL_MS  = 8000;
+/* A workflow_dispatch takes ~60–90s end to end. Past this, an optimistic row that the
+   server still disagrees with is a failure, not latency. */
+const SETTLE_MS     = 200000;
+/* The fast poll exists to WATCH the settle deadline, so it must outlive it. It used to
+   be 180s against a 200s deadline: it always died first, and the decision it was there to
+   observe was left to the 45s poll — or, if the app was backgrounded, to nothing. */
+const FAST_POLL_MAX = SETTLE_MS + 60000;
 /* correctness #3 — a cancel from this app is a workflow_dispatch: queue + runner
    allocation + checkout + setup-python + pip + FIT login all happen BEFORE the POST that
    the gym timestamps. 75s is optimistic, 120s is normal, and relTime() rounds ("1m" can
@@ -953,7 +970,7 @@ const SYNC_MAX_MS  = 150000;           // a dispatch is "in flight" for at most 
    the UI must never call it free. Erring towards warning costs nothing; being wrong costs
    a strike, and three strikes in 7 days is a 7-day booking ban. */
 const CANCEL_LATENCY_MS = 4*60000;
-let pollTimer = null, freshTimer = null;
+let pollTimer = null, fastTimer = null, fastUntil = 0;
 
 /* F3 — DISPATCH_MIN was only ever enforced within one page lifetime, and an iOS
    home-screen web app is purged and cold-launched constantly. Every relaunch with stale
@@ -991,13 +1008,12 @@ let loadingNow = false;                // debounce: one loadAll() at a time
    setTimeout inside pollAfterDispatch(), and visibilitychange clearPostPoll()s it the
    instant the app is backgrounded. Switching apps while a sync ran (entirely normal while
    waiting ~70s for a workflow) came back to syncing===true with nothing alive to clear it,
-   which permanently disabled autoSync(), syncNow() AND pull-to-refresh until a force-quit.
+   which permanently disabled autoSync() AND pull-to-refresh until a force-quit.
    A deadline held as a timestamp and re-evaluated on resume cannot be cancelled by being
    backgrounded. */
 function reapSync(){
   if(syncing && syncStartedAt && Date.now() - syncStartedAt > SYNC_MAX_MS){
     syncing = false; syncStartedAt = 0;
-    try{ updateFresh(); }catch(e){}
   }
 }
 
@@ -1128,8 +1144,6 @@ const G = {
   warnS:  '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.6 2.9 19.4h18.2L12 4.6Z"/><path d="M12 10.2v4"/><circle cx="12" cy="16.9" r=".9" fill="currentColor" stroke="none"/></svg>',
   cal:    '<svg viewBox="0 0 28 28" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.5" width="20.8" height="19" rx="4.6"/><path d="M3.6 11.2h20.8"/><path d="M9.2 3.2v4.2M18.8 3.2v4.2"/></svg>',
   lock:   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="10.4" width="14.8" height="10.4" rx="3.4"/><path d="M8.2 10.2V7.8a3.8 3.8 0 0 1 7.6 0v2.4"/></svg>',
-  trash:  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.8h15"/><path d="M9.4 6.6V4.9a1.6 1.6 0 0 1 1.6-1.6h2a1.6 1.6 0 0 1 1.6 1.6v1.7"/><path d="M6.6 6.8 7.5 19a1.8 1.8 0 0 0 1.8 1.7h5.4a1.8 1.8 0 0 0 1.8-1.7l.9-12.2"/></svg>',
-  refresh:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 3.4v5.2h-5.2"/></svg>',
   big_cal:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.5" width="20.8" height="19" rx="4.6"/><path d="M3.6 11.2h20.8"/><path d="M9.2 3.2v4.2M18.8 3.2v4.2"/></svg>',
   big_chk:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="14" r="10.6"/><path d="m9.4 14.3 3.2 3.2 6.1-6.6"/></svg>',
   big_rep:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 12.2v-1.4a4.4 4.4 0 0 1 4.4-4.4h9.4"/><path d="m15.9 3.2 3.6 3.2-3.6 3.2"/><path d="M22.6 15.8v1.4a4.4 4.4 0 0 1-4.4 4.4H8.8"/><path d="m12.1 24.8-3.6-3.2 3.6-3.2"/></svg>',
@@ -1139,12 +1153,108 @@ const G = {
 /* ════════════════════════════════════════════════════════════════
    Toast + sheets
    ════════════════════════════════════════════════════════════════ */
-let toastTimer = null;
+/* One element and one timer meant the second of two messages in the same pass simply
+   replaced the first, unseen — and two settle decisions land in the same pass routinely.
+   Queue them: every message is shown for its own duration, in order. Anything that
+   matters beyond a few seconds is ALSO written to `alerts` (see pushAlert), because a
+   toast cannot survive being backgrounded and must never be the only witness. */
+let toastTimer = null, toastQueue = [], toastShowing = false;
 function toast(msg, ms){
-  const t = $('#toast'); $('#toastText').textContent = msg;
+  if(msg == null || msg === '') return;
+  toastQueue.push({msg: String(msg), ms: ms || 2800});
+  if(toastQueue.length > 8) toastQueue.splice(0, toastQueue.length - 8);
+  pumpToast();
+}
+function pumpToast(){
+  if(toastShowing) return;
+  const next = toastQueue.shift();
+  const t = $('#toast'); if(!t) return;
+  if(!next){ t.classList.remove('on'); return; }
+  toastShowing = true;
+  $('#toastText').textContent = next.msg;
   t.classList.add('on');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove('on'), ms || 2800);
+  toastTimer = setTimeout(()=>{
+    t.classList.remove('on');
+    /* let the fade finish before the next one starts, so two messages never read as one */
+    toastTimer = setTimeout(()=>{ toastShowing = false; pumpToast(); }, 260);
+  }, next.ms);
+}
+
+/* ── persistent notices ────────────────────────────────────────────────────────────
+   `id` makes a notice idempotent: the same condition re-detected on every poll updates
+   one row rather than stacking. `tone` drives the colour. `until` (optional) is a
+   predicate name resolved in alertResolved() so a notice can retire itself when the
+   thing it warns about is genuinely fixed. */
+function alertsKey(){ return memberKey('alerts'); }
+function loadAlerts(){
+  try{
+    const raw = localStorage.getItem(alertsKey());
+    const v = raw ? JSON.parse(raw) : null;
+    alerts = Array.isArray(v) ? v.filter(a => a && a.id) : [];
+  }catch(e){ alerts = []; }
+}
+function persistAlerts(){
+  try{
+    if(!USER) return;
+    if(alerts.length) localStorage.setItem(alertsKey(), JSON.stringify(alerts.slice(-12)));
+    else localStorage.removeItem(alertsKey());
+  }catch(e){}
+}
+/* ── row warnings that outlive the log entry they came from ─────────────────────────
+   botRowWarnings() derives "Couldn't cancel this — cancel it in the FIT app or it becomes
+   a no-show" from ONE `cancel_failed` entry. The bot keeps only the last 200 entries and
+   has become far chattier (`recheck`, `book_attempt`, `*_transport_error`, `*_recovered`),
+   so that entry can age out of the file while the booking is still sitting on the account,
+   silently taking the warning with it — the app would stop warning about a no-show that is
+   still coming. A booking's status does not expire because a log did, so once the app has
+   seen the warning it keeps it, per member, in localStorage.
+   It is not "sticky forever": it is cleared the moment either half of what it asserts
+   stops being true — a later settling entry (`cancelled` / `cancel_recovered`) proves the
+   booking is gone, or the booking simply leaves the FIT account list. */
+let stickyWarn = {};
+function stickyWarnKey(){ return memberKey('rowwarn'); }
+function loadStickyWarn(){
+  try{
+    const v = JSON.parse(localStorage.getItem(stickyWarnKey()) || 'null');
+    stickyWarn = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  }catch(e){ stickyWarn = {}; }
+}
+function persistStickyWarn(){
+  try{
+    if(!USER) return;
+    const keys = Object.keys(stickyWarn);
+    if(keys.length) localStorage.setItem(stickyWarnKey(), JSON.stringify(stickyWarn));
+    else localStorage.removeItem(stickyWarnKey());
+  }catch(e){}
+}
+function pushAlert(a){
+  if(!a || !a.id) return;
+  const i = alerts.findIndex(x => x.id === a.id);
+  const rec = {id:a.id, tone:a.tone||'amber', title:a.title||'', body:a.body||'',
+               at: Date.now(), tab: a.tab || 'booked'};
+  if(i >= 0) alerts[i] = rec; else alerts.push(rec);
+  persistAlerts();
+}
+function dropAlert(id){
+  const n = alerts.length;
+  alerts = alerts.filter(a => a.id !== id);
+  if(alerts.length !== n) persistAlerts();
+}
+/* A notice AND a toast: the toast catches the eye now, the notice is still there in an
+   hour when the app is reopened. Strike-relevant outcomes always use this. */
+function announce(a){
+  pushAlert(a);
+  toast((a.title ? a.title+' — ' : '') + a.body, a.ms || 5200);
+}
+function alertsHTML(tab){
+  const mine = alerts.filter(a => (a.tab || 'booked') === tab);
+  if(!mine.length) return '';
+  return '<div class="group" style="margin-top:12px">' + mine.map(a =>
+    '<div class="rulerow"><div class="ri" data-tone="'+(a.tone==='bad'?'bad':'amber')+'">'+G.warn+'</div>'+
+    '<div class="rt"><b>'+esc(a.title||'Heads up')+'</b><span>'+esc(a.body)+'</span></div>'+
+    '<button class="btn-sm" data-dismiss="'+esc(a.id)+'" aria-label="Dismiss this notice">Got it</button>'+
+    '</div>').join('') + '</div>';
 }
 function sheetOpen(){ return !!$('#sheetRoot').innerHTML; }
 /* F1 — the wipe that finishes the dismiss animation MUST be cancellable and MUST belong to
@@ -1262,16 +1372,47 @@ async function dispatch(workflow, inputs){
      of the change: a client can no longer ask to act as somebody else. */
   await wapi('/dispatch', {workflow: workflow, inputs: inputs || {}});
 }
-function isAuthErr(e){ const s = String(e && e.message || e); return s.indexOf('401')>=0 || s.indexOf('403')>=0; }
+/* CONTRACT §1b — "any 401 from any endpoint means sign in again". Read the STATUS, never
+   the message: this used to sniff the text for '401'/'403', and the Worker's dispatch
+   errors quote GitHub's own status back ("Could not start that run (403)"), so a problem
+   with the WORKER's GitHub token signed the MEMBER out of an app whose session was fine —
+   and signing in again could not possibly fix it. The Worker now keeps those digits out of
+   the message as well; this is the half that cannot be got wrong from the other side. */
+function isAuthErr(e){
+  const st = e && typeof e.status === 'number' ? e.status : null;
+  return st === 401 || st === 403;
+}
+/* Did the Worker DEFINITELY refuse, or do we simply not know?
+   `wapi` throws for three different things and only one of them is knowledge:
+     • a JSON answer that says no (any status < 500, including a 200 with ok:false) —
+       the Worker made a decision and no workflow was started. We may say so.
+     • a 5xx, a 408/429, a dropped connection, or our own 12s abort — the request may
+       have reached GitHub and dispatched the run. We know NOTHING. Saying "nothing was
+       booked" here is the app asserting a state it cannot observe, and the audit caught
+       exactly that: the class was booked on FIT while the app declared it wasn't.
+   Anything not provably a refusal is treated as unknown, and unknown means the pending
+   record stays and the settle window decides. */
+function isDefiniteReject(e){
+  const st = e && typeof e.status === 'number' ? e.status : null;
+  if(st === null) return false;                       // network failure or client abort
+  if(st >= 500 || st === 408 || st === 429) return false;
+  return true;
+}
 /* CONTRACT §2: ANY 401/403 clears the session and returns to setup — not just the
    initial load, or an expired session leaves the user tapping Save forever. */
 function bailToSetup(msg){
-  signOut();
   booted = false;
   stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
+  fastUntil = 0;
   /* F24 — the in-flight hairline was left animating behind the setup screen forever */
   clearFlight();
   closeSheet();
+  /* This lands on the sign-in screen, and the next person to use it may not be the one
+     who was just here. Erase EVERYTHING — draft picks, saved picks + sha, bookings,
+     timetable, log, notices, the cached payload, the member identity — not just the
+     session. The audit demonstrated the alternative: a failed first load rendered the
+     previous member's bookings, with a working Cancel button. */
+  wipeMemberState();
   renderSetup(msg || 'Your session expired. Sign in again.');
 }
 function handleApiErr(e){
@@ -1283,6 +1424,25 @@ function safeParse(txt, fallback){ try { return txt ? JSON.parse(txt) : fallback
 /* F22 — returns true when this call actually did the work, false when it was debounced
    away. Pull-to-refresh needs to know, or it tells the user "Up to date" having done
    nothing at all — at the exact moment they are pulling BECAUSE they think it is stuck. */
+/* The ONE entry point that establishes a live app — used by boot, by sign-in, and by
+   nothing else. Polling and `booted` are established whatever the load did, because the
+   manual controls that used to rescue a stranded app were deliberately removed: if this
+   path can fail to arm the timers, the only remedy left on the phone is a force-quit. */
+function bootLoad(){
+  return loadAll()
+    .catch(e => { if(window.console && console.warn) console.warn('bootLoad', e); })
+    .then(()=>{
+      try{
+        if(!session) return;              // a 401 during the load already sent us to sign-in
+        booted = true;                    // …even if the load itself failed
+        startPolling();
+        if(isStale()) autoSync();
+        /* a throw partway through the load can leave the boot placeholder on screen —
+           draw the real screens from whatever state we do have */
+        renderAll();
+      }catch(e){ if(window.console && console.warn) console.warn('bootLoad tail', e); }
+    });
+}
 async function loadAll(silent){
   if(loadingNow) return false;    // debounce: poll + visibility + PTR can all land at once
   loadingNow = true;
@@ -1296,6 +1456,7 @@ async function loadAll(silent){
 let lastDataJson = null;
 async function loadAllInner(silent){
   let unchanged = false;
+  freshFromServer = false;
   /* an identical payload only means "nothing to redraw" if the screen was not showing an
      offline banner a moment ago — clearing that banner IS a change */
   const hadError = loadError !== null;
@@ -1322,6 +1483,8 @@ async function loadAllInner(silent){
     if(tt && Array.isArray(tt.classes)) timetable = tt;
     const bk = d.bookings;
     if(bk && Array.isArray(bk.bookings)) bookings = bk;
+    /* the server's list is authoritative, so an optimistic row has to be re-applied to
+       every copy of it — see reconcilePending() */
     /* only replace the activity list when the log actually came back as a list — a
        malformed payload must not blank it while the banner claims a cached view */
     if(Array.isArray(d.log)) logdata = d.log;
@@ -1335,6 +1498,7 @@ async function loadAllInner(silent){
     }
     if(!keepLocalPicks) savedPicksJson = JSON.stringify(picks);
     loadError = null;
+    freshFromServer = true;
   }catch(e){
     unchanged = false;
     if(isAuthErr(e)){ bailToSetup(); return; }
@@ -1346,29 +1510,53 @@ async function loadAllInner(silent){
      savedPicksJson only becomes the real server baseline once the load has landed. */
   if(!booted){
     try{
-      const raw = localStorage.getItem(DRAFT_KEY);
-      const draft = raw ? JSON.parse(raw) : null;
-      if(Array.isArray(draft) && JSON.stringify(draft) !== savedPicksJson){
+      const draft = readDraft();
+      if(draft && JSON.stringify(draft) !== savedPicksJson){
         picks = draft;
         toast('Restored unsaved pick changes — tap Save picks', 4200);
-      } else if(raw){ localStorage.removeItem(DRAFT_KEY); }
+      } else if(draft){ localStorage.removeItem(draftKey()); }
     }catch(e){}
+    try{ loadAlerts(); }catch(e){}
+    try{ loadStickyWarn(); }catch(e){}
   }
-  indexDates();
+  /* Everything from here on is bookkeeping over data that has already landed, and NONE of
+     it may be allowed to strand the app. It used to be bare: a throw out of
+     reconcilePending() or indexDates() meant boot's `loadAll().then(startPolling…)` never
+     ran, `booted` stayed false, every poll early-returned forever and — with the manual
+     controls deliberately gone — the only way out was a force-quit. `booted` is now set
+     first and each step is independently contained, so a partly-failed load still leaves a
+     live, polling app. */
   booted = true;
+  let settled = false;
+  /* Optimistic book/cancel rows are re-applied to (or resolved against) the list that just
+     landed, BEFORE anything reads it. `settled` is true when a pending action was decided
+     this pass — a decision the user must see even if the payload itself was byte-identical. */
+  try{ settled = reconcilePending(); }
+  catch(e){ if(window.console && console.warn) console.warn('reconcilePending', e); }
+  try{ syncBotAlerts(); }
+  catch(e){ if(window.console && console.warn) console.warn('syncBotAlerts', e); }
+  try{ indexDates(); }
+  catch(e){ if(window.console && console.warn) console.warn('indexDates', e); }
   /* a sync we started has landed the moment the stamps move past the baseline */
-  if(syncing){
-    const t = dataUpdatedMs();
-    if(t !== null && (syncBaseline === null || t > syncBaseline)){
-      syncing = false; syncStartedAt = 0; clearPostPoll();
+  try{
+    if(syncing){
+      const t = dataUpdatedMs();
+      if(t !== null && (syncBaseline === null || t > syncBaseline)){
+        syncing = false; syncStartedAt = 0; clearPostPoll();
+      }
     }
-  }
-  reapSync();                       // F2 — a sync past its deadline is not in flight
-  /* the poll's cheap path: byte-identical data and no banner to clear ⇒ nothing on screen
-     can legitimately differ, so don't rebuild it. The freshness line still ticks, since
-     that is a function of the clock rather than of the data. */
-  if(unchanged && !hadError){ try{ updateFresh(); updateNav(); }catch(e){} }
-  else renderAll();
+    reapSync();                     // F2 — a sync past its deadline is not in flight
+  }catch(e){}
+  /* the poll's cheap path: byte-identical data, no banner to clear and no pending action
+     that just resolved ⇒ nothing on screen can legitimately differ, so don't rebuild it */
+  /* the fast poll exists only to settle pending actions; the moment there are none it
+     has nothing to watch. Doing this here (rather than only inside the fast timer's own
+     tick) means ANY load that resolves the last pending action ends it immediately. */
+  try{ if(fastTimer && !pendingCancels.length && !pendingBooks.length && !syncing) stopFastPoll(); }catch(e){}
+  try{
+    if(unchanged && !hadError && !settled && !pendingCancels.length) updateNav();
+    else renderAll();
+  }catch(e){ if(window.console && console.warn) console.warn('render', e); }
 }
 
 function indexDates(){
@@ -1454,13 +1642,31 @@ function isDirty(){ return JSON.stringify(picks) !== savedPicksJson; }
 /* F7 — iOS purges backgrounded home-screen web apps without warning, and picks/
    savedPicksJson lived only in memory: an unsaved pick edit had exactly one lifetime,
    until the user took a phone call. Mirror the dirty buffer into localStorage on
-   every edit; the key is removed the moment the list matches the server again. */
-const DRAFT_KEY = 'fitbooker_draft_picks';
+   every edit; the key is removed the moment the list matches the server again.
+
+   The key is scoped per member and the payload carries the member it belongs to. It used
+   to be ONE global key: the audit restored Josh's unsaved draft into his partner's
+   session, where a single tap on Save would have written his picks to her account. */
+function draftKey(){ return memberKey('draft_picks'); }
 function saveDraft(){
   try{
-    if(isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(picks));
-    else localStorage.removeItem(DRAFT_KEY);
+    if(!USER) return;                       // no member ⇒ no member-scoped bucket to use
+    if(isDirty()) localStorage.setItem(draftKey(), JSON.stringify({u:USER, p:picks}));
+    else localStorage.removeItem(draftKey());
   }catch(e){}
+}
+/* Restore only a draft that is provably this member's — the key says so and so does the
+   payload. A mismatch is deleted, never shown. */
+function readDraft(){
+  try{
+    if(!USER) return null;
+    const raw = localStorage.getItem(draftKey());
+    if(!raw) return null;
+    const v = JSON.parse(raw);
+    if(v && typeof v === 'object' && Array.isArray(v.p) && v.u === USER) return v.p;
+    localStorage.removeItem(draftKey());
+  }catch(e){}
+  return null;
 }
 function syncDirty(){
   const app = $('#app'), d = isDirty();
@@ -1612,10 +1818,165 @@ async function maybeKickSnipe(){
          removes the cron lead-time requirement; if it fails, "the bot will book them
          automatically" is a lie and nothing started. */
       if(!handleApiErr(e))
-        toast('Saved, but the instant booking run didn’t start — open Picks and tap ' +
-              '“Fire a booking pass”.', 5200);
+        toast('Saved, but the instant booking run didn’t start. The bot’s next scheduled ' +
+              'pass will still try for this one.', 5200);
     }
   }
+}
+
+/* `autoSnipeIfOpen()` was DELETED. It fired unattended booking passes from the phone and
+   every one of its three trigger conditions was wrong:
+     • it fired for windows that opened long ago, which the bot structurally cannot book
+       (its grace is 20 minutes) — burning its own retry budget on runs that can only fail;
+     • it fired for a class the user had JUST cancelled, racing the cancel;
+     • it fired for unsaved DRAFT picks that are not in picks.json, spending the debounce
+       so the legitimate pass after Save was suppressed.
+   It is also redundant: the Cloudflare Worker's every-minute cron dispatches snipe.yml
+   from the generated schedule (AUTH.md), and saving picks triggers a pass server-side.
+   Nothing replaces it — the phone does not decide when a booking pass runs. */
+
+/* ════════════════════════════════════════════════════════════════
+   Optimistic book / cancel
+   ════════════════════════════════════════════════════════════════ */
+/* A cancel (or a book) is a workflow_dispatch: the row cannot really change for ~a minute.
+   Waiting for that is what made the app feel like a remote control rather than an app, so
+   the list changes NOW and the server is reconciled against it afterwards.
+
+   Two rules keep that honest:
+     • a pending change is re-applied to every payload that lands, so a poll mid-flight
+       cannot resurrect a cancelled row or drop a booked one;
+     • if the server still disagrees SETTLE_MS after the dispatch, the change is put back
+       the way it was and the user is told. A cancel that silently failed becomes a no-show,
+       and three of those in 7 days is a booking ban — silence is the one unacceptable
+       outcome here.
+   IDENTITY IS FIT'S OWN BOOKING ID. It used to be date|time|studio with an unclassifiable
+   studio silently guessed as 'exhale' — so two bookings at the same date+time, one of them
+   unclassifiable, collided on one key. Cancel then re-found the row BY THAT KEY and spliced
+   the wrong one off screen while telling the bot to cancel the other. Screen and reality
+   ended up inverted, which is a no-show, which is a strike.
+   Every account row carries `cancel_url` = /portal/account/cancelbooking/booking/1024573.
+   That number identifies the booking and nothing else does. */
+let pendingCancels = [];   // {key, at, b, idx, bookingId}
+let pendingBooks   = [];   // {key, at, b, before:Set}
+let freshFromServer = false;   // did the load that is running right now actually land?
+/* FIT's numeric booking id, or '' when the row has no cancel link to read it from. */
+function bookingId(b){
+  if(!b) return '';
+  const raw = String(b.booking_id || b.cancel_url || '');
+  const m = raw.match(/\/booking\/(\d+)/);
+  if(m) return m[1];
+  return /^\d+$/.test(raw) ? raw : '';
+}
+/* Can the bot act on this row at all? It only ever cancels rows that carry a cancel link
+   (fitbot.cmd_cancel filters on exactly that), so a row without one must not be offered a
+   Cancel button that could never work. */
+function isCancellable(b){ return !!(b && !b.__pending && String(b.cancel_url || b.booking_id || '')); }
+function bookingKey(b){
+  if(!b) return '';
+  const id = bookingId(b);
+  if(id) return 'id:'+id;
+  /* No id: fall back, but never to a guess. The cancel link itself is unique per booking
+     even when the id cannot be parsed out of it; only when there is no link at all do we
+     drop to date+time+studio, and then studioFromBooking() answers 'unknown' rather than
+     inventing 'exhale'. */
+  const url = String(b.cancel_url || '');
+  if(url) return 'u:'+url;
+  return 'dts:'+String(b.date||'')+'|'+String(b.time||'')+'|'+studioFromBooking(b);
+}
+function bookingList(){
+  if(!bookings || !Array.isArray(bookings.bookings)) bookings = {updated: bookings && bookings.updated, bookings: []};
+  return bookings.bookings;
+}
+/* rows FIT has actually confirmed — everything that makes a CLAIM must use this, so an
+   optimistic row this app invented can never be read back as evidence of a real booking */
+function realBookings(){ return bookingList().filter(b => b && !b.__pending); }
+function findBookingIdx(key){ return bookingList().findIndex(b => bookingKey(b) === key); }
+function hasPending(key){
+  return pendingCancels.some(p=>p.key===key) || pendingBooks.some(p=>p.key===key);
+}
+/* is there a pending optimistic BOOK covering this timetable occurrence? */
+function pendingBookFor(date, time, studio){
+  return pendingBooks.find(p => p.b && p.b.date === date && p.b.time === time &&
+                                p.b.__pendingStudio === studio) || null;
+}
+/* is this exact slot already on the account (really, not optimistically)? */
+function alreadyBookedSlot(c){
+  return realBookings().some(b => b.date === c.date && b.time === c.time &&
+    (studioOfBooking(b) === null || studioOfBooking(b) === c.studio));
+}
+/* Re-apply pending changes to the list that just arrived and decide any that have run out
+   of time. Returns true when something was decided, so the caller re-renders even if the
+   payload was byte-identical. */
+function reconcilePending(){
+  if(!pendingCancels.length && !pendingBooks.length) return false;
+  /* Only ever judge against data that actually arrived. A failed load leaves the previous
+     (already-edited) list in place, where a cancelled row is missing because WE removed it
+     — reading that as "the server agrees" would retire the pending record without ever
+     checking, and the settle guarantee would quietly evaporate. */
+  if(!freshFromServer) return false;
+  const now = Date.now(), list = bookingList();
+  let settled = false;
+  pendingCancels = pendingCancels.filter(p=>{
+    const i = list.findIndex(b => bookingKey(b) === p.key);
+    if(i < 0){                                 // the server agrees it is gone — done
+      dropAlert('cancelunknown:'+p.key);
+      return false;
+    }
+    if(now - p.at > SETTLE_MS){
+      /* Still on the account long after the bot should have acted: leave the row in place
+         (that is the truth) and say so — as a notice that survives the next message and
+         the next launch, not as a 5-second toast. A cancel the user believes happened and
+         which did not is a no-show, and three of those in 7 days is a 7-day ban. */
+      announce({id:'cancelfail:'+p.key, tone:'bad', tab:'booked',
+                title:'That cancel didn’t go through',
+                body:(p.b && p.b.name ? p.b.name : 'That class')+' is STILL on your FIT '+
+                     'account. Cancel it in the FIT app, or it becomes a no-show.'});
+      dropAlert('cancelunknown:'+p.key);
+      settled = true;
+      return false;
+    }
+    list.splice(i,1);                          // keep it hidden while the bot catches up
+    return true;
+  });
+  const claimed = [];
+  pendingBooks = pendingBooks.filter(p=>{
+    /* A pending BOOK is a row this app invented from a timetable entry; FIT hands the real
+       one back with its own name/location, which can classify to a different studio. So the
+       studio is NOT compared — but the match must still be a booking that genuinely did not
+       exist when the user tapped Book. Matching on date+time alone let an Infrared Sauna
+       already sitting at 06:15 instantly "confirm" a Yoga booked at 06:15, after which the
+       yoga's real failure was never reported at all. `before` is the set of row keys present
+       at dispatch time; only a row outside it counts, and each new row can satisfy at most
+       one pending book. */
+    const hit = list.find(b => !b.__pending && b.date === p.b.date && b.time === p.b.time &&
+                               !(p.before && p.before[bookingKey(b)]) &&
+                               claimed.indexOf(b) < 0);
+    if(hit){ claimed.push(hit); dropAlert('bookunknown:'+p.key); return false; }
+    if(now - p.at > SETTLE_MS){
+      announce({id:'bookfail:'+p.key, tone:'amber', tab:'booked',
+                title:'That booking didn’t go through',
+                body:(p.b && p.b.name ? p.b.name : 'The class')+' is not on your FIT '+
+                     'account. Nothing was booked — try again, or book it in the FIT app.'});
+      dropAlert('bookunknown:'+p.key);
+      settled = true;
+      return false;
+    }
+    if(list.indexOf(p.b) < 0) list.push(p.b);  // hold the optimistic row until it lands
+    return true;
+  });
+  return settled;
+}
+/* Snapshot of what was on the account at the instant an optimistic action was taken. */
+function bookingKeySnapshot(){
+  const o = {};
+  realBookings().forEach(b => { o[bookingKey(b)] = true; });
+  return o;
+}
+/* redraw everything without throwing the reader out of their scroll position */
+function rerenderKeepScroll(){
+  const p = $('#page-'+activeTab), s = p ? p.scrollTop : 0;
+  renderAll();
+  if(p) p.scrollTop = s;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1655,8 +2016,33 @@ function beginFlight(msg, ms){
    Live data (§3) — poll while visible, auto-dispatch a real FIT sync
    when the files go stale, and show freshness instead of demanding a tap.
    ════════════════════════════════════════════════════════════════ */
-/* the OLDER of the two `updated` stamps — both files have to be fresh */
+/* ── "this member has never been synced at all" ──────────────────────────────────────
+   `bookings.updated` is null only until the bot has read this member's FIT account ONCE —
+   fitbot.set_user() seeds the file that way and cmd_refresh() always stamps a real time,
+   even for an account holding nothing. So null means NEVER SYNCED, never "no bookings".
+
+   That distinction is the whole bug. dataUpdatedMs() took the oldest NON-NULL stamp, and
+   the timetable is shared — Josh's runs keep it minutes old — so a brand-new member read
+   as perfectly fresh, isStale() was false, autoSync() never fired and Booked said "Not
+   synced yet / Nothing booked" until a scheduled refresh happened along, up to 8 hours
+   later. For those hours alreadyBookedSlot() and the one-class-per-studio-per-day warning
+   had nothing to work with and the app offered to book classes already on the account.
+
+   A member's own data being absent is the stalest state there is, not a missing input. */
+function neverSynced(){
+  /* Only ever a verdict about data that ARRIVED. Before the first payload lands, and after
+     a failed load, `bookings` is the boot placeholder — reading that as "never synced"
+     would dispatch a sync because the network was down. */
+  if(lastDataJson === null) return false;
+  const u = bookings && bookings.updated;
+  if(!u) return true;
+  return !isFinite(new Date(u).getTime());
+}
+/* the OLDER of the two `updated` stamps — both files have to be fresh.
+   A member's bookings that are merely OLDER than the timetable already came out right
+   here (oldest wins); it was only the null that read as fresh. */
 function dataUpdatedMs(){
+  if(neverSynced()) return null;        // ⇒ dataAgeMs() Infinity ⇒ isStale() true
   let oldest = null;
   [timetable && timetable.updated, bookings && bookings.updated].forEach(u=>{
     if(!u) return;
@@ -1667,15 +2053,6 @@ function dataUpdatedMs(){
 }
 function dataAgeMs(){ const t = dataUpdatedMs(); return t === null ? Infinity : Math.max(0, Date.now()-t); }
 function isStale(){ return dataAgeMs() > STALE_MS; }
-function ageShort(ms){
-  if(!isFinite(ms)) return '—';
-  const m = Math.floor(ms/60000);
-  if(m < 1) return 'now';
-  if(m < 60) return m+'m ago';
-  const h = Math.floor(m/60);
-  if(h < 24) return h+'h ago';
-  return Math.floor(h/24)+'d ago';
-}
 function ageLong(ms){
   if(!isFinite(ms)) return 'never synced';
   const m = Math.floor(ms/60000);
@@ -1688,15 +2065,6 @@ function ageLong(ms){
   const d = Math.floor(h/24);
   return 'updated '+d+(d===1?' day ago':' days ago');
 }
-function freshnessText(){ return syncing ? 'Syncing…' : ageShort(dataAgeMs()); }
-function updateFresh(){
-  const b = $('#syncBtn'); if(!b) return;
-  const t = $('#freshTxt'); if(t) t.textContent = freshnessText();
-  b.classList.toggle('syncing', !!syncing);
-  b.classList.toggle('stale', !syncing && isStale());
-  b.setAttribute('aria-label', syncing ? 'Syncing with FIT' : 'Data '+ageLong(dataAgeMs())+' — tap for sync options');
-}
-
 let postPoll = [], syncBaseline = null;
 function clearPostPoll(){ postPoll.forEach(clearTimeout); postPoll = []; }
 /* after a dispatch the run takes ~60–75s; poll across that window, non-blocking */
@@ -1707,14 +2075,28 @@ function pollAfterDispatch(){
   });
   /* kept as the fast path while the app stays open; reapSync() is the backstop that
      survives being backgrounded, so this timer being destroyed is no longer fatal */
-  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; syncStartedAt = 0; updateFresh(); } }, 115000));
+  /* the Booked subtitle is the only thing that reads `syncing`, so redraw once when the
+     latch drops — in place, without throwing the reader out of their scroll position */
+  postPoll.push(setTimeout(()=>{ if(syncing){ syncing = false; syncStartedAt = 0; rerenderKeepScroll(); } }, 115000));
 }
+/* A never-synced member is stale FOREVER until a run writes their bookings.json, and there
+   is one way that never happens: the Worker only creates data/<member>/ on their first
+   SAVE, so somebody who signs in and saves nothing is not iterated by refresh.yml at all.
+   Unbounded, that is a dispatch of a workflow that cannot help them every DISPATCH_MIN for
+   as long as the app is open. Bounded, it is three tries — enough for a slow or unlucky
+   first run, not enough to be a storm — and it costs nothing in the case it exists for,
+   because the first successful sync clears the condition. Genuine staleness is NOT bounded
+   by this: a member with real data that has gone old keeps retrying as it always did. */
+const BOOTSTRAP_SYNCS = 3;
+let bootstrapSyncs = 0;
 /* Debounced + rate-limited: at most one attempt in flight, and never more than one
    refresh.yml dispatch per DISPATCH_MIN however many triggers pile up. */
 async function autoSync(force){
   reapSync();                            // F2 — never bail out behind a stale latch
   if(!session || !booted || autoBusy || syncing) return false;
   if(!force && !isStale()) return false;
+  const boot = neverSynced();
+  if(boot && !force && bootstrapSyncs >= BOOTSTRAP_SYNCS) return false;
   const now = Date.now();
   if(now - lastDispatchMs() < DISPATCH_MIN){
     loadAll(true);                       // too soon to dispatch — just re-read the files
@@ -1722,19 +2104,44 @@ async function autoSync(force){
   }
   autoBusy = true;
   markDispatch(now);                     // F3 — claim the slot, across restarts too
+  if(boot) bootstrapSyncs++;
   syncBaseline = dataUpdatedMs();
   try{
     await dispatch('refresh.yml');
     syncing = true; syncStartedAt = Date.now();
-    updateFresh();
     beginFlight(null, 78000);            // subtle hairline only — never a blocking spinner
     pollAfterDispatch();
     return true;
   }catch(e){
-    syncing = false; syncStartedAt = 0; updateFresh();
+    syncing = false; syncStartedAt = 0;
     if(isAuthErr(e)) bailToSetup();
     return false;
   }finally{ autoBusy = false; }
+}
+/* ── fast poll: the honesty guarantee behind the optimistic rows ──────────
+   After a book or a cancel the app checks every FAST_POLL_MS instead of every 45s, so the
+   change is confirmed (or withdrawn) in seconds. It stops itself the moment nothing is
+   pending, and never runs longer than FAST_POLL_MAX. */
+/* `fastStopOnSettle` is gone. It was only ever set to false (by the deleted
+   autoSnipeIfOpen) and reset in stopFastPoll(), so once a booking pass had flipped it, no
+   later book or cancel could ever end its fast poll early. Every remaining caller watches a
+   specific pending row, so the rule is unconditional: stop when nothing is pending. */
+function startFastPoll(){
+  fastUntil = Date.now() + FAST_POLL_MAX;
+  if(fastTimer || document.hidden) return;
+  fastTimer = setInterval(()=>{
+    if(document.hidden || !session || !booted) return;
+    if(Date.now() > fastUntil){ stopFastPoll(); return; }
+    loadAll(true).then(()=>{
+      if(!pendingCancels.length && !pendingBooks.length && !syncing) stopFastPoll();
+    });
+  }, FAST_POLL_MS);
+}
+function stopFastPoll(){
+  if(fastTimer){ clearInterval(fastTimer); fastTimer = null; }
+  /* clear the deadline too, or the next startPolling() faithfully restarts a window that
+     was already resolved and polls every 8s for nothing */
+  fastUntil = 0;
 }
 function startPolling(){
   stopPolling();
@@ -1744,21 +2151,23 @@ function startPolling(){
     loadAll(true);
     if(isStale()) autoSync();
   }, POLL_MS);
-  /* F19 — freshTimer used to be started once and never stopped: it kept ticking for the
-     whole life of the page, including while hidden. It belongs to the visible-polling
-     lifecycle, same as pollTimer. */
-  if(!freshTimer) freshTimer = setInterval(()=>{ reapSync(); updateFresh(); }, 15000);
+  /* A pending action that outlived a trip to the background resumes its fast poll here.
+     The condition is "is anything still pending", not the old `fastUntil > now` — that
+     variable is cleared by stopFastPoll(), which stopPolling() has just called, and a
+     stale deadline used to restart an already-resolved window anyway. */
+  if(pendingCancels.length || pendingBooks.length) startFastPoll();
 }
 function stopPolling(){
   if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
-  if(freshTimer){ clearInterval(freshTimer); freshTimer = null; }
+  stopFastPoll();
 }
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){ stopPolling(); clearPostPoll(); return; }
   reapSync();                      // F2 — hours may have passed; an "in flight" sync expired
   startPolling();
-  updateFresh();
   if(!session || !booted) return;
+  /* coming back is the strongest signal that the screen is about to be read: re-read now,
+     dispatch a real sync if the data has gone stale, and settle anything still pending */
   loadAll(true).then(()=>{ if(isStale()) autoSync(); });
 });
 /* iOS fires pagehide, not always visibilitychange, when a home-screen web app is put away
@@ -1766,7 +2175,7 @@ document.addEventListener('visibilitychange', function(){
 window.addEventListener('pagehide', function(){ stopPolling(); clearPostPoll(); try{ saveDraft(); }catch(e){} });
 window.addEventListener('pageshow', function(e){
   if(!e.persisted) return;         // a bfcache restore resumes a page whose timers are gone
-  reapSync(); startPolling(); updateFresh();
+  reapSync(); startPolling();
   if(session && booted) loadAll(true);
 });
 
@@ -1799,8 +2208,10 @@ function studiosOn(date){
 function bookedStudiosOn(date){
   const out = {};
   /* correctness #10 — only claim a studio is taken when we actually know which studio it
-     was. A guessed 'exhale' put a false "already booked today" caution on real classes. */
-  ((bookings&&bookings.bookings)||[]).forEach(b=>{
+     was. A guessed 'exhale' put a false "already booked today" caution on real classes.
+     realBookings() drops the optimistic rows: a class this app has merely ASKED FIT for is
+     not a booking, and must not block or claim anything. */
+  realBookings().forEach(b=>{
     if(!b || b.date !== date) return;
     const st = studioOfBooking(b);
     if(st) out[st] = b;
@@ -1840,8 +2251,12 @@ function pickState(p){
      be told apart from "something else in this studio that day is blocking it". They mean
      opposite things to the user and only the first is a fulfilled pick. Bookings whose
      studio can't be established are ignored entirely rather than asserted. */
+  /* correctness: realBookings() only. The optimistic row this app pushes on to the Booked
+     list carries `location: <studio>`, so it used to classify perfectly and flip the pick
+     to a green "Booked ✓" before FIT had even been asked. A tick that is not a booking is
+     the single most dangerous thing this screen can say. */
   const exact = {}, sameStudio = {};
-  ((bookings&&bookings.bookings)||[]).forEach(b=>{
+  realBookings().forEach(b=>{
     if(!b || !b.date) return;
     const st = studioOfBooking(b);
     if(!st) return;
@@ -1852,6 +2267,9 @@ function pickState(p){
   for(let i=0;i<occ.length;i++){
     const c = occ[i];
     if(exact[c.date+'|'+c.studio+'|'+c.time]) continue;   // the bot already won this one
+    /* asked for, not answered: show the truthful in-between state rather than either a
+       tick or a countdown */
+    if(pendingBookFor(c.date, c.time, c.studio)) return {kind:'booking', opens:null, cls:c};
     const other = sameStudio[c.date+'|'+c.studio];
     if(other){ if(!blocked) blocked = {cls:c, by:other}; continue; }
     const o = new Date(c.opens_iso).getTime();
@@ -1902,7 +2320,7 @@ function renderAll(){
   safeRender('booked', renderBooked);
   safeRender('picks', renderPicks);
   const c2 = $('#chips'); if(c2 && chipsLeft) c2.scrollLeft = chipsLeft;
-  try{ syncDirty(); updateNav(); updateFresh(); }catch(e){}
+  try{ syncDirty(); updateNav(); }catch(e){}
 }
 function safeRender(tab, fn){
   try{ fn(); }
@@ -1926,15 +2344,10 @@ function offlineBanner(){
     '<div class="rt"><b>Offline</b><span>'+esc(loadError)+'</span></div></div></div>';
 }
 
-/* ── hero ───────────────────────────────────────────────────── */
-function heroHTML(){ return '<div class="herowrap">'+heroInner()+openPicksHTML()+'</div>'; }
-function openPicksHTML(){
-  const open = picks.filter(p => pickState(p).kind === 'open');
-  if(!open.length) return '';
-  return '<button class="alertline" data-act="snipe">'+G.boltL+
-    '<span>'+open.length+(open.length===1?' open pick':' open picks')+' · run a pass</span>'+
-    '<span class="ac">'+G.chevBig+'</span></button>';
-}
+/* ── hero ───────────────────────────────────────────────────────
+   Picks only. On Book it was answering a question nobody was asking there ("when does my
+   next pick book?") above the thing they came for; on Picks it IS the question. */
+function heroHTML(){ return '<div class="herowrap">'+heroInner()+'</div>'; }
 function heroInner(){
   const nw = nextPickWindow();
   if(!nw){
@@ -2073,10 +2486,8 @@ function renderBook(){
       '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
       '<div class="et">'+(loadError?'No timetable on this device':'No timetable yet')+'</div>'+
       '<div class="es">'+(loadError
-        ? 'Nothing has been cached here yet and the booking service is unreachable. Try again once you have a connection.'
-        : 'The app is syncing with FIT by itself — pull down, or tap below, to fetch the timetable now.')+'</div>'+
-      '<div style="width:100%;max-width:280px;margin-top:14px">'+
-      '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT</button></div></div>';
+        ? 'Nothing has been cached here yet and the booking service is unreachable. It will fill in by itself once you have a connection.'
+        : 'The app is fetching your timetable from FIT — this takes about a minute. Pull down to hurry it along.')+'</div></div>';
     return;
   }
   const list = classesFor(selDate);
@@ -2115,7 +2526,6 @@ function renderBook(){
   w.innerHTML =
     '<div class="ltitle">Book</div>'+
     offlineBanner()+
-    heroHTML()+
     '<div class="stickybar">'+
       '<div class="railwrap"><div class="railslide" id="railslide">'+
         weekHeadHTML()+
@@ -2161,9 +2571,12 @@ function stepWeek(delta){
    guesser could never say "I don't know": every unclassifiable booking — a PT session, a
    renamed class — became a phantom "Exhale booked that day" that both suppressed a real
    exhale pick and claimed on screen that the bot had won it.
-   `studioOfBooking` is the honest one and is what any CLAIM must use; `studioFromBooking`
-   keeps the old always-answer behaviour for cosmetics (row dots) and cancel routing, where
-   the bot matches on date+time anyway. */
+   `studioOfBooking` is the honest one and is what any CLAIM must use. `studioFromBooking`
+   is the always-answer sibling used only where a string is structurally required — and it
+   now answers 'unknown', never 'exhale'. Guessing 'exhale' collapsed an unclassifiable
+   booking onto the key of a real exhale booking at the same time, and the cancel path then
+   hid one row and cancelled the other. 'unknown' matches no studio the bot knows, so the
+   bot falls through to its date+time path and REFUSES to guess if that is ambiguous. */
 function studioOfBooking(b){
   const s = (((b&&b.name)||'')+' '+((b&&b.location)||'')).toLowerCase();
   if(s.indexOf('reformer')>=0) return 'reformer';
@@ -2174,7 +2587,7 @@ function studioOfBooking(b){
   if(/\b(exhale|yoga|pilates|barre|vinyasa|hatha|yin|meditation|stretch|mobility)\b/.test(s)) return 'exhale';
   return null;
 }
-function studioFromBooking(b){ return studioOfBooking(b) || 'exhale'; }
+function studioFromBooking(b){ return studioOfBooking(b) || 'unknown'; }
 /* Resolve a Sydney wall-clock date+time to a real instant.
    A hard-coded +10:00 is wrong for half the year (AEDT is +11:00) and that error
    lands squarely on the free-cancel / strike boundary, so solve it against the same
@@ -2199,6 +2612,274 @@ function sydWallToMs(dateStr, hhmm){
   if(!ok || !isFinite(ms)) return null;
   return ms;
 }
+/* ── the bot's own actionable outcomes (contract §7) ─────────────────────────────────
+   The activity list is gone and is not coming back, but a handful of bot log entries are
+   not activity — they are unfinished business that only the user can close, and the worst
+   of them is `cancel_failed`: the class is STILL on the FIT account, so not acting on it
+   is a no-show and a strike. Those are derived from the `log` the app already fetches and
+   attached to the row they belong to, where the user is already looking.
+
+   Only the LAST cancel-related entry per booking counts, and a warning is only shown while
+   the booking it describes is still on the account — so it retires itself the moment the
+   thing it warns about is genuinely resolved. */
+function logBookingId(e){
+  const t = (e && e.target) || {};
+  return String(e && e.booking_id ? e.booking_id : (t.booking_id || '')) || '';
+}
+function logRowKey(e){
+  const id = logBookingId(e);
+  if(id) return 'id:'+id;
+  const t = (e && e.target) || {};
+  const d = t.date || e.date || '', tm = t.time || e.time || '';
+  return (d && tm) ? 'dt:'+d+'|'+tm : '';
+}
+function bookingRowKeys(b){
+  const out = [];
+  const id = bookingId(b);
+  if(id) out.push('id:'+id);
+  if(b && b.date && b.time) out.push('dt:'+b.date+'|'+b.time);
+  return out;
+}
+/* ── every kind fitbot.log_event() can emit, and where it reaches the user ───────────
+   §7: the app must never claim success from a bot log kind it does not understand, and
+   skips/failures must be visually distinct from successes. That only holds if the set of
+   kinds is written down, so this table IS the mapping — a kind missing from it is a
+   mapping bug and says so in the console (developers only; never the user).
+     'row'   — inline warning on the booking row it is about   (botRowWarnings)
+     'alert' — persistent notice on Booked, no row to hang off (syncBotAlerts)
+     'note'  — freshness note on Booked                        (botStaleNote)
+     ''      — deliberately no user surface, for the reason grouped above it            */
+const BOT_LOG_SURFACE = {
+  /* unfinished business only the user can close */
+  cancel_failed:'row', cancel_notfound:'row', cancel_unknown:'row',
+  waitlisted:'alert', book_unknown:'alert', booknow_unknown:'alert',
+  refresh_failed:'note',
+
+  /* GOOD news, and identical in effect to a clean success: the request failed in transit
+     but the action is CONFIRMED on the FIT account — it IS booked / it IS cancelled. Each
+     is always followed in the same run by the ordinary `booked` / `booknow` / `cancelled`
+     entry, and the Booked list already shows the result, so a surface of its own could
+     only make something that went right read like something that went wrong. What these
+     must do instead is CLEAR doubt raised earlier, and they do: both are settling kinds
+     below, so a recovered booking retires an earlier "couldn't tell" notice. */
+  book_recovered:'', cancel_recovered:'',
+
+  /* intermediate diagnostics. A step failed, so the bot went and read the FIT account
+     before saying anything at all — none of these is an outcome and none of them means
+     the action failed. The outcome is a separate entry, and that one is mapped. */
+  book_transport_error:'', cancel_transport_error:'', recheck:'', book_attempt:'',
+
+  /* outcomes and housekeeping the screens already show better than a log line can:
+     a booking appears on Booked, a pick shows its own state on Picks, a failed scrape
+     shows as stale data. */
+  refresh:'', booked:'', booknow:'', cancelled:'',
+  booknow_notfound:'', booknow_ambiguous:'', scrape_error:'', cred_fallback:'',
+  form_checkbox_skipped:'', picks_unreadable:'', pick_removed:'', pick_bad_date:'',
+  pick_day_mismatch:'', pick_name_drift:'', pick_unusable:'',
+  snipe_notfound:'', snipe_waiting:'', snipe_full:'', snipe_rejected:'', snipe_failed:'',
+  snipe_nopicks:'', snipe_skipped:'', snipe_nothing_due:'', snipe_late:'',
+  snipe_skipped_studio_limit:''
+};
+const unmappedKinds = {};
+function checkLogKinds(){
+  (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+    const k = e && e.kind;
+    if(!k || BOT_LOG_SURFACE.hasOwnProperty(k) || unmappedKinds[k]) return;
+    unmappedKinds[k] = true;
+    /* Console only, once per kind. An unknown kind is never rendered as anything — least
+       of all as a success — but it must not vanish without trace either. */
+    if(window.console && console.warn) console.warn('bot log kind not mapped in BOT_LOG_SURFACE:', k);
+  });
+}
+
+/* the cancel-related kinds that describe ONE booking; the last one wins */
+const CANCEL_OUTCOME_KINDS = {cancel_failed:1, cancelled:1, cancel_notfound:1,
+                              cancel_unknown:1, cancel_recovered:1};
+/* {rowKey: {tone, text}} for rows that need a persistent inline warning */
+function botRowWarnings(){
+  const latest = {};
+  (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+    if(!e || !e.kind) return;
+    if(!CANCEL_OUTCOME_KINDS[e.kind]) return;
+    const k = logRowKey(e);
+    if(!k) return;
+    /* The log is written by append, so ARRAY ORDER is the chronology and the last entry
+       about a booking is the current one. It used to compare `ts` as a STRING, and Sydney
+       wall clock repeats an hour every April: at the fall-back, 02:30+11:00 is followed by
+       02:30+10:00, which sorts LOWER. A `cancelled` that resolved a `cancel_failed` would
+       lose that comparison and the row would keep telling the user it was still booked —
+       for a booking that no longer exists. */
+    latest[k] = e;
+  });
+  const out = {};
+  Object.keys(latest).forEach(k=>{
+    const e = latest[k];
+    if(e.kind === 'cancel_failed'){
+      out[k] = {tone:'bad', text:'Couldn’t cancel this — cancel it in the FIT app or it becomes a no-show'};
+    } else if(e.kind === 'cancel_unknown'){
+      /* The cancel request failed AND the FIT account list could not be read, so whether
+         this is still booked is genuinely unknown. Only one of the two possible beliefs
+         can cost a strike — "it's cancelled" when it is not — so the app takes the other
+         one and says so on the row, which is still here precisely because nothing has
+         proved it gone. It retires itself: a later `cancelled` supersedes this entry, and
+         a booking that leaves the account takes its row (and this line) with it. */
+      out[k] = {tone:'bad', text:'The bot couldn’t confirm this cancel — treat it as STILL BOOKED. Check the FIT app and cancel it there, or it becomes a no-show'};
+    } else if(e.kind === 'cancel_notfound' && e.ambiguous){
+      out[k] = {tone:'bad', text:'The bot can’t tell this apart from another booking at the same time, so it refused to cancel either — cancel this one in the FIT app'};
+    }
+    /* `cancelled` and `cancel_recovered` deliberately produce nothing: both mean the
+       booking is confirmed gone, and both are here so they can supersede a warning. */
+  });
+
+  /* ── remember it, so a 200-entry log cannot quietly retract a no-show warning ──── */
+  const before = JSON.stringify(stickyWarn);
+  Object.keys(latest).forEach(k=>{
+    /* the log has since REACHED A CONCLUSION about this booking — that outranks anything
+       remembered, in both directions */
+    if(out[k]) stickyWarn[k] = out[k];
+    else delete stickyWarn[k];
+  });
+  /* Only ever judged against a list that actually arrived: before the first payload lands
+     realBookings() is empty, and pruning against that would drop every remembered warning
+     on a cold launch — which is the exact moment it is most needed. */
+  if(lastDataJson !== null){
+    const live = {};
+    realBookings().forEach(b => bookingRowKeys(b).forEach(k => { live[k] = true; }));
+    Object.keys(stickyWarn).forEach(k=>{ if(!live[k]) delete stickyWarn[k]; });
+  }
+  Object.keys(stickyWarn).forEach(k=>{ if(!out[k]) out[k] = stickyWarn[k]; });
+  if(JSON.stringify(stickyWarn) !== before) persistStickyWarn();
+  return out;
+}
+
+/* ── "the bot cannot tell you whether this booked" ───────────────────────────────────
+   book_unknown / booknow_unknown: the booking POST's outcome could not be determined AND
+   the FIT account list could not be read either, so the bot stopped. It did NOT retry —
+   a blind retry after a possible success takes a second spot or trips the
+   one-class-per-studio-per-day rule. There is no booking row to attach this to, because
+   whether a booking exists is exactly what is in doubt, and BOTH wrong beliefs hurt: a
+   class he thinks he has and does not, and a class he has, never sees, and does not
+   attend — a no-show, and three in 7 days is a 7-day ban. So it goes up as a persistent
+   notice on Booked and stays until something settles it. */
+const BOOK_DOUBT_KINDS = {book_unknown:1, booknow_unknown:1};
+/* Definite conclusions about the same class, every one of them reached from a FIT account
+   read that SUCCEEDED. A later one of these retires the doubt. `book_recovered` is in here
+   for its whole purpose: it is the transport failing and the booking existing anyway. */
+const BOOK_SETTLED_KINDS = {booked:1, booknow:1, book_recovered:1, snipe_failed:1,
+                            snipe_rejected:1, snipe_full:1, waitlisted:1};
+/* the class an entry is about — identity is date+time+studio (§6); `name` is a soft label */
+function logSlot(e){
+  const t = (e && e.target) || {}, p = (e && e.pick) || {};
+  const date = t.date || e.date || p.date || '';
+  const time = t.time || p.time || e.time || '';
+  const studio = String(t.studio || p.studio || e.studio || '').toLowerCase();
+  if(!date || !time) return null;
+  return {key: date+'|'+time+'|'+(studio||'?'), date:date, time:time, studio:studio,
+          name: t.name || e.name || p.name || ''};
+}
+/* {slotKey: {kind,date,time,studio,name}} — unresolved "did this book?" doubts */
+function botBookDoubts(){
+  const latest = {};
+  (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+    if(!e || !e.kind) return;
+    if(!BOOK_DOUBT_KINDS[e.kind] && !BOOK_SETTLED_KINDS[e.kind]) return;
+    const s = logSlot(e);
+    if(!s) return;
+    latest[s.key] = {e:e, s:s};        // array order is the chronology — see botRowWarnings()
+  });
+  const out = {}, today = sydToday();
+  Object.keys(latest).forEach(k=>{
+    const r = latest[k];
+    if(!BOOK_DOUBT_KINDS[r.e.kind]) return;          // a later run reached a real answer
+    if(r.s.date < today) return;                     // the class has been and gone
+    /* It is on the account now, so the doubt is answered and the row itself is the
+       answer. realBookings() only — an optimistic row this app invented must never be
+       read back as evidence. A row whose studio cannot be classified says null rather
+       than guessing, and null must not veto the match. */
+    const on = realBookings().some(b => b && b.date === r.s.date && b.time === r.s.time &&
+      (!r.s.studio || studioOfBooking(b) === null || studioOfBooking(b) === r.s.studio));
+    if(on) return;
+    out[k] = {kind:r.e.kind, date:r.s.date, time:r.s.time, studio:r.s.studio, name:r.s.name};
+  });
+  return out;
+}
+
+/* ── the bot's own data re-sync failed ───────────────────────────────────────────────
+   `refresh_failed` is logged when the sync that runs AFTER a book or cancel could not
+   complete: the outcome itself is already in the log, only the data files are stale. So
+   the lists may not yet show what the bot just did. Not an instruction, so no notice and
+   no toast — a quiet line that removes itself as soon as a sync lands. */
+function botStaleNote(){
+  const log = Array.isArray(logdata) ? logdata : [];
+  let last = null;
+  for(let i = log.length - 1; i >= 0; i--){
+    const k = log[i] && log[i].kind;
+    if(k === 'refresh_failed'){ last = log[i]; break; }
+    if(k === 'refresh'){ break; }                    // a later sync succeeded: settled
+  }
+  if(!last) return '';
+  const t = Date.parse(last.ts || '');
+  const u = (bookings && bookings.updated) ? Date.parse(bookings.updated) : NaN;
+  if(isFinite(t) && isFinite(u) && u >= t) return '';   // the data is newer than the failure
+  return '<div class="group" style="margin-top:12px"><div class="rulerow">'+
+    '<div class="ri" data-tone="amber">'+G.warn+'</div><div class="rt">'+
+    '<b>This list may be out of date</b><span>The bot’s last sync with FIT didn’t finish, '+
+    'so anything it booked or cancelled since may not be shown here yet. It keeps '+
+    'retrying on its own.</span></div></div></div>';
+}
+/* Outcomes with no row to hang off, promoted to persistent notices. `waitlisted` is the
+   one that matters: it is NOT a booking, but FIT can promote it into one up to an hour
+   before the class — which is a class the user never sees, i.e. a no-show. */
+function syncBotAlerts(){
+  const seen = {};
+  checkLogKinds();
+  (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+    if(!e || e.kind !== 'waitlisted') return;
+    const d = (e.date || (e.pick && e.pick.date) || '');
+    if(d && d < sydToday()) return;                       // the class has been and gone
+    const id = 'waitlist:'+d+'|'+String(e.bid||'');
+    seen[id] = true;
+    pushAlert({id:id, tone:'amber', tab:'booked',
+      title:'Waitlisted, not booked',
+      body:(e.name || (e.pick && e.pick.name) || 'A class')+(d?' on '+d:'')+
+           ' is not booked. If FIT promotes you off the waitlist it becomes a real booking '+
+           '— check the FIT app and cancel it if you will not attend.'});
+  });
+  /* drop waitlist notices whose class has passed out of the log entirely */
+  alerts.filter(a => a.id.indexOf('waitlist:') === 0 && !seen[a.id]).forEach(a => dropAlert(a.id));
+
+  /* book_unknown / booknow_unknown — see botBookDoubts(). The strongest thing the app
+     can say, because it is the one case where it cannot say anything else honestly. */
+  const doubts = botBookDoubts();
+  Object.keys(doubts).forEach(k=>{
+    const d = doubts[k];
+    const id = 'bookdoubt:'+k;
+    seen[id] = true;
+    const what = (d.name || 'A class') + ' · ' + shortDate(d.date) + ', ' +
+                 fmt12(d.time).full + (SLABEL[d.studio] ? ' · ' + SLABEL[d.studio] : '') +
+                 (d.kind === 'booknow_unknown' ? ' (you asked for this one)' : '');
+    pushAlert({id:id, tone:'bad', tab:'booked',
+      title:'Check the FIT app — booking not confirmed',
+      body: what + '. FIT didn’t answer and your account couldn’t be read, so the bot '+
+            'stopped without retrying — this may or may not be booked. Open the FIT app: '+
+            'book it if it isn’t there; if it is there and you won’t go, cancel it there '+
+            'or it becomes a no-show.'});
+  });
+  /* Retire it the moment the log stops saying it: a later definite outcome, the class
+     appearing on the account, the date passing, or the entry ageing out of the log. */
+  alerts.filter(a => a.id.indexOf('bookdoubt:') === 0 && !seen[a.id]).forEach(a => dropAlert(a.id));
+  /* A "that cancel didn't go through" / "couldn't confirm that cancel" notice is about ONE
+     booking. Once that booking is genuinely off the account there is nothing left to act
+     on, so retire it rather than making the user dismiss a solved problem — the notices
+     that stay have to mean something or they stop being read. */
+  const live = {};
+  realBookings().forEach(b => { live[bookingKey(b)] = true; });
+  alerts.forEach(a=>{
+    ['cancelfail:', 'cancelunknown:'].forEach(pre=>{
+      if(a.id.indexOf(pre) === 0 && !live[a.id.slice(pre.length)]) dropAlert(a.id);
+    });
+  });
+}
 function bookingStartMs(b){
   if(!b.date || !b.time) return null;
   const c = (timetable.classes||[]).find(x => x.date===b.date && x.time===b.time);
@@ -2215,6 +2896,29 @@ function bookingStartMs(b){
   return sydWallToMs(b.date, b.time);
 }
 
+/* ── a cancel the app has NOT been able to confirm ───────────────────────────────────
+   The row leaves the list the instant Cancel is tapped, which is what makes the app feel
+   like an app — but until the server agrees, that empty space is a claim the app cannot
+   back. Offline it could sit there for hours. So say it, in words, on the screen the row
+   left: this is not done yet, and it is still booked until it is confirmed. */
+function pendingCancelHTML(){
+  if(!pendingCancels.length) return '';
+  const off = !!loadError;
+  return '<div class="group" style="margin-top:12px">' + pendingCancels.map(p=>{
+    const nm = (p.b && p.b.name) ? p.b.name : 'That class';
+    const when = (p.b && p.b.date) ? shortDate(p.b.date) +
+      (p.b.time ? ' · ' + (p.b.time_raw || fmt12(p.b.time).full) : '') : '';
+    const waited = relTime(Date.now() - p.at);
+    return '<div class="rulerow"><div class="ri" data-tone="'+(off?'bad':'amber')+'">'+G.warn+'</div>'+
+      '<div class="rt"><b>Cancelling '+esc(nm)+' — not confirmed</b><span>'+
+      (when ? esc(when)+'. ' : '')+
+      (off
+        ? 'You are offline, so this cancel has NOT been confirmed with FIT. Treat the class as STILL BOOKED until this says otherwise — if it did not go through and you do not attend, it is a no-show.'
+        : 'Waiting for FIT to confirm ('+esc(waited)+'). It is still on your FIT account until this clears.')+
+      '</span></div></div>';
+  }).join('') + '</div>';
+}
+
 function renderBooked(){
   const w = $('#w-booked');
   const bks = ((bookings && bookings.bookings) || []).slice()
@@ -2224,10 +2928,14 @@ function renderBooked(){
     : (isFinite(bms) ? 'From your FIT account, ' + ageLong(Math.max(0, Date.now()-bms))
                      : 'Not synced yet');
 
+  const warn = botRowWarnings();
   let rows = '';
   if(bks.length){
     rows = '<div class="ghead">On your FIT account<span class="gh-r">'+bks.length+'</span></div><div class="group">' +
       bks.map((b,i)=>{
+      /* the bot's own unfinished business for THIS row (cancel_failed, ambiguous refusal) */
+      let bw = null;
+      bookingRowKeys(b).forEach(k=>{ if(!bw && warn[k]) bw = warn[k]; });
       /* correctness #10 — say "Studio unknown" rather than asserting Exhale */
       const stk = studioOfBooking(b), st = stk || 'exhale';
       const stLabel = stk ? (SLABEL[stk]||stk) : 'Studio unknown';
@@ -2235,9 +2943,15 @@ function renderBooked(){
       const when = (b.date ? shortDate(b.date) : (b.date_raw||'')) + ' · ' +
                    (b.time_raw || (b.time ? fmt12(b.time).full : ''));
       const startMs = bookingStartMs(b);
+      /* an optimistic row: it is on screen because the user just asked for it, not because
+         FIT has confirmed it. Say so, and offer no Cancel until it is real — cancelling
+         something that does not exist yet is how you end up with neither. */
+      const pending = !!b.__pending;
       /* correctness #3 — measure against when the BOT will reach FIT, not against now */
       let free = '', freeCls = 'go', freeAt = null, freeG = null;
-      if(startMs){
+      if(pending){
+        free = 'Booking on FIT…'; freeCls = 'amb'; freeG = G.boltL;
+      } else if(startMs){
         const freeUntil = startMs - 3600000, dt = freeUntil - Date.now();
         if(dt > CANCEL_LATENCY_MS){
           freeAt = freeUntil - CANCEL_LATENCY_MS;
@@ -2256,108 +2970,50 @@ function renderBooked(){
           (free ? '<div class="cmeta"><span class="cst '+freeCls+(freeCls==='bad'?' longform':'')+'"'+
                   (freeAt?' data-cd="'+freeAt+'" data-cdmode="free"':'')+'>'+
                   (freeG||G.clock)+'<span>'+esc(free)+'</span></span></div>' : '')+
+          /* the bot's last word on this booking, if it was bad news. Persistent: it stays
+             on the row for as long as the booking it warns about is still on the account. */
+          (bw ? '<div class="cmeta"><span class="cst '+esc(bw.tone)+' longform">'+G.warnS+
+                '<span>'+esc(bw.text)+'</span></span></div>' : '')+
+          /* no cancel link on the row ⇒ the bot cannot cancel it at all (it only ever acts
+             on rows that carry one). Say so instead of offering a button that cannot work. */
+          (!pending && !isCancellable(b)
+            ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
+              '<span>This one can only be cancelled in the FIT app</span></span></div>' : '')+
         '</div>'+
         '<div class="cact">'+
-          (b.date && b.time ? '<button class="btn-sm redtxt" data-cancel="'+i+'">Cancel</button>' : '')+
+          (!pending && isCancellable(b) ? '<button class="btn-sm redtxt" data-cancel="'+i+'">Cancel</button>' : '')+
         '</div>'+
       '</div>';
     }).join('') + '</div>'+
-    '<div class="gfoot">Cancelling here runs the bot against your FIT account and takes about a minute. '+
-    'You can also cancel in the FIT app.</div>';
+    '<div class="gfoot">Cancelling takes the class off your FIT account. It leaves this list '+
+    'straight away, and comes back with a warning if FIT didn’t take it. You can also cancel '+
+    'in the FIT app.</div>';
   } else {
     rows = '<div class="emptystate"><div class="eg">'+G.big_chk+'</div>'+
       '<div class="et">Nothing booked</div>'+
-      '<div class="es">Classes on your FIT account — booked by you or by the bot — show up here.</div>'+
-      '<div style="width:100%;max-width:280px;margin-top:14px">'+
-      '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT</button></div></div>';
+      '<div class="es">Classes on your FIT account — booked by you or by the bot — show up here.</div></div>';
   }
 
   w.innerHTML =
     '<div class="ltitle">Booked</div>'+
     '<div class="lsub">'+esc(upd)+'</div>'+
     offlineBanner()+
+    botStaleNote()+
+    pendingCancelHTML()+
+    alertsHTML('booked')+
     '<div style="height:2px"></div>'+
     rows+
-    '<div class="ghead">Cancellation rules</div>'+
-    '<div class="group">'+
-      '<div class="rulerow"><div class="ri" data-tone="go">'+G.check+'</div>'+
-        '<div class="rt"><b>More than 1 hour before</b><span>Cancelling is free. No strike, no penalty.</span></div></div>'+
-      '<div class="rulerow"><div class="ri" data-tone="amber">'+G.clockL+'</div>'+
-        '<div class="rt"><b>Within 1 hour, or a no-show</b><span>Counts as one strike against your account.</span></div></div>'+
-      '<div class="rulerow"><div class="ri" data-tone="bad">'+G.warn+'</div>'+
-        '<div class="rt"><b>3 strikes in a rolling 7 days</b><span>7-day booking ban. If you can’t make a class, cancel it here — never just skip it.</span></div></div>'+
-    '</div>'+
+    /* the static free-vs-late-cancel rule block lived here. Every row already carries its
+       own live "Free cancel for 2h 10m" / "Late cancel = a strike" line, and the confirm
+       sheet spells out the consequence at the only moment it can change a decision. */
     '<div class="spacer"></div>';
 }
 
 /* ── Picks screen ───────────────────────────────────────────── */
-const LOG_META = {
-  booked:            {t:'Booked',                 c:'go',        g:G.check},
-  waitlisted:        {t:'Added to waitlist',      c:'amber',g:G.clockL},
-  snipe_failed:      {t:'Booking failed',         c:'bad',       g:G.xmark},
-  snipe_waiting:     {t:'Waiting for the window', c:'n3',      g:G.clockL},
-  book_attempt:      {t:'Booking attempt',        c:'amber',g:G.boltL},
-  refresh:           {t:'Timetable synced',       c:'n3',      g:G.refresh},
-  booknow:           {t:'Instant book',           c:'amber',g:G.boltL},
-  cancelled:         {t:'Cancelled',              c:'bad',       g:G.trash},
-  cancel_notfound:   {t:'Cancel — no match',      c:'amber',g:G.warn},
-  snipe_nothing_due: {t:'Checked — nothing due',  c:'n3',      g:G.check},
-  snipe_notfound:    {t:'Class not on timetable', c:'amber',g:G.warn},
-  snipe_nopicks:     {t:'No picks saved',         c:'n3',      g:G.repeat},
-  /* correctness #8 — nine kinds the bot emits had no entry here and rendered as a grey row
-     showing the raw identifier, visually identical to benign chatter. Every "your pick was
-     NOT booked" signal was in that group. An unmapped kind must be impossible to mistake
-     for routine, so each one below carries plain wording and a failure/warning tone. */
-  snipe_skipped:     {t:'Pick skipped — not booked',           c:'bad',   g:G.warn},
-  snipe_skipped_studio_limit:
-                     {t:'Skipped — that studio was already booked', c:'amber', g:G.warn},
-  snipe_late:        {t:'Run woke too late — window missed',    c:'bad',   g:G.xmark},
-  snipe_rejected:    {t:'Refused by FIT',                       c:'bad',   g:G.xmark},
-  snipe_full:        {t:'Class was full — not booked',          c:'bad',   g:G.warn},
-  pick_removed:      {t:'One-off pick used up',                 c:'n3',    g:G.check},
-  pick_bad_date:     {t:'Pick has an unusable date',            c:'bad',   g:G.warn},
-  pick_day_mismatch: {t:'Pick day and date disagree',           c:'amber', g:G.warn},
-  pick_name_drift:   {t:'Class renamed — matched by time',      c:'amber', g:G.warn},
-  pick_unusable:     {t:'Pick could not be read',               c:'bad',   g:G.warn},
-  picks_unreadable:  {t:'Picks file unreadable',                c:'bad',   g:G.warn},
-  booknow_notfound:  {t:'Instant book — no matching class',     c:'bad',   g:G.warn},
-  booknow_ambiguous: {t:'Instant book — ambiguous, refused',    c:'bad',   g:G.warn},
-  scrape_error:      {t:'Timetable scrape error',               c:'amber', g:G.warn},
-  form_checkbox_skipped: {t:'Unexpected form field skipped',    c:'amber', g:G.warn}
-};
-/* correctness #8 — "make skip/failure states visually distinct from successes". Tone alone
-   is not enough, but the loud treatment has to be reserved for the lines that actually mean
-   "this class was NOT booked", or it stops meaning anything. `cancelled` is a red line but a
-   routine one he asked for; `book_attempt`/`booknow` are progress notes, not warnings. */
-const LOG_LOUD = {snipe_failed:1, snipe_skipped:1, snipe_late:1, snipe_rejected:1,
-                  snipe_full:1, pick_bad_date:1, pick_unusable:1, picks_unreadable:1,
-                  booknow_notfound:1, booknow_ambiguous:1};
-const LOG_QUIET = {book_attempt:1, booknow:1};
-function logVariant(kind, tone){
-  if(LOG_LOUD[kind]) return 'lv-bad';
-  if(LOG_QUIET[kind]) return '';
-  if(tone === 'amber') return 'lv-warn';
-  if(tone === 'go') return 'lv-good';
-  return '';
-}
-function logDetail(e){
-  if(e.pick) return e.pick.day+' '+fmt12(e.pick.time).full+' · '+(e.pick.name||SLABEL[e.pick.studio]||e.pick.studio||'');
-  if(e.target){
-    const parts = [e.target.name];
-    if(e.target.date) parts.push(shortDate(e.target.date));
-    if(e.target.time) parts.push(fmt12(e.target.time).full);
-    return parts.filter(Boolean).join(' · ');
-  }
-  if(e.classes !== undefined) return e.classes+' classes · '+(e.bookings||0)+' bookings';
-  if(e.result && e.result.verified !== undefined) return e.result.verified ? 'Verified' : 'Not verified';
-  return '';
-}
-function logWhen(iso){
-  const ds = isoDateStr(iso), today = sydToday();
-  if(ds === today) return isoClock(iso);
-  if(ds === addDays(today,-1)) return 'Yest';
-  return WD_SHORT[dowMon0(ds)]+' '+dayNum(ds);
-}
+/* The "Bot activity" list lived here — LOG_META and its formatters with it. `logdata` still
+   arrives from the Worker and is still parsed; nothing renders it. Anything that section was
+   the only witness to now has to reach the user as a toast or as a state on the row itself
+   (see the "didn't book" branch in pickRowHTML), which is where they were looking anyway. */
 
 /* one saved pick, recurring or one-off */
 function pickRowHTML(p, dupe){
@@ -2365,7 +3021,26 @@ function pickRowHTML(p, dupe){
   const st = pickState(p);
   const drift = pickNameDrift(p);
   let nextTxt, nextCls = 'amb', g = G.clock, opens = null, wide = false;
-  if(st.kind === 'open'){ nextTxt = 'Open now'; nextCls = 'go'; g = G.bolt; }
+  if(st.kind === 'open'){
+    /* The window is open and the class is still not on the account. For the first few
+       minutes that is just the bot on its way. After that it is a failure — and the
+       activity log that used to be the only place it was ever visible is gone, so it has
+       to be said on the row it belongs to. */
+    const openFor = st.opens === null ? 0 : Date.now() - st.opens;
+    if(openFor > 10*60000){
+      /* amber, not red: much the commonest cause is a pick added AFTER this occurrence's
+         window opened, which is nobody's failure — and the bot's own grace is 20 minutes,
+         so no pass can rescue it either. If it keeps saying this, the class is full. */
+      nextTxt = 'Open '+relTime(openFor)+' — not booked yet';
+      nextCls = 'amb'; g = G.warnS; wide = true;
+    } else {
+      nextTxt = 'Open now — booking'; nextCls = 'go'; g = G.bolt;
+    }
+  }
+  else if(st.kind === 'booking'){
+    /* the app has asked FIT and has NOT been answered. Not a tick. */
+    nextTxt = 'Booking… not confirmed yet'; nextCls = 'amb'; g = G.boltL; wide = true;
+  }
   else if(st.kind === 'waiting'){ opens = st.opens; nextTxt = 'Books in '+relTime(st.opens - Date.now()); }
   else if(st.kind === 'booked'){ nextTxt = 'Booked for '+shortDate(st.cls.date); nextCls = 'go'; g = G.check; }
   else if(st.kind === 'blocked'){
@@ -2377,6 +3052,15 @@ function pickRowHTML(p, dupe){
   }
   else if(st.kind === 'expired'){ nextTxt = 'Date has passed'; nextCls = ''; g = G.warnS; }
   else { nextTxt = 'Not on the timetable'; nextCls = 'bad'; g = G.warnS; }
+  /* The bot tried this occurrence and could not find out what happened (book_unknown /
+     booknow_unknown). Every line above this asserts something — "not booked yet", "Open
+     now — booking" — that the bot does not actually know, so none of them may stand.
+     Say the one true thing instead; the notice on Booked carries the rest. */
+  const doubt = st.cls ? botBookDoubts()[st.cls.date+'|'+st.cls.time+'|'+(st.cls.studio||'?')] : null;
+  if(doubt){
+    nextTxt = 'Couldn’t tell if this booked — check the FIT app';
+    nextCls = 'bad'; g = G.warnS; wide = true; opens = null;
+  }
   return '<div class="crow'+(once?' once ispick':'')+'">'+
     '<div class="ctime"><b style="font-size:13.5px">'+esc(p.day)+'</b>'+
       '<span style="letter-spacing:0;text-transform:none;font-size:11px">'+esc(fmt12(p.time).full)+'</span></div>'+
@@ -2448,47 +3132,12 @@ function renderPicks(){
       'within 45 minutes fires a booking run straight away.</div>';
   }
 
-  const items = logdata.slice().reverse().slice(0,60);
-  let logHTML;
-  if(!items.length){
-    logHTML = '<div class="group"><div class="rulerow"><div class="ri" data-tone="n3">'+G.clockL+'</div>'+
-      '<div class="rt"><b>No activity yet</b><span>Every booking, cancel and sync the bot performs is listed here.</span></div></div></div>';
-  } else {
-    logHTML = '<div class="group">' + items.map(e=>{
-      /* correctness #8 — amber, not grey: a kind this build does not know about is far
-         more likely to be a new failure mode than routine chatter, and the raw identifier
-         is at least made readable rather than printed as snipe_skipped_studio_limit */
-      const m = LOG_META[e.kind] ||
-                {t:String(e.kind||'Event').replace(/_/g,' '), c:'amber', g:G.warn};
-      const d = logDetail(e);
-      return '<div class="logrow '+logVariant(e.kind, m.c)+'"><div class="li" data-tone="'+m.c+'">'+m.g+'</div>'+
-        '<div class="lb"><div class="lt">'+esc(m.t)+'</div>'+
-        (d ? '<div class="ls">'+esc(d)+'</div>' : '')+'</div>'+
-        '<div class="lw">'+esc(logWhen(e.ts))+'</div></div>';
-    }).join('') + '</div>'+
-    '<div class="gfoot">Newest first, Sydney time.</div>';
-  }
-
   w.innerHTML =
     '<div class="ltitle">Picks</div>'+
     '<div class="lsub">'+esc(picksSummary())+'</div>'+
     offlineBanner()+
     heroHTML()+
     pickHTML+
-    '<div class="ghead">Run the bot now</div>'+
-    '<div class="group">'+
-      '<button class="row tapme" data-act="snipe">'+
-        '<span style="color:var(--amber);flex:none;width:22px;display:flex;justify-content:center">'+G.boltL+'</span>'+
-        '<div class="rbody"><div class="rtitle">Fire a booking pass</div>'+
-        '<div class="rsub"><span class="txt">Check every pick and book anything due</span></div></div>'+G.chev+'</button>'+
-      '<button class="row tapme" data-act="sync">'+
-        '<span style="color:var(--ink2);flex:none;width:22px;display:flex;justify-content:center">'+G.refresh+'</span>'+
-        '<div class="rbody"><div class="rtitle">Sync timetable &amp; bookings</div>'+
-        '<div class="rsub"><span class="txt">'+
-          esc(syncing ? 'Syncing now…' : 'Automatic — data '+ageLong(dataAgeMs()))+'</span></div></div>'+G.chev+'</button>'+
-    '</div>'+
-    '<div class="ghead">Bot activity</div>'+
-    logHTML+
     '<div class="spacer"></div>';
 }
 
@@ -2555,17 +3204,15 @@ function doSignOut(){
      signs out. Fire-and-forget on purpose: the local state must clear instantly even with
      no connection, and a failure here changes nothing this app can see. */
   try{ wapi('/logout', {}).catch(()=>{}); }catch(e){}
-  signOut();
-  lastDataJson = null;
   booted = false;
   stopPolling(); clearPostPoll(); syncing = false; syncStartedAt = 0;
+  fastUntil = 0;
   clearFlight();
   closeSheet();
-  /* Everything in memory belongs to the member who just left — blank it, or the next
-     person briefly sees the previous person's bookings behind the login screen. */
-  timetable = {updated:null, classes:[]};
-  bookings  = {updated:null, bookings:[]};
-  logdata = []; picks = []; picksSha = null; savedPicksJson = '[]';
+  /* Everything in memory AND in storage belongs to the member who just left — the draft
+     picks above all, which used to sit under one global key and were restored into the
+     next person's session, one tap from writing his picks to her account. */
+  wipeMemberState();
   renderSetup('');
 }
 
@@ -2601,11 +3248,13 @@ async function login(){
       loginWarn((d && d.error) || 'Could not sign in right now — try again');
       return;
     }
+    /* A sign-in is a change of member until proven otherwise. Erase whatever the previous
+       one left behind BEFORE the new session exists — the audit showed a failed first load
+       rendering the previous member's bookings, complete with a working Cancel button. */
+    wipeMemberState();
     session = d.session;
-    USER = d.user || 'josh';
+    USER = d.user || '';
     USERNAME = d.name || '';
-    /* a fresh sign-in must not inherit the last member's cached payload */
-    lastDataJson = null;
     try {
       localStorage.setItem('fitbooker_session', session);
       localStorage.setItem('fitbooker_user', USER);
@@ -2630,7 +3279,7 @@ function enterApp(){
   $('#tabfade').classList.remove('hidden');
   $('#app').classList.remove('setupmode');
   $('#w-book').innerHTML = '<div class="ltitle">Book</div><div class="emptystate"><div class="es">Connecting…</div></div>';
-  loadAll().then(()=>{ startPolling(); if(isStale()) autoSync(); });
+  bootLoad();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -2767,8 +3416,6 @@ function openInfoSheet(){
         '<div class="rt"><b>7 days + 1 hour</b><span>A class becomes bookable exactly 7 days and 1 hour before it starts, Sydney time.</span></div></div>'+
       '<div class="rulerow"><div class="ri" data-tone="amber">'+G.repeat+'</div>'+
         '<div class="rt"><b>Every week, or just this one</b><span>A weekly pick is a weekday + time + studio and repeats forever. A one-off is pinned to a single date and is never repeated. The bot wakes just before each window and books on the second.</span></div></div>'+
-      '<div class="rulerow"><div class="ri" data-tone="n2">'+G.refresh+'</div>'+
-        '<div class="rt"><b>Data keeps itself fresh</b><span>The app re-reads your data every 45 seconds while it is open and pulls a new copy from the FIT portal by itself once it is more than 15 minutes old. Pull down to force it.</span></div></div>'+
       '<div class="rulerow"><div class="ri" data-tone="n2">'+G.cal+'</div>'+
         '<div class="rt"><b>One class per studio per day</b><span>FIT rejects a second booking in the same studio on the same day.</span></div></div>'+
       '<div class="rulerow"><div class="ri" data-tone="bad">'+G.warn+'</div>'+
@@ -2801,6 +3448,34 @@ async function bookNow(bid, fromSheet){
     actions: [{label: conflict ? 'Book Anyway' : 'Book Now', style:'default'}]
   });
   if(choice !== 0){ if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
+
+  /* Optimistic: the class appears on Booked immediately, flagged as not yet confirmed and
+     with no Cancel button until it is real. It is memory-only — nothing about it is
+     persisted — so the worst case is that it disappears at the next launch, never that a
+     phantom booking outlives the session. reconcilePending() withdraws it with a toast if
+     FIT does not have it SETTLE_MS from now. */
+  const optimistic = {
+    date: c.date, time: c.time,
+    name: c.name || SLABEL[c.studio] || c.studio,
+    location: c.studio,                  // keeps studioOfBooking() honest for this row
+    time_raw: fmt12(c.time).full,
+    /* __pending marks this row as an ASK, not a booking. realBookings() filters it out, so
+       nothing that makes a claim — pickState's green tick, the one-per-studio-per-day
+       caution, the pending-book match — can ever be satisfied by a row this app invented.
+       __pendingStudio is what we asked for, and is never read as what FIT confirmed. */
+    __pending: true,
+    __pendingStudio: c.studio
+  };
+  const key = bookingKey(optimistic);
+  /* Guard the DISPATCH, not just the row. The row guard alone let a double tap send two
+     booknow.yml runs: the second one books nothing (FIT already has it) but it is a wasted
+     run, and against a slower first run it is a genuine race. */
+  if(hasPending(key)){ toast('Already booking that one — hold on.', 2600); return; }
+  if(alreadyBookedSlot(c)){ toast('That class is already on your FIT account.', 3000); return; }
+  const before = bookingKeySnapshot();
+  bookingList().push(optimistic);
+  pendingBooks.push({key: key, at: Date.now(), b: optimistic, before: before});
+  rerenderKeepScroll();
   try{
     /* correctness #2 — `date` pins the occurrence. Without it the bot resolves the
        (day,time,studio) triple to the SOONEST future match, and the two-week timetable
@@ -2810,8 +3485,51 @@ async function bookNow(bid, fromSheet){
        booknow.yml already declares a `date` input (it is used for cancel), so sending it
        is safe whether or not the bot-side patch has landed. */
     await dispatch('booknow.yml', {day:c.day, time:c.time, studio:c.studio, date:c.date});
-    beginFlight('Booking… the Booked tab updates in about a minute.');
-  }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
+    beginFlight('Booking on FIT — confirming in about a minute.', 78000);
+    startFastPoll();                     // …and confirm it every 8s rather than every 45
+  }catch(e){
+    if(handleApiErr(e)) return;          // 401/403: the session is gone, so is the state
+    if(isDefiniteReject(e)){
+      /* The Worker answered and said no. Nothing was dispatched, so nothing was asked of
+         FIT — take the row back off the screen and say so plainly. */
+      withdrawPending(pendingBooks, key);
+      toast('Couldn’t start that booking — nothing was booked. '+String(e.message||e), 5200);
+      rerenderKeepScroll();
+      return;
+    }
+    /* Timeout, dropped connection or a 5xx. THE RUN MAY ALREADY HAVE BEEN DISPATCHED — the
+       app aborts its own fetch at 12s and the Worker's call to GitHub does not stop when we
+       stop listening. The audit demonstrated the old behaviour: the booking succeeded on FIT
+       while the app declared "nothing was booked" AND dropped the pending record, so the
+       settle net that exists to catch exactly this was disarmed at the same moment.
+       Keep the pending record, keep the optimistic row, keep watching. The settle window
+       decides in ~3 minutes, from evidence. Never assert a negative the app cannot know. */
+    announce({id:'bookunknown:'+key, tone:'amber', tab:'booked',
+              title:'Couldn’t confirm that booking request',
+              body:(c.name||'The class')+' on '+shortDate(c.date)+' — the request may or may '+
+                   'not have reached FIT. The app is checking; it will tell you either way. '+
+                   'Do not tap Book again yet.'});
+    rerenderKeepScroll();
+    startFastPoll();
+  }
+}
+/* drop a pending record and undo its optimistic edit to the list */
+function withdrawPending(bucket, key){
+  const i = bucket.findIndex(p=>p.key===key);
+  if(i < 0) return null;
+  const p = bucket[i];
+  bucket.splice(i,1);
+  const list = bookingList();
+  if(bucket === pendingBooks){
+    const j = list.findIndex(b => b === p.b);
+    if(j >= 0) list.splice(j,1);
+  }else{
+    if(list.findIndex(b => bookingKey(b) === key) < 0){
+      const at = (p.idx === null || p.idx < 0 || p.idx > list.length) ? list.length : p.idx;
+      list.splice(at, 0, p.b);
+    }
+  }
+  return p;
 }
 
 async function cancelBooking(i){
@@ -2824,6 +3542,8 @@ async function cancelBooking(i){
   const late  = atRun !== null && atRun < 3600000;
   /* correctness #10 — the studio we send is a guess when the name/location don't say */
   const knownStudio = studioOfBooking(b);
+  /* FIT's own id for THIS booking, read off its cancel link. This is what gets sent. */
+  const fitId = bookingId(b);
   const choice = await actionSheet({
     title: 'Cancel ' + (b.name||'this booking') + '?',
     message: (b.date_raw || shortDate(b.date)) + ' at ' + (b.time_raw || fmt12(b.time).full) +
@@ -2831,82 +3551,72 @@ async function cancelBooking(i){
         ? '\nCancelling within 1 hour of the class counts as a strike. 3 strikes in 7 days = a 7-day ban.'
         : (late ? '\nThe bot takes about a minute to reach FIT and that lands inside the last hour — this WILL count as a strike. Cancel in the FIT app instead if you can. 3 strikes in 7 days = a 7-day ban.'
                 : '\nFree cancel: the bot will reach FIT more than 1 hour before the class.')) +
-      (knownStudio ? '' : '\nThe studio for this booking isn’t obvious from its name, so the bot matches on date and time.'),
+      /* The old text here said "so the bot matches on date and time". That was FALSE: the
+         app sent a GUESSED studio ('exhale') and the bot matched on it. Now the bot is
+         given this booking's own FIT id and cancels exactly it, so there is nothing to
+         disclaim. Only a row with no id at all falls back to date+time — and then the bot
+         refuses outright rather than picking one, which IS worth saying. */
+      (fitId ? '' : (knownStudio
+        ? ''
+        : '\nThis booking has no cancel id the app can read, so the bot will match on date and time — and will refuse to cancel anything at all if another booking shares them.')),
     actions: [{label: late ? 'Cancel Anyway (strike)' : 'Cancel Booking', style:'destructive'}],
     cancelLabel:'Keep Booking'
   });
   if(choice !== 0) return;
-  try{
-    await dispatch('booknow.yml', {day:'MON', time:b.time, studio:studioFromBooking(b), action:'cancel', date:b.date});
-    beginFlight('Cancelling… this list refreshes in about a minute.');
-  }catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
-}
 
-/* Manual sync is now a fallback, not the primary path — the poller and the
-   staleness check drive refresh.yml on their own. */
-async function syncNow(){
-  reapSync();                     // F2 — a stale latch must never block a manual sync
-  if(syncing){ toast('Already syncing — new data lands in about a minute.', 2600); return; }
-  const now = Date.now(), last = lastDispatchMs();
-  if(now - last < DISPATCH_MIN){
-    loadAll(true);
-    toast('Synced '+ageShort(now - last).replace(' ago','')+' ago — data reloaded.', 2600);
-    return;
+  /* Optimistic: the row goes NOW. Waiting ~a minute for a workflow to run before a tapped
+     Cancel had any visible effect was the single most remote-control-feeling thing left in
+     the app. Everything after this point exists to make sure the disappearance is true.
+
+     The pending record's identity is the FIT booking id. It used to be
+     date|time|guessed-studio, which two different bookings could share — so the re-find
+     below spliced the WRONG row off the screen while the dispatch cancelled the other. */
+  const key = bookingKey(b);
+  if(hasPending(key)){ toast('Already cancelling that one — hold on.', 2600); return; }
+  const live = bookingList();
+  const idx = live.findIndex(x => bookingKey(x) === key);
+  const snapshot = idx >= 0 ? live[idx] : b;
+  if(idx >= 0) live.splice(idx, 1);
+  pendingCancels.push({key: key, at: Date.now(), b: snapshot, idx: idx, bookingId: fitId});
+  rerenderKeepScroll();
+
+  try{
+    /* booking_id is the whole identity when we have one; the bot ignores date/time/studio
+       entirely in that case and verifies THAT id is gone from the account afterwards.
+       studio is still sent for the id-less fallback, and is 'unknown' — never a guess —
+       when the row cannot be classified, so the bot cannot match the wrong studio. */
+    await dispatch('booknow.yml', {day:'MON', time:b.time, studio:studioFromBooking(b),
+                                   action:'cancel', date:b.date, booking_id:fitId});
+    beginFlight('Cancelling on FIT — confirming in about a minute.', 78000);
+    startFastPoll();
+  }catch(e){
+    if(handleApiErr(e)) return;
+    /* The cancel path fails SAFE in one direction only: put the row back. A visible row is
+       the pessimistic claim ("still booked"), and if the cancel did in fact land, the next
+       poll removes it — whereas a hidden row the user believes is cancelled and which is
+       not is a no-show, and three of those in 7 days is a 7-day ban. */
+    withdrawPending(pendingCancels, key);
+    if(isDefiniteReject(e)){
+      toast('Couldn’t cancel that — nothing was sent, so it is still booked. '+
+            String(e.message||e), 5200);
+    }else{
+      /* timeout / dropped connection: the run MAY have been dispatched. Say exactly that
+         rather than asserting either outcome. */
+      announce({id:'cancelunknown:'+key, tone:'bad', tab:'booked',
+                title:'Couldn’t confirm that cancel',
+                body:(b.name||'That class')+' is shown as still booked because the app could '+
+                     'not confirm otherwise. The request may or may not have reached FIT — '+
+                     'check the FIT app before the class, or it could become a no-show.'});
+    }
+    rerenderKeepScroll();
   }
-  autoBusy = true;
-  markDispatch(now);              // F3
-  syncBaseline = dataUpdatedMs();
-  try{
-    await dispatch('refresh.yml');
-    syncing = true; syncStartedAt = Date.now(); updateFresh();
-    beginFlight('Syncing with FIT — new data in about a minute.', 78000);
-    pollAfterDispatch();
-  }catch(e){ syncing = false; syncStartedAt = 0; updateFresh(); if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
-  finally{ autoBusy = false; }
 }
 
-/* subtle manual affordance: the freshness pill opens this, it is not the main path */
-function openDataSheet(){
-  const age = dataAgeMs();
-  const html =
-  '<div class="sheet-card"><div class="grabber"></div><div class="sheet-scroll">'+
-    '<div class="detail-head">'+
-      '<div class="detail-title">Live data</div>'+
-      '<div class="detail-when">'+esc(syncing
-        ? 'A sync is running now — this updates itself when it lands.'
-        : 'FIT Booker re-reads your data every 45 seconds while the app is open, and pulls a '+
-          'fresh copy from the FIT portal by itself whenever it goes more than 15 minutes stale.')+
-      '</div>'+
-    '</div>'+
-    '<div>'+
-      factRow('Timetable', esc(timetable && timetable.updated
-        ? ageLong(Math.max(0, Date.now()-new Date(timetable.updated).getTime())) : 'never'))+
-      factRow('Bookings', esc(bookings && bookings.updated
-        ? ageLong(Math.max(0, Date.now()-new Date(bookings.updated).getTime())) : 'never'))+
-      factRow('Status', syncing ? '<span style="color:var(--amber)">Syncing…</span>'
-        : (age > STALE_MS ? '<span style="color:var(--amber)">Stale — syncing shortly</span>'
-                          : '<span style="color:var(--go)">Up to date</span>'))+
-    '</div>'+
-    '<div class="sheet-actions">'+
-      '<button class="btn gray" data-act="sync">'+G.refresh+' Sync with FIT now</button>'+
-      '<button class="btn gray" data-act="close">Done</button>'+
-    '</div>'+
-    '<div class="sheet-note">Pull down on any tab to force a sync too. Automatic syncs are limited to one '+
-      'every 5 minutes so the bot is never hammered.</div>'+
-  '</div></div>';
-  openSheet(html);
-}
-
-async function firePass(){
-  const choice = await actionSheet({
-    title:'Fire a booking pass?',
-    message:'The bot checks every saved pick and books anything whose window is open.',
-    actions:[{label:'Run Now', style:'default'}]
-  });
-  if(choice !== 0) return;
-  try{ await dispatch('snipe.yml'); beginFlight('Booking pass running — check back in a minute.'); }
-  catch(e){ if(!handleApiErr(e)) toast(String(e.message||e), 4200); }
-}
+/* syncNow(), firePass() and the Live-data sheet they hung off are gone. autoSync() —
+   on load, on foreground, on the 45s poll when the data is stale, and on pull-to-refresh —
+   is now the only path to refresh.yml. autoSnipeIfOpen() has been DELETED: the phone no
+   longer fires unattended booking passes at all — the Worker's cron does, from the
+   generated schedule. Nothing in the UI dispatches a workflow except book and cancel. */
 
 /* ════════════════════════════════════════════════════════════════
    Navigation, scroll memory, gestures
@@ -3259,12 +3969,17 @@ document.addEventListener('click', function(e){
   }
   const cn = T('[data-cancel]'); if(cn){ cancelBooking(Number(cn.dataset.cancel)); return; }
 
+  /* dismissing a persistent notice is the user saying "I have dealt with this" — it is the
+     only thing that removes one that has not resolved by itself */
+  const dm = T('[data-dismiss]'); if(dm){ dropAlert(dm.dataset.dismiss); rerenderKeepScroll(); return; }
+
   const act = T('[data-act]');
   if(act){
     const a = act.dataset.act;
-    if(a === 'sync'){ if(sheetOpen()) closeSheet(); syncNow(); }
-    else if(a === 'snipe') firePass();
-    else if(a === 'login') login();
+    /* 'sync' and 'snipe' used to live here. There is no manual dispatch of any kind now:
+       syncing is automatic, and the only workflows this app fires are the ones behind an
+       explicit book or cancel. */
+    if(a === 'login') login();
     else if(a === 'signout') doSignOut();
     else if(a === 'reload') loadAll();
     else if(a === 'goBook') switchTab('book');
@@ -3291,7 +4006,6 @@ document.addEventListener('click', function(e){
   const row = T('.crow[data-bid]'); if(row){ openClassSheet(row.dataset.bid); return; }
 }, false);
 
-$('#syncBtn').addEventListener('click', openDataSheet);
 $('#infoBtn').addEventListener('click', openInfoSheet);
 $('#saveBtn').addEventListener('click', savePicks);
 
@@ -3393,13 +4107,19 @@ window.addEventListener('orientationchange', ()=> setTimeout(fixSafeAreaTop, 250
 /* ── boot ───────────────────────────────────────────────────── */
 (function boot(){
   try{
+    /* keys from builds that stored member data globally — never read, always removed */
+    try{ LEGACY_KEYS.forEach(k => localStorage.removeItem(k)); }catch(e){}
     if(!session){ renderSetup(''); return; }
     $('#w-book').innerHTML = '<div class="ltitle">Book</div>'+
       '<div class="emptystate"><div class="es">Loading your timetable…</div></div>';
-    /* §3: load, then let the staleness check dispatch a real FIT sync by itself */
-    loadAll().then(()=>{ startPolling(); if(isStale()) autoSync(); });
+    /* §3: load, then let the staleness check dispatch a real FIT sync by itself.
+       bootLoad() arms `booted` and the pollers whatever the load did — the manual controls
+       that used to rescue a stranded app are gone, so this path may never fail to arm. */
+    bootLoad();
   }catch(e){
     try{ $('#w-book').innerHTML = errorBlock(e); }catch(x){}
+    /* even a throw here must leave a live app rather than a dead screen */
+    try{ booted = true; startPolling(); }catch(x){}
   }
 })();
 </script>
