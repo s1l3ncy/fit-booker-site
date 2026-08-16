@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v3';   // v3: session-based auth, no GitHub token in the app
+const CACHE = 'fit-booker-v4';   // v4: no manual controls, optimistic actions, bot warnings
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
