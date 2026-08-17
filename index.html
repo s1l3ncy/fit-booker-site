@@ -436,19 +436,26 @@ svg{display:block;flex:none}
 .railslide.out-r{opacity:0;transform:translateX(22px)}
 .railslide.drag{transition:none}
 
+/* AUDIT (18 Aug) — measured 548 px of chips in a 440 px rail, with the row ending in a
+   4 px gap: it looked complete and terminated, so the sixth studio (Nurture) was both
+   off-screen and unhinted on the primary device. Tightened so all six fit at 440, and the
+   rail keeps a fade at each end for the narrower widths where they still cannot. */
+.chipwrap{position:relative;min-width:0}
+.chipwrap::after{content:'';position:absolute;top:0;bottom:8px;right:0;width:18px;
+  pointer-events:none;background:linear-gradient(90deg,transparent,var(--bg));opacity:.9}
 .chips{
-  display:flex;gap:6px;min-width:0;overflow-x:auto;overflow-y:hidden;
+  display:flex;gap:4px;min-width:0;overflow-x:auto;overflow-y:hidden;
   padding:0 var(--pr) 8px var(--pl);
   scrollbar-width:none;overscroll-behavior-x:contain;   /* F14 */
 }
 .chips::-webkit-scrollbar{width:0;height:0}
 .chip{
-  flex:0 0 auto;height:44px;border-radius:12px;padding:0 13px;
-  display:flex;align-items:center;gap:7px;
+  flex:0 0 auto;height:44px;border-radius:12px;padding:0 7px;
+  display:flex;align-items:center;gap:4px;
   background:var(--card);box-shadow:var(--shadow);
-  font-size:14px;font-weight:600;letter-spacing:-.2px;color:var(--ink2);
+  font-size:13.5px;font-weight:600;letter-spacing:-.24px;color:var(--ink2);
 }
-.chip .cd{width:8px;height:8px;border-radius:4px;flex:none}
+.chip .cd{width:7px;height:7px;border-radius:4px;flex:none}
 .chip .cd.all{width:14px;height:8px;border-radius:4px;
   background:linear-gradient(90deg,var(--s-exhale),var(--s-reformer),var(--s-run),var(--s-cycle),var(--s-nurture))}
 .chip[aria-selected="true"]{background:var(--btn-ink);color:var(--btn-on)}
@@ -464,6 +471,10 @@ svg{display:block;flex:none}
 .dayslide{transition:opacity .2s ease,transform .2s ease}
 .dayslide.out-l{opacity:0;transform:translateX(-26px)}
 .dayslide.out-r{opacity:0;transform:translateX(26px)}
+/* AUDIT (18 Aug) — an outgoing slide sat at opacity 0 and stayed hit-testable for the
+   150-165 ms before its DOM was replaced, so a quick second tap opened a class from the
+   day you had just left. Invisible must mean untappable. */
+.dayslide.out-l,.dayslide.out-r,.railslide.out-l,.railslide.out-r{pointer-events:none}
 .dayslide.drag{transition:none}
 .railslide.drag,.dayslide.drag{will-change:transform}   /* F16 */
 
@@ -514,6 +525,9 @@ svg{display:block;flex:none}
 .cname{font-size:16px;font-weight:620;letter-spacing:-.32px;line-height:20px;min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow.isfull .cname{color:var(--ink2)}
+/* a class you already hold — the one state this row could not show before */
+.crow.isbooked{background:var(--go-bg,var(--fill))}
+.crow.isbooked + .crow::before,.crow + .crow.isbooked::before{display:none}
 .cmeta{display:flex;align-items:center;flex-wrap:wrap;gap:1px 8px;min-width:0;margin-top:2px;
   font-size:12.5px;line-height:16px;letter-spacing:-.05px}
 /* text-overflow is inert on a flex box — the ellipsis has to live on the inner span */
@@ -772,11 +786,15 @@ svg{display:block;flex:none}
 #app.setupmode .savebar,#app.setupmode .tabfade,#app.setupmode .ptr{display:none}
 .setup{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;
   padding:0 calc(24px + var(--sar)) 30px calc(24px + var(--sal))}
+/* the sign-in tile carries the app icon, so it uses the icon's own colours rather than
+   the amber accent. Deliberately NOT a theme-color change: the two theme-color metas are
+   pinned to the tab-bar background and paint the strip iOS leaves below the web view — see
+   IOS-VIEWPORT.md before touching those. */
 .setup .mark{
-  width:72px;height:72px;border-radius:20px;margin:0 auto 18px;
-  background:linear-gradient(160deg,var(--amber-rail),var(--s-run));
+  width:78px;height:78px;border-radius:22px;margin:0 auto 18px;
+  background:#0B1628;
   display:flex;align-items:center;justify-content:center;color:#fff;
-  box-shadow:0 12px 30px -10px rgba(208,138,17,.55);
+  box-shadow:0 12px 30px -10px rgba(11,22,40,.55);
 }
 .setup h1{font-size:27px;font-weight:760;letter-spacing:-.7px;text-align:center}
 .setup p{font-size:14.5px;line-height:20px;color:var(--ink2);text-align:center;margin-top:8px;letter-spacing:-.2px}
@@ -799,8 +817,11 @@ svg{display:block;flex:none}
   /* buys back the few px that were eating the studio name in a booked row */
   .cmeta{font-size:12px}
   .crow{gap:8px;padding-left:10px}
-  /* seven columns still have to fit — buy the px back from the gutters, not the cells */
-  .rail{gap:4px;padding-left:calc(var(--pl) - 6px);padding-right:calc(var(--pr) - 6px)}
+  /* seven columns still have to fit — buy the px back from the gutters, not the cells.
+     AUDIT (18 Aug): at 320 px a day cell measured 40.6 px against CONTRACT §8's 44 px
+     floor, so take a little more from the gutters and the gaps. */
+  .rail{gap:2px;padding-left:calc(var(--pl) - 14px);padding-right:calc(var(--pr) - 14px)}
+  .chip{padding:0 6px;font-size:13px}
   .dcell .dw{font-size:8.5px;letter-spacing:.01em}
   .dcell .dn{font-size:17px}
   .dcell .pips{gap:1.5px}
@@ -1116,6 +1137,24 @@ function cdText(ms){
   if(h < 24) return h+'h '+String(Math.floor((s%3600)/60)).padStart(2,'0')+'m';
   return Math.floor(h/24)+'d '+(h%24)+'h';
 }
+/* ── when this class's booking window opens ─────────────────────────────────────────
+   CONTRACT §5 says both sides must compute the window the same way. The bot does NOT use
+   one reading: `fitbot.window_candidates` carries BOTH the wall-clock one (7 calendar days
+   + 1 hour, which is what `opens_iso` holds) and the absolute one (start − 169 h), and
+   `next_window_open` aims at the EARLIEST that has not closed. The two agree except for
+   classes in the week after a DST change, where the absolute reading is an hour earlier.
+   The app used `opens_iso` alone, so for that hour it said "Not open yet" and withheld the
+   Book button while the bot was already attempting — the app refusing a booking the user
+   could make, and asserting a window fact the bot does not share. One occurrence per pick
+   per year, and it is silent, which is why it is worth the four lines. */
+function opensAtMs(c){
+  const wall = new Date((c && c.opens_iso) || '').getTime();
+  const start = new Date((c && c.start_iso) || '').getTime();
+  const abs = isFinite(start) ? start - 169*3600000 : NaN;
+  if(!isFinite(wall)) return abs;                 // NaN if neither is readable
+  if(!isFinite(abs)) return wall;
+  return Math.min(wall, abs);
+}
 function durationMins(c){
   try{
     const m = String(c.end||'').match(/(\d{1,2}):(\d{2})\s*([AaPp])/);
@@ -1143,8 +1182,16 @@ function availInfo(c){
   if(c && c.projected) return {full:false, label:'', cls:'', long:'', projected:true};
   const a = String(c.avail||'');
   if(!c.notfull){
-    if(a.indexOf('waitlist')>=0 && a.indexOf('no_waitlist')<0)
+    /* AUDIT (18 Aug) — this was a SUBSTRING test: `waitlist` present and `no_waitlist`
+       absent. PORTAL-NOTES lists two full-with-waitlist enums and they mean opposite
+       things — `full_but_waitlist_available` is "Full (Waitlist Available)" and
+       `full_waitlist_and_class` is "Full (Waitlist FULL)". Both matched, so 27 of the 494
+       classes in the current timetable advertised a waitlist FIT has explicitly closed.
+       Match the enum, never a fragment of it. */
+    if(a === 'full_but_waitlist_available')
       return {full:true, label:'Full · waitlist', cls:'bad', long:'Full — waitlist open'};
+    if(a === 'full_waitlist_and_class')
+      return {full:true, label:'Full', cls:'bad', long:'Full — waitlist also full'};
     return {full:true, label:'Full', cls:'bad', long:'Full'};
   }
   if(a==='less_than_100') return {full:false, label:'Almost full', cls:'', long:'Almost full'};
@@ -1172,7 +1219,17 @@ const G = {
   big_cal:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.5" width="20.8" height="19" rx="4.6"/><path d="M3.6 11.2h20.8"/><path d="M9.2 3.2v4.2M18.8 3.2v4.2"/></svg>',
   big_chk:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="14" r="10.6"/><path d="m9.4 14.3 3.2 3.2 6.1-6.6"/></svg>',
   big_rep:'<svg viewBox="0 0 28 28" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 12.2v-1.4a4.4 4.4 0 0 1 4.4-4.4h9.4"/><path d="m15.9 3.2 3.6 3.2-3.6 3.2"/><path d="M22.6 15.8v1.4a4.4 4.4 0 0 1-4.4 4.4H8.8"/><path d="m12.1 24.8-3.6-3.2 3.6-3.2"/></svg>',
-  mark:   '<svg viewBox="0 0 28 28" width="38" height="38" fill="none" stroke="currentColor"><path d="M14 3.4 5 14.6h6.2l-1.4 9.6L23 12.2h-6.6L18 3.4Z" fill="currentColor" stroke="none"/></svg>'
+  /* the fitbot mark — the same robot as the home-screen icon (site/icon.svg), redrawn at
+     28pt. Two colours, so it does not inherit currentColor the way the old bolt did: the
+     head outline is white and the antenna, ears and eyes are the mint accent. */
+  mark:   '<svg viewBox="0 0 512 512" width="78" height="78" fill="none">'+
+          '<path d="M256 152 V118" stroke="#6EE7C4" stroke-width="24" stroke-linecap="round"/>'+
+          '<circle cx="256" cy="96" r="29" fill="#6EE7C4"/>'+
+          '<rect x="78" y="242" width="58" height="106" rx="29" fill="#6EE7C4"/>'+
+          '<rect x="376" y="242" width="58" height="106" rx="29" fill="#6EE7C4"/>'+
+          '<rect x="112" y="154" width="288" height="248" rx="74" fill="none" stroke="#FFFFFF" stroke-width="30"/>'+
+          '<path d="M180 300a27 27 0 0 1 54 0" stroke="#6EE7C4" stroke-width="21" stroke-linecap="round"/>'+
+          '<path d="M278 300a27 27 0 0 1 54 0" stroke="#6EE7C4" stroke-width="21" stroke-linecap="round"/></svg>'
 };
 
 /* ════════════════════════════════════════════════════════════════
@@ -1309,6 +1366,10 @@ function closeSheet(){
   if(sh) sh.classList.remove('on');
   /* F12 — release the shell as soon as the dismiss starts, not when the node is wiped */
   try{ $('#app').removeAttribute('inert'); }catch(e){}
+  if(sheetOpener){
+    const o = sheetOpener; sheetOpener = null;
+    try{ if(document.contains(o)) o.focus({preventScroll:true}); }catch(e){}
+  }
   cancelSheetWipe();
   const mine = sh;                      // key the teardown to THIS sheet instance
   sheetWipeTimer = setTimeout(()=>{
@@ -1317,6 +1378,21 @@ function closeSheet(){
        this timer has nothing left to do */
     if(!mine || root.contains(mine)) root.innerHTML = '';
   }, 460);
+}
+/* AUDIT (18 Aug) — sheets set `inert` on #app, which blurs the button that opened them,
+   and then focused nothing: VoiceOver landed at the top of the document rather than in the
+   dialog, Escape did nothing, and the dialog had no accessible name. Setting inert without
+   moving focus is the mirror image of the problem inert was added to solve. */
+let sheetOpener = null;
+function nameSheet(root){
+  if(!root) return;
+  const t = root.querySelector('.detail-title, .as-title, .sheet-title');
+  if(t){
+    if(!t.id) t.id = 'sheetTitle';
+    root.setAttribute('aria-labelledby', t.id);
+  }else if(!root.getAttribute('aria-label')) root.setAttribute('aria-label', 'Details');
+  root.setAttribute('tabindex', '-1');
+  try{ root.focus({preventScroll:true}); }catch(e){ try{ root.focus(); }catch(x){} }
 }
 function openSheet(innerHTML, extraClass){
   const root = $('#sheetRoot');
@@ -1329,6 +1405,12 @@ function openSheet(innerHTML, extraClass){
      to be genuinely unreachable; otherwise VoiceOver swipes straight past it onto Book
      buttons the user cannot see. */
   try{ $('#app').setAttribute('inert',''); }catch(e){}
+  /* remember who opened it, so focus can go back where the finger was */
+  if(!sheetOpener){
+    const a = document.activeElement;
+    sheetOpener = (a && a !== document.body && $('#app').contains(a)) ? a : null;
+  }
+  nameSheet(sh);
   requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ sc.classList.add('on'); sh.classList.add('on'); }); });
   return root;
 }
@@ -1575,6 +1657,7 @@ async function loadAllInner(silent){
       const draft = readDraft();
       if(draft && JSON.stringify(draft) !== savedPicksJson){
         picks = draft;
+        showSaveBar = true;         // the one path that still needs the bar
         toast('Restored unsaved pick changes — tap Save picks', 4200);
       } else if(draft){ localStorage.removeItem(draftKey()); }
     }catch(e){}
@@ -1616,11 +1699,41 @@ async function loadAllInner(silent){
      tick) means ANY load that resolves the last pending action ends it immediately. */
   try{ if(fastTimer && !pendingCancels.length && !pendingBooks.length && !pendingConfirms.length && !syncing) stopFastPoll(); }catch(e){}
   try{
-    if(unchanged && !hadError && !settled && !pendingCancels.length) updateNav();
-    else renderAllIdle();
+    /* call it first: short-circuited out of the condition it never advanced its own
+       bucket, so every data-changing poll was followed by a needless second render */
+    const moved = timeMoved();
+    if(unchanged && !hadError && !settled && !pendingCancels.length && !moved) updateNav();
+    else { indexDates(); renderAllIdle(); }
   }catch(e){ if(window.console && console.warn) console.warn('render', e); }
 }
 
+/* ── has enough time passed that this screen is now WRONG? ──────────────────────────
+   AUDIT (18 Aug) — everything time-derived on Book (which classes are still to come, the
+   "N left · M open" counter, the Now rule, which cell is TODAY, whether a class can still
+   be booked) is computed at render time only, and the 45 s poll deliberately renders
+   NOTHING when the payload is byte-identical — which is the normal state between the
+   bot's own scrapes. The only clock-driven redraw was a 5-minute interval. So a class kept
+   a live Book button for up to five minutes after it started, and across midnight the
+   strip still said TODAY on yesterday while offering to book a class that had already
+   begun: a booking nobody attends is the no-show this project exists to prevent.
+   Cheap to detect: the Sydney date plus how many classes are still in the future. */
+let lastTimeBucket = '';
+function timeBucket(){
+  const now = Date.now();
+  let n = 0;
+  const cl = (timetable && timetable.classes) || [];
+  for(let i=0;i<cl.length;i++){
+    const c = cl[i];
+    if(c && c.start_iso && new Date(c.start_iso).getTime() > now) n++;
+  }
+  return sydToday()+'|'+n;
+}
+function timeMoved(){
+  const b = timeBucket();
+  if(b === lastTimeBucket) return false;
+  lastTimeBucket = b;
+  return true;
+}
 function indexDates(){
   const set = {};
   (timetable.classes||[]).forEach(c=>{ if(c && c.date) set[c.date] = true; });
@@ -1656,6 +1769,11 @@ function indexDates(){
    nothing to say. */
 function firstWeek(){ return sydToday(); }
 function lastWeek(){ return addDays(sydToday(), PLAN_DAYS - 7); }
+/* the plannable range, for anything that moves the selected day by arithmetic */
+function clampDate(d){
+  const a = sydToday(), b = addDays(a, PLAN_DAYS - 1);
+  return d < a ? a : d > b ? b : d;
+}
 function clampWeek(ws){
   const a = firstWeek(), b = lastWeek();
   return ws < a ? a : (ws > b ? b : ws);
@@ -1711,13 +1829,13 @@ function addPick(day,time,studio,name,date){
   const p = {day:day, time:time, studio:studio, name:name||''};
   if(date) p.date = date;
   if(pickIndex(day,time,studio,date||'') < 0) picks.push(p);
-  heroCache = null; syncDirty();
+  resetDerived(); syncDirty();
   return true;
 }
 function removePick(day,time,studio,date){
   const i = pickIndex(day,time,studio,date||'');
   if(i >= 0) picks.splice(i,1);
-  heroCache = null; syncDirty();
+  resetDerived(); syncDirty();
   return false;
 }
 /* legacy signature kept for the recurring path (sheet switch, remove buttons) */
@@ -1758,7 +1876,11 @@ function readDraft(){
 }
 function syncDirty(){
   const app = $('#app'), d = isDirty();
-  app.classList.toggle('dirty', d);
+  /* `dirty` drives the Save bar, and with instant writes the list is dirty only for the
+     ~200 ms a write is in flight — a bar that slid up and away on every tap would be the
+     narration this app deliberately does not do. It is shown only when something is
+     genuinely stranded (see showSaveBar). */
+  app.classList.toggle('dirty', d && showSaveBar);
   saveDraft();
   if(d){
     const saved = safeParse(savedPicksJson, []);
@@ -1792,17 +1914,29 @@ function updateBadges(){
   if(np === 0 && isDirty()) pb.textContent = '0';
 }
 
-async function savePicks(){
-  const btn = $('#saveBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
-  try{
+/* ── writing the pick list ─────────────────────────────────────────────────────────
+   The network half, shared by the instant path and by the fallback Save bar. Throws if it
+   could not resolve the write; PICKS_BAILED means the session is gone and the caller must
+   simply stop (the sign-in screen is already up). */
+const PICKS_BAILED = '__picks_bailed__';
+async function pushPicks(){
+  /* AUDIT round 2 — `savedPicksJson = JSON.stringify(picks)` on success wrote the LIVE
+     array, and `picks` is mutated in place while the request is in flight. So an edit made
+     during a write was recorded as "the server has this" although the server never saw it.
+     Two things then read that lie: the 409 merge base (which silently discarded a pick the
+     app had just said it added) and, worse, commitPicks's failure revert — which restored
+     a list containing a removal the server never received, leaving a pick GONE from the
+     screen and LIVE on the server. The bot goes on booking a class he thinks he cancelled,
+     which is the no-show this feature exists to prevent. Commit exactly what was sent. */
+  const sent = JSON.stringify(picks);
+  {
     let res;
     try{
-      res = await wapi('/picks', {picks: picks, sha: picksSha});
+      res = await wapi('/picks', {picks: safeParse(sent, []), sha: picksSha});
     }catch(e1){
       if(e1 && (e1.status === 401 || e1.status === 403)){
         bailToSetup('This app has lost write access to your bookings. Sign in again.');
-        return;
+        throw new Error(PICKS_BAILED);
       }
       if(!(e1 && e1.status === 409)) throw e1;
       /* correctness #12 — the app KNEW the remote had changed, then invited the user to
@@ -1822,30 +1956,120 @@ async function savePicks(){
         merged = theirs.filter(t => !iRemoved.some(q=>samePick(q,t)))
                        .concat(iAdded.filter(p => !theirs.some(t=>samePick(t,p))));
       }
-      if(!merged) throw new Error('Picks changed elsewhere — tap Save picks again');
-      picks = merged; heroCache = null; syncDirty(); renderPicks(); renderBook();
+      if(!merged) throw new Error('Picks changed elsewhere — try that again');
+      picks = merged; resetDerived(); syncDirty(); renderPicks(); renderBook();
+      const merged2 = JSON.stringify(picks);
       /* retry ONCE, against the sha the conflict just handed us. If that also conflicts
          the list is being edited from two places right now — stop and let the user look. */
       try{
-        res = await wapi('/picks', {picks: picks, sha: picksSha});
+        res = await wapi('/picks', {picks: safeParse(merged2, []), sha: picksSha});
       }catch(e2){
         if(e2 && (e2.status === 401 || e2.status === 403)){
           bailToSetup('This app has lost write access to your bookings. Sign in again.');
-          return;
+          throw new Error(PICKS_BAILED);
         }
         if(e2 && e2.status === 409 && e2.res && typeof e2.res.sha === 'string') picksSha = e2.res.sha;
-        throw new Error('Picks had also changed elsewhere — merged. Check the list, then Save again.');
+        throw new Error('Picks changed on another device and couldn’t be merged.');
       }
+      if(res && typeof res.sha === 'string' && res.sha) picksSha = res.sha;
+      savedPicksJson = merged2;
+      syncDirty();
+      return;
     }
     if(res && typeof res.sha === 'string' && res.sha) picksSha = res.sha;
-    savedPicksJson = JSON.stringify(picks);
+    savedPicksJson = sent;
     syncDirty();
-    heroCache = null;
-    renderPicks(); renderBook();
+  }
+}
+
+/* ── a pick change writes itself ───────────────────────────────────────────────────
+   Josh: "pushing the button should just put the one i selected into picks. no extra
+   'save picks' needed." Every other action in this app is already optimistic-and-silent;
+   picks were the last thing that made him confirm his own tap.
+
+   The failure direction is what makes this safe to do. An ADD that does not land means a
+   class simply is not picked — annoying, never a strike. A REMOVE that does not land
+   means the bot goes on booking a class he believes he cancelled, and a booking he does
+   not attend IS the strike. So on any failure the list is put back to the last state the
+   server is known to hold — which for a failed removal truthfully re-shows the pick — the
+   screen is re-read from the Worker, and a failed removal additionally raises a
+   persistent notice, because a toast can be missed and this one costs a class.
+
+   Serialised: two /picks writes in flight at once race their shas and the second loses to
+   a 409 it cannot merge honestly. A tap during a write sets `again`, and the loop repeats
+   with the newer list. */
+let pickSaveBusy = false, pickSaveAgain = false, showSaveBar = false;
+const PICKSAVE_ALERT = 'picksave:stuck';
+async function commitPicks(){
+  if(pickSaveBusy){ pickSaveAgain = true; return; }
+  pickSaveBusy = true;
+  try{
+    for(let i = 0; i < 6; i++){
+      pickSaveAgain = false;
+      const baseline = savedPicksJson;
+      try{
+        await pushPicks();
+      }catch(e){
+        if(String(e && e.message) === PICKS_BAILED) return;
+        /* AUDIT round 2 — the caller used to say whether this was a removal, and with
+           coalescing the caller can be the wrong edit entirely: a failed REMOVAL was
+           reported as "nothing was added" and its persistent notice was suppressed.
+           Ask the lists instead — anything in the server's last acknowledged copy that is
+           missing from what we tried to send IS a removal, whoever asked for it. */
+        const base = safeParse(baseline, []);
+        const removal = base.some(q => !picks.some(p => samePick(p, q)));
+        picks = base;
+        showSaveBar = false;
+        resetDerived(); syncDirty();
+        if(removal){
+          /* pushed BEFORE the render, or the notice waits for the next one — and the
+             loadAll() below can early-return while a poll is already in flight */
+          pushAlert({id:PICKSAVE_ALERT, tone:'bad', tab:'picks',
+            title:'That pick was NOT removed',
+            body:'It is still saved, so the bot will still book it — and a class you don’t '+
+                 'go to is a no-show. Remove it again, or cancel the booking in the FIT app.'});
+        }
+        safeRender('picks', renderPicks); rerenderBook();
+        toast(removal ? 'Couldn’t remove that pick — it is still saved'
+                      : 'Couldn’t save that pick — nothing was added. '+String(e.message||e), 5000);
+        loadAll(true);            // end up showing what is actually saved, not what we hoped
+        return;
+      }
+      if(!pickSaveAgain) break;
+    }
+    /* AUDIT round 2 — the loop is bounded, and on hitting the bound the newest edit was
+       never written while `isDirty()` said everything was saved: no bar, no draft, no
+       notice, and in the removal direction a pick live on the server and gone from the
+       screen. If anything is still waiting, put the bar back — that is what it is for. */
+    if(pickSaveAgain){
+      showSaveBar = true; syncDirty();
+      toast('Some pick changes haven’t saved yet — tap Save picks', 5000);
+      return;
+    }
+    dropAlert(PICKSAVE_ALERT);
+    showSaveBar = false;
+    resetDerived(); safeRender('picks', renderPicks); rerenderBook();
+    maybeKickSnipe();
+  }finally{
+    pickSaveBusy = false;
+  }
+}
+
+/* The Save bar is a fallback now, not a step: it appears only when a change is sitting
+   unsaved for a reason the instant path could not resolve — today, a draft restored after
+   iOS killed the app mid-edit. */
+async function savePicks(){
+  const btn = $('#saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await pushPicks();
+    dropAlert(PICKSAVE_ALERT);
+    showSaveBar = false;
+    resetDerived(); syncDirty(); renderPicks(); renderBook();
     toast('Picks saved — the bot will book them automatically');
     maybeKickSnipe();
   }catch(e){
-    toast(String(e.message || e), 4200);
+    if(String(e && e.message) !== PICKS_BAILED) toast(String(e.message || e), 4200);
   }finally{
     btn.disabled = false; btn.textContent = 'Save picks';
   }
@@ -1975,6 +2199,13 @@ function nextWindowMs(p){ return scanOpens(p, 21); }
 /* A ONE-OFF pick is pinned to one calendar date, so its window is that date's
    start − 7d − 1h. bookableOpensMs above is the contract's recurring maths and is
    left byte-for-byte intact; this is the dated sibling, used only when p.date is set. */
+/* the same both-candidates rule as opensAtMs, for a pick that has no class object yet */
+function opensPairMs(startMs, wallMs){
+  const abs = isFinite(startMs) ? startMs - 169*3600000 : NaN;
+  if(!isFinite(wallMs)) return isFinite(abs) ? abs : null;
+  if(!isFinite(abs)) return wallMs;
+  return Math.min(wallMs, abs);
+}
 function oneOffOpensMs(p){
   const now = Date.now();
   const c = (timetable.classes||[]).find(x => x && x.date===p.date && x.time===p.time && x.studio===p.studio);
@@ -2156,16 +2387,36 @@ function pendingBookFor(date, time, studio){
   return pendingBooks.find(p => p.b && p.b.date === date && p.b.time === time &&
                                 p.b.__pendingStudio === studio) || null;
 }
-/* is this exact slot already on the account (really, not optimistically)? */
+/* is this exact slot already on the account (really, not optimistically)?
+   AUDIT (18 Aug) — this used to accept a row whose studio could NOT be classified, and it
+   is a hard block: `bookNow` refuses with "That class is already on your FIT account."
+   A PT session or a HIIT class at the same time made that statement false and left no way
+   to book the class from the app at all. The `=== null` acceptance was borrowed from
+   `fitbot.booking_matches`, where the studio had already been asked for and date+time
+   legitimately pin the row; here the studio is the whole question, so the precedent that
+   applies is `fitbot.resolve_booking_id`, which refuses a row it cannot classify.
+   An unidentifiable clash at the same time is now a caution in the confirm sheet. */
 function alreadyBookedSlot(c){
   return realBookings().some(b => b.date === c.date && b.time === c.time &&
-    (studioOfBooking(b) === null || studioOfBooking(b) === c.studio));
+    studioOfBooking(b) === c.studio);
+}
+/* a real booking at the same date+time whose studio cannot be established — not proof of
+   anything, so it warns and never blocks */
+function unknownClashAt(c){
+  return realBookings().find(b => b.date === c.date && b.time === c.time &&
+    studioOfBooking(b) === null) || null;
 }
 /* Re-apply pending changes to the list that just arrived and decide any that have run out
    of time. Returns true when something was decided, so the caller re-renders even if the
    payload was byte-identical. */
+/* rows already used to settle an optimistic book — persists across passes, cleared once
+   nothing is pending */
+let claimedRows = {};
 function reconcilePending(){
-  if(!pendingCancels.length && !pendingBooks.length && !pendingConfirms.length) return false;
+  if(!pendingCancels.length && !pendingBooks.length && !pendingConfirms.length){
+    claimedRows = {};
+    return false;
+  }
   /* Only ever judge against data that actually arrived. A failed load leaves the previous
      (already-edited) list in place, where a cancelled row is missing because WE removed it
      — reading that as "the server agrees" would retire the pending record without ever
@@ -2210,15 +2461,71 @@ function reconcilePending(){
        yoga's real failure was never reported at all. `before` is the set of row keys present
        at dispatch time; only a row outside it counts, and each new row can satisfy at most
        one pending book. */
+    /* AUDIT (18 Aug) — the studio was deliberately not compared, because FIT hands the
+       real row back with its own name and location and that can classify differently. But
+       `studioOfBooking` answers null when it cannot tell, so a DEFINITE classification
+       that differs is evidence, and throwing it away let an unrelated Cycle class booked
+       by the bot's own snipe pass "confirm" a Reformer request that had failed. */
     const hit = list.find(b => !b.__pending && b.date === p.b.date && b.time === p.b.time &&
                                !(p.before && p.before[bookingKey(b)]) &&
+                               !claimedRows[bookingKey(b)] &&
+                               (studioOfBooking(b) === null ||
+                                studioOfBooking(b) === p.b.__pendingStudio) &&
                                claimed.indexOf(b) < 0);
-    if(hit){ claimed.push(hit); dropAlert('bookunknown:'+p.key); return false; }
+    /* If nothing matched on the strict studio rule but the settle window has passed, a
+       single unclaimed new row at exactly this date+time is still better evidence than
+       none: FIT does occasionally hand a booking back under a name this app classifies
+       elsewhere, and leaving the optimistic row up produces a duplicate. Only when it is
+       unambiguous — exactly one candidate. */
+    let hit2 = null;
+    if(!hit && now - p.at > SETTLE_MS){
+      const cands = list.filter(b => !b.__pending && b.date === p.b.date && b.time === p.b.time &&
+                                     !(p.before && p.before[bookingKey(b)]) &&
+                                     !claimedRows[bookingKey(b)] && claimed.indexOf(b) < 0);
+      if(cands.length === 1) hit2 = cands[0];
+    }
+    if(hit || hit2){
+      const got = hit || hit2;
+      claimed.push(got);
+      /* `claimed` alone was rebuilt every call, so it only de-duplicated within ONE pass:
+         two Book taps and one real booking settled both, one per poll. This survives. */
+      claimedRows[bookingKey(got)] = true;
+      dropAlert('bookunknown:'+p.key); dropAlert('bookfail:'+p.key);
+      return false;
+    }
     if(now - p.at > SETTLE_MS){
-      announce({id:'bookfail:'+p.key, tone:'amber', tab:'booked',
-                title:'That booking didn’t go through',
-                body:(p.b && p.b.name ? p.b.name : 'The class')+' is not on your FIT '+
-                     'account. Nothing was booked — try again, or book it in the FIT app.'});
+      /* AUDIT (18 Aug) — this announced "Nothing was booked" from `bookings.json` alone.
+         That file is written by the bot's post-action refresh, which can fail (it logs
+         `refresh_failed` and says so) or simply be slower than the settle window when a
+         runner is queued. Meanwhile the bot's own positive proof — `booknow` with
+         `booked:true`, "confirmed on the FIT account booking list" — sits unread in the
+         same payload. Telling the owner nothing was booked when it WAS is the no-show this
+         whole project exists to prevent, so consult the log before speaking. */
+      const verdict = botVerdictFor(p.b.date, p.b.time, p.b.__pendingStudio, p.at - 60000);
+      if(verdict === 'ok'){
+        /* Proven booked by the bot's own account read, just not in the data files yet
+           (its post-action refresh failed, or Actions is slow). Hold the row and say
+           nothing — botStaleNote already explains why the list lags. Held until the class
+           starts rather than for a fixed multiple of the settle window: dropping it early
+           made a real booking silently disappear off the screen. */
+        const startMs = new Date(p.b.date+'T'+String(p.b.time||'00:00')+':00').getTime();
+        if(!isFinite(startMs) || now < startMs){ if(list.indexOf(p.b) < 0) list.push(p.b); return true; }
+        return false;
+      }
+      if(verdict === 'failed'){
+        announce({id:'bookfail:'+p.key, tone:'amber', tab:'booked',
+                  title:'That booking didn’t go through',
+                  body:(p.b && p.b.name ? p.b.name : 'The class')+' is not on your FIT '+
+                       'account — the bot checked. Nothing was booked; try again, or book '+
+                       'it in the FIT app.'});
+      }else{
+        announce({id:'bookfail:'+p.key, tone:'bad', tab:'booked',
+                  title:'Couldn’t confirm that booking',
+                  body:(p.b && p.b.name ? p.b.name : 'The class')+' isn’t showing on your '+
+                       'FIT account and the bot hasn’t said either way. Check the FIT app: '+
+                       'book it if it isn’t there — and if it IS there and you won’t go, '+
+                       'cancel it there or it becomes a no-show.'});
+      }
       dropAlert('bookunknown:'+p.key);
       settled = true;
       return false;
@@ -2243,6 +2550,7 @@ function reconcilePending(){
       if(id) serverConfirmed[id] = true;
     }
   });
+  if(!pendingBooks.length) claimedRows = {};
   pendingConfirms = pendingConfirms.filter(p=>{
     if(serverConfirmed[p.id]){ dropAlert('confirmfail:'+p.id); return false; }
     /* the booking has left the account entirely (cancelled elsewhere, or swept) — there is
@@ -2268,21 +2576,54 @@ function bookingKeySnapshot(){
    (It cannot hit the WRONG row — the buttons carry the booking's identity, not its
    position — but "nothing happened" is still a failure.)
    A tap is down-then-up in ~100ms, so deferring for the duration of one is invisible. */
-let pointerHeld = 0, renderHeld = false;
+let pointerHeld = 0, renderHeld = false, heldTimer = null;
+function flushHeld(){
+  if(heldTimer){ clearTimeout(heldTimer); heldTimer = null; }
+  if(!renderHeld) return;
+  renderHeld = false;
+  try{ renderAll(); }catch(e){}
+}
+/* AUDIT (18 Aug) — this deferred the held redraw by ONE MACROTASK on the reasoning that
+   `setTimeout(0)` "puts the redraw after the click has been dispatched". On touch it does
+   not: iOS synthesises mousedown/mouseup/click ~20-30 ms AFTER touchend, in a later task
+   than the 0 ms timer. So the redraw landed in the gap, and the click was then hit-tested
+   against a REBUILT list — measured: finger down on one class's repeat glyph, poll lands,
+   finger up, and a different class's weekly pick is removed, with a toast whose wording is
+   identical either way. That is strictly worse than the swallowed tap this latch was
+   written to prevent: it is a silent wrong action on the wrong class.
+
+   So hold until the click has actually been dispatched. The click listener below is
+   capture-phase (it runs before the delegated handler) and defers by a macrotask from
+   THERE, which lands after the whole click dispatch. The timer is the fallback for the
+   taps that never produce a click at all — a scroll, a cancelled gesture, a system
+   swipe — and 450 ms is longer than any real tap and shorter than a poll interval. */
 function releasePointer(){
   pointerHeld = 0;
-  /* DEFERRED, not immediate. `pointerup` fires BEFORE `mouseup` and before `click`, so
-     rendering here tears out the element the touch started on and no click is ever
-     synthesised — the latch would guarantee the swallowed tap it exists to prevent
-     instead of merely allowing it. A macrotask puts the redraw after the click has been
-     dispatched and handled. */
-  if(renderHeld){
-    renderHeld = false;
-    setTimeout(()=>{ try{ renderAll(); }catch(e){} }, 0);
+  if(!renderHeld) return;
+  if(heldTimer) clearTimeout(heldTimer);
+  heldTimer = setTimeout(flushHeld, 450);
+}
+/* AUDIT round 2 — `releasePointer` was also called by the 1 s watchdog at 1.5 s of hold,
+   without checking whether the pointer was actually UP: a press held ~2 s got the list
+   rebuilt underneath it and the tap landed on a different class — the exact defect the
+   click-flush fix was written to remove, reachable by pressing rather than tapping. The
+   watchdog still exists (iOS can swallow a pointerup to a system gesture), but a finger
+   that is provably down buys a much longer grace, and nothing is flushed until it lifts. */
+let pointerDown = false;
+function holdActive(){
+  if(!pointerHeld) return false;
+  if(Date.now() - pointerHeld > (pointerDown ? 6000 : 1500)){
+    pointerHeld = 0; pointerDown = false; return false;
   }
+  return true;
 }
 try{
-  document.addEventListener('pointerdown', ()=>{ pointerHeld = Date.now(); }, true);
+  document.addEventListener('pointerdown', ()=>{ pointerDown = true; pointerHeld = Date.now(); }, true);
+  /* capture, so it is seen before the delegated handler; the macrotask from here runs
+     after that handler has finished with the DOM it was hit-tested against */
+  document.addEventListener('click', ()=>{
+    if(renderHeld) setTimeout(flushHeld, 0);
+  }, true);
   /* Several ways out, on purpose. A latch with a single release is a latch that sticks:
      iOS can swallow a pointerup to a system gesture, a share sheet or a context menu, and
      if that ever happened the countdown flip, the 45s poll redraw and the 5-minute
@@ -2291,7 +2632,7 @@ try{
      meant to cover the ~100ms of one tap, so a stale one is always a bug. */
   ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel',
    'visibilitychange'].forEach(ev=>{
-    document.addEventListener(ev, releasePointer, true);
+    document.addEventListener(ev, ()=>{ pointerDown = false; releasePointer(); }, true);
   });
   /* Window blur ONLY — the app losing focus. NOT a capture-phase 'blur' on document:
      that fires for every element that loses focus, including the one the finger just
@@ -2302,9 +2643,8 @@ try{
 /* every TIMER-driven redraw goes through this; user-initiated ones call renderAll */
 function renderAllIdle(){
   /* ...and a watchdog, so even a release event that never arrives cannot outlast one
-     redraw interval */
-  if(pointerHeld && Date.now() - pointerHeld > 1500) pointerHeld = 0;
-  if(pointerHeld){ renderHeld = true; return; }
+     redraw interval — but a finger that is still down is not a stuck latch (round 2) */
+  if(holdActive()){ renderHeld = true; return; }
   renderHeld = false;
   renderAll();
 }
@@ -2520,31 +2860,75 @@ function dayHasClasses(date){
   const now = Date.now();
   return (timetable.classes||[]).some(c => c && c.date===date && new Date(c.start_iso).getTime() > now);
 }
+/* AUDIT (18 Aug) — the pips ignored the studio chip while the list obeyed it, so with
+   Run selected every Sunday cell still showed three coloured pips and read as a live day,
+   and tapping it produced an empty list. The strip is the only overview of the 28-day
+   horizon; under a filter it was showing a different data set from the thing it indexes. */
 function studiosOn(date){
   const now = Date.now(), seen = {};
   (timetable.classes||[]).forEach(c=>{
-    if(c && c.date===date && new Date(c.start_iso).getTime() > now) seen[c.studio] = 1;
+    if(c && c.date===date && (studioFilter==='all' || c.studio===studioFilter) &&
+       new Date(c.start_iso).getTime() > now) seen[c.studio] = 1;
   });
   return STUDIOS.filter(s => seen[s]);
 }
-/* studio already booked on this calendar date (one class per studio per day) */
+/* studio already taken on this calendar date (one class per studio per day).
+   correctness #10 — only ever name a studio we actually KNOW: `studioOfBooking` returns
+   null rather than guessing, and a guessed 'exhale' used to put a false caution on real
+   classes.
+
+   AUDIT (18 Aug) — pending rows are included now, and that is a deliberate reversal of
+   "realBookings() only". The rule that matters is CLAIM vs CAUTION, not real vs pending:
+   pickState's green tick, `botBookDoubts`'s "it is on the account", the settle window —
+   all still read realBookings() and cannot be satisfied by a row this app invented. This
+   map only ever produces a WARNING and a `Book anyway` pill, and the safe direction for a
+   warning is to appear. Leaving pending rows out meant tapping Book on a second class in
+   the same studio the same day dispatched a second run FIT was always going to refuse,
+   and nothing on the screen said so until the sync landed minutes later. */
 function bookedStudiosOn(date){
   const out = {};
-  /* correctness #10 — only claim a studio is taken when we actually know which studio it
-     was. A guessed 'exhale' put a false "already booked today" caution on real classes.
-     realBookings() drops the optimistic rows: a class this app has merely ASKED FIT for is
-     not a booking, and must not block or claim anything. */
-  realBookings().forEach(b=>{
+  bookingList().forEach(b=>{
     if(!b || b.date !== date) return;
-    const st = studioOfBooking(b);
-    if(st) out[st] = b;
+    /* __pendingStudio is what we ASKED for — honest for a caution, never read as what FIT
+       confirmed (that is what studioOfBooking is for, and it can answer null). */
+    const st = b.__pending ? b.__pendingStudio : studioOfBooking(b);
+    if(st && !out[st]) out[st] = b;
   });
   return out;
 }
-/* another saved pick in the same studio on the same weekday */
+/* The booking that IS this class — the same slot, not merely the same studio that day.
+   Nothing on the Book tab could say this before: `bookedStudiosOn` keys on date+studio
+   only, so the class you had just booked carried "Reformer already booked today — FIT
+   allows one per day" against ITSELF, kept a live Book button, and the detail sheet told
+   you to "cancel that one first". Twenty minutes before the class that advice is a late
+   cancel, i.e. the strike this project exists to prevent.
+   Pending rows count: the whole point is that the screen answers the instant you tap. */
+function bookingForClass(c){
+  if(!c) return null;
+  return bookingList().find(b => b && b.date === c.date && b.time === c.time &&
+    ((b.__pending ? b.__pendingStudio : studioOfBooking(b)) === c.studio)) || null;
+}
+/* ── another saved pick that would take this studio on THIS DATE ────────────────────
+   AUDIT (18 Aug) — the reported bug, and the one Josh could see: this matched on WEEKDAY
+   alone and never asked whether the pick has a live occurrence on `c.date`. A recurring
+   THU 06:00 pick therefore claimed a clash on every Thursday row for four weeks —
+   including Thursdays whose window the bot passed days ago (D-24's bug, unfixed here),
+   dates where the pick's own class does not exist, weeks FIT has not published, and picks
+   the Picks tab was simultaneously calling "Not on the timetable". A warning that fires
+   when nothing is wrong is worse than no warning: it teaches him to ignore the one that
+   matters.
+
+   `pickState` already answers "which occurrence will the bot actually take", using the
+   bot's own grace rule, so ask it rather than restating the calendar. Memoised per render
+   because this runs once per row. */
 function pickClash(c){
-  return picks.find(p => p.studio===c.studio && p.day===c.day && p.time!==c.time &&
-                         (!isOneOff(p) || pickDate(p)===c.date)) || null;
+  return picks.find(p=>{
+    if(p.studio !== c.studio || p.time === c.time) return false;
+    if(isOneOff(p)) return pickDate(p) === c.date;
+    if(p.day !== c.day) return false;
+    const st = pickStateFor(p);
+    return !!(st && st.cls && st.cls.date === c.date);
+  }) || null;
 }
 
 /* Every future timetable occurrence of a saved pick, soonest first. */
@@ -2630,6 +3014,18 @@ function pickMiss(p){
 
 /* Single source of truth shared by the hero and the Picks list, so the two can
    never disagree about the same pick. */
+/* pickState walks the timetable, and the Book tab now asks it once per row (pickClash)
+   and the Picks tab once per pick (pickDupes). Memoised for the duration of one render
+   pass — every input it reads is a module global, so anything that changes one of them
+   drops the memo through resetDerived(). */
+let psCache = null;
+function resetDerived(){ psCache = null; heroCache = null; }
+function pickStateFor(p){
+  const k = pickKey(p);
+  if(!psCache) psCache = {};
+  if(!psCache.hasOwnProperty(k)) psCache[k] = pickState(p);
+  return psCache[k];
+}
 function pickState(p){
   const now = Date.now();
   const occ = pickOccurrences(p);
@@ -2683,7 +3079,7 @@ function pickState(p){
        act on, so it is reported where it happens, exactly like `booked` above. */
     const other = sameStudio[c.date+'|'+c.studio];
     if(other) return {kind:'blocked', opens:null, cls:c, by:other};
-    const o = new Date(c.opens_iso).getTime();
+    const o = opensAtMs(c);
     if(!isFinite(o)) continue;
     /* THE FIX. An occurrence whose window opened longer ago than the bot's grace is one no
        pass will ever take — reporting it as "not booked yet" is a countdown for a run that
@@ -2727,7 +3123,7 @@ function nextPickWindow(){
   picks.forEach(p=>{
     let hit = null;
     pickOccurrences(p).forEach(c=>{
-      const o = new Date(c.opens_iso).getTime();
+      const o = opensAtMs(c);
       if(isFinite(o) && o > now && (!hit || o < hit.opens)) hit = {opens:o, cls:c, pick:p};
     });
     if(!hit){
@@ -2747,16 +3143,26 @@ function nextPickWindow(){
 const NAV_TITLES = {book:'Book', booked:'Booked', picks:'Picks'};
 
 function renderAll(){
-  /* F10 — renderBook() rewrites #w-book wholesale, which recreates #chips with
-     scrollLeft 0. The chip click handler already saved and restored it; the 45s poll path
-     never did, so the studio rail silently snapped back to "All" (measured 108 -> 0) every
-     45 seconds while the user was reading it. */
-  const chips = $('#chips'), chipsLeft = chips ? chips.scrollLeft : 0;
-  safeRender('book', renderBook);
-  safeRender('booked', renderBooked);
-  safeRender('picks', renderPicks);
-  const c2 = $('#chips'); if(c2 && chipsLeft) c2.scrollLeft = chipsLeft;
+  /* AUDIT (18 Aug) — this rebuilt all three tabs on every poll, countdown flip and idle
+     tick: measured 18.0 ms against renderBook's 3.8 ms, two thirds of it spent serialising
+     53 KB of HTML into two tabs nobody was looking at. It is also the thing that re-targets
+     taps (see releasePointer) and resets scroll positions, so the cheapest fix for both is
+     to stop doing the work. The hidden tabs are marked dirty and flushed by switchTab, so
+     nothing can be shown stale.
+     F10 lives in renderBook() now — it owns the chip rail's scroll. */
+  resetDerived();
+  const R = {book:renderBook, booked:renderBooked, picks:renderPicks};
+  Object.keys(R).forEach(t=>{
+    if(t === activeTab) safeRender(t, R[t]);
+    else tabDirty[t] = true;
+  });
   try{ syncDirty(); updateNav(); }catch(e){}
+}
+let tabDirty = {book:false, booked:false, picks:false};
+function flushTab(t){
+  if(!tabDirty[t]) return;
+  tabDirty[t] = false;
+  safeRender(t, t==='book' ? renderBook : t==='booked' ? renderBooked : renderPicks);
 }
 function safeRender(tab, fn){
   try{ fn(); }
@@ -2887,15 +3293,23 @@ function chipsHTML(){
 function classRowHTML(c, bookedStudios){
   const t = fmt12(c.time);
   const av = availInfo(c);
-  const opensMs = new Date(c.opens_iso).getTime();
-  const open = opensMs <= Date.now();
+  const opensMs = opensAtMs(c);
+  const open = isFinite(opensMs) && opensMs <= Date.now();
   const pk = pickFor(c);
   const picked = !!pk, once = picked && isOneOff(pk);
-  const conflict = bookedStudios[c.studio];
-  const clash = (picked || conflict || av.full) ? null : pickClash(c);
+  /* the booking that IS this class outranks everything: it is not a conflict with itself,
+     it cannot be booked again, and it is the most useful thing this row can say */
+  const mine = bookingForClass(c);
+  const conflict = (mine || av.full) ? null : bookedStudios[c.studio];
+  /* AUDIT (18 Aug) — `picked` used to suppress the clash line, which disabled the one
+     surface that could report a genuine two-picks-one-studio-one-day conflict exactly
+     when it was real. The clash is a fact about the pick beside it, not about this row. */
+  const clash = (mine || conflict || av.full) ? null : pickClash(c);
 
   let stTxt, stCls = '', stG = '';
-  if(av.full){
+  if(mine){
+    stTxt = mine.__pending ? 'Booked' : 'You’re booked in'; stCls = 'go'; stG = G.check;
+  } else if(av.full){
     stTxt = av.label; stCls = 'bad';
   } else if(open){
     stTxt = 'Open now'; stCls = 'go'; stG = G.bolt;
@@ -2915,10 +3329,12 @@ function classRowHTML(c, bookedStudios){
   const staff = c.staff && String(c.staff).trim() ? String(c.staff).trim() : '';
   const tail = (SLABEL[c.studio]||c.studio) + (staff ? ' · ' + staff : '');
   /* CONTRACT §5 gates Book on window-open + not-full only. A same-day booking in the
-     same studio is a WARNING (bookings.json can be up to 8 hours stale), never a block. */
-  const canBook = open && !av.full && !c.projected;
+     same studio is a WARNING (bookings.json can be up to 8 hours stale), never a block.
+     A booking of THIS class is different: there is nothing left to ask for. */
+  const canBook = open && !av.full && !c.projected && !mine;
 
-  return '<div class="crow'+(picked?' ispick':'')+(once?' once':'')+(av.full?' isfull':'')+'" data-bid="'+esc(c.bid)+'" id="row-'+esc(c.bid)+'">'+
+  return '<div class="crow'+(picked?' ispick':'')+(once?' once':'')+(av.full?' isfull':'')+
+    (mine?' isbooked':'')+'" data-bid="'+esc(c.bid)+'" id="row-'+esc(c.bid)+'">'+
     '<div class="ctime"><b>'+esc(t.h)+'</b><span>'+t.ap.toUpperCase()+'</span></div>'+
     '<div class="cbody">'+
       '<div class="cname">'+esc(c.name || c.studio)+'</div>'+
@@ -2957,6 +3373,12 @@ function renderBook(){
      yesterday stayed a day off the page grid and tapping the leftmost cell slid the strip
      backwards a week. pageOf is idempotent on an anchor that is already aligned. */
   weekStart = pageOf(weekStart || firstWeek());
+  /* AUDIT round 2 — the memo was dropped in renderAll() and on pick edits only, and every
+     direct renderBook()/renderPicks() path (a day tap, a week step, a chip, flushTab)
+     skipped it. pickState reads the clock, so a Book tab redrawn 25 minutes later showed
+     clash warnings computed against a window the bot had already passed. It is a null
+     assignment; do it wherever a render begins. */
+  resetDerived();
   if(!allDates.length){
     w.innerHTML = '<div class="ltitle">Book</div>'+ offlineBanner() +
       '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
@@ -2968,7 +3390,11 @@ function renderBook(){
   }
   const list = classesFor(selDate);
   const bookedStudios = bookedStudiosOn(selDate);
-  const openNow = list.filter(c => !availInfo(c).full && new Date(c.opens_iso).getTime() <= Date.now()).length;
+  /* "open" counted classes the rows themselves refuse: ones already booked, and ones whose
+     studio is spoken for that day. Count what the reader can actually act on. */
+  const openNow = list.filter(c => !availInfo(c).full && !c.projected &&
+    isFinite(opensAtMs(c)) && opensAtMs(c) <= Date.now() &&
+    !bookingForClass(c) && !bookedStudios[c.studio]).length;
 
   const buckets = [
     {k:'Morning',   f:c=>Number(String(c.time).split(':')[0]) < 12},
@@ -2983,12 +3409,27 @@ function renderBook(){
     /* AUDIT (round 2) — the discriminator is not "is this day in the future" but "did this
        day ever have classes". Today with nothing published is the one case where "every
        class has already started" is both false and least obviously so. */
-    const anyThatDay = (timetable.classes||[]).some(c => c && c.date === selDate);
+    /* AUDIT (18 Aug) — and it has to be measured against the SAME set the list drew from.
+       Computed over the unfiltered timetable it told the reader that every Run class on a
+       Sunday had "already started" — on a Sunday six days away, for a studio that has
+       never run a Sunday class. Eight such cells in the current timetable. */
+    const anyThatDay = (timetable.classes||[]).some(c => c && c.date === selDate &&
+      (studioFilter==='all' || c.studio===studioFilter));
+    const anyAtAll = (timetable.classes||[]).some(c => c && c.date === selDate);
+    /* Two different silences, and they are not interchangeable: a day with nothing on it
+       INSIDE the published fortnight is FIT publishing no classes for that day, while a
+       day past the end of the scrape is FIT not having published that week at all (the
+       projection can leave such holes — it shifts by whole weeks and never projects inside
+       the bookable window). Compare against the last REAL date, not against today. */
+    let lastReal = '';
+    (timetable.classes||[]).forEach(c=>{ if(c && !c.projected && c.date > lastReal) lastReal = c.date; });
+    const unpublished = !anyAtAll && !!lastReal && selDate > lastReal;
     listHTML = '<div class="emptystate"><div class="eg">'+G.big_cal+'</div>'+
       '<div class="et">'+(anyThatDay ? 'Nothing left here' : 'Nothing here')+'</div><div class="es">'+
       (studioFilter==='all'
         ? (anyThatDay ? 'Every class on this day has already started.'
-                      : 'FIT hasn’t published any classes for this day.')
+           : unpublished ? 'FIT publishes about two weeks ahead — this day isn’t out yet.'
+                         : 'FIT hasn’t published any classes for this day.')
         : 'No '+esc(SLABEL[studioFilter]||studioFilter)+' classes '+(anyThatDay?'left on':'on')+
           ' this day — try All.')+'</div></div>';
   } else {
@@ -3000,7 +3441,7 @@ function renderBook(){
     });
     listHTML += '<div class="gfoot">'+
       '<span class="ig">'+G.repeat+'</span> hands the slot to the bot — <b>every week</b>, or <b>just this one</b> '+
-      'date. It books the second the window opens, 7 days + 1 hour ahead. <b>Book</b> takes this one class now. '+
+      'date. It books as soon as the window opens, 7 days + 1 hour ahead. <b>Book</b> takes this one class now. '+
       'Tap a row for detail.</div>';
   }
 
@@ -3009,6 +3450,13 @@ function renderBook(){
 
   const cnt = list.length + ' left' + (openNow ? ' · <b>'+openNow+' open</b>' : '');
 
+  /* F10 + AUDIT (18 Aug) — renderBook rewrites #w-book wholesale, which recreates #chips
+     with scrollLeft 0. renderAll() and the chip handler each saved and restored it; every
+     other route into here (a day tap, a week step, a pick toggle, jumpToClass) did not, so
+     the rail snapped back to the left while the filter stayed on. At 440 px that puts the
+     SELECTED chip off-screen entirely and leaves five chips all reading unselected — the
+     control says "no filter" while the list shows one studio. One owner, here. */
+  const chipsLeft = (function(){ const el = $('#chips'); return el ? el.scrollLeft : 0; })();
   w.innerHTML =
     '<div class="ltitle">Book</div>'+
     offlineBanner()+
@@ -3017,7 +3465,7 @@ function renderBook(){
         weekHeadHTML()+
         '<div class="rail" id="rail">'+railHTML()+'</div>'+
       '</div></div>'+
-      '<div class="chips" id="chips">'+chipsHTML()+'</div>'+
+      '<div class="chipwrap"><div class="chips" id="chips">'+chipsHTML()+'</div></div>'+
     '</div>'+
     '<div class="dayslide" id="dayslide">'+
       '<div class="dayhead"><div class="dh">'+esc(relDayLabel(selDate))+'</div>'+
@@ -3026,6 +3474,18 @@ function renderBook(){
       listHTML+
       '<div class="spacer"></div>'+
     '</div>';
+  const chipsEl = $('#chips');
+  if(chipsEl){
+    if(chipsLeft) chipsEl.scrollLeft = chipsLeft;
+    /* and never let the active filter be the one chip you cannot see */
+    const sel = chipsEl.querySelector('.chip[aria-selected="true"]');
+    if(sel){
+      const l = sel.offsetLeft, r = l + sel.offsetWidth;
+      if(l < chipsEl.scrollLeft) chipsEl.scrollLeft = Math.max(0, l - 8);
+      else if(r > chipsEl.scrollLeft + chipsEl.clientWidth)
+        chipsEl.scrollLeft = r - chipsEl.clientWidth + 8;
+    }
+  }
 }
 
 /* ── week paging ────────────────────────────────────────────── */
@@ -3041,13 +3501,21 @@ function stepWeek(delta){
   }
   if(slide) slide.classList.add(delta > 0 ? 'out-l' : 'out-r');
   weekStart = next;
+  /* AUDIT (18 Aug) — paging the strip moved `weekStart` and left `selDate` behind, so the
+     screen showed a week header for 24–30 Aug, no selected cell anywhere, and underneath
+     it "Tomorrow · 41 left · 27 open" with live Book buttons for the 18th. The two halves
+     of one screen described different weeks, indefinitely, and the strip — the dominant
+     control — was the one that was wrong. Carry the day with the page. */
+  const want = clampDate(addDays(selDate, delta*7));
+  if(want !== selDate){ selDate = want; scrollMemo.book = 0; }
   setTimeout(()=>{
-    renderBook();
+    try{ renderBook(); }catch(e){ safeRender('book', renderBook); }
     const s2 = $('#railslide');
     if(s2){
       s2.classList.add(delta > 0 ? 'out-r' : 'out-l');
       requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ s2.classList.remove('out-r','out-l'); }); });
     }
+    updateNav();
   }, slide ? 150 : 0);
 }
 
@@ -3159,7 +3627,14 @@ const BOT_LOG_SURFACE = {
      a booking appears on Booked, a pick shows its own state on Picks, a failed scrape
      shows as stale data. */
   refresh:'', booked:'', booknow:'', cancelled:'',
-  booknow_notfound:'', booknow_ambiguous:'', scrape_error:'', cred_fallback:'',
+  /* AUDIT (18 Aug) — these two were '' under "the screens already show this better than a
+     log line can: a booking appears on Booked". True of `booked`/`booknow`; the exact
+     OPPOSITE of true here, because these are the bot saying it did not book and the whole
+     point is that nothing appears. The only other reporter is the in-memory settle window,
+     which does not survive iOS purging a backgrounded app — i.e. tap Book, pocket the
+     phone, and a definite failure was reported on no surface anywhere. */
+  booknow_notfound:'alert', booknow_ambiguous:'alert',
+  scrape_error:'', cred_fallback:'',
   form_checkbox_skipped:'', picks_unreadable:'', pick_removed:'', pick_bad_date:'',
   pick_day_mismatch:'', pick_name_drift:'', pick_unusable:'',
   /* a booking pass that genuinely failed — shown on the pick row it belongs to, by
@@ -3198,7 +3673,14 @@ const BOT_LOG_SURFACE = {
      button appearing on a row is a better surface for `autobook_tagged` than any notice,
      and `autobook_untagged` means only that a class will NOT be auto-cancelled — i.e.
      exactly the behaviour that existed before this feature. */
-  autobook_tagged:'', autobook_untagged:'', sweep:'', sweep_error:''
+  autobook_tagged:'', autobook_untagged:'', sweep:'', sweep_error:'',
+  /* CONTRACT §9b, found 17 Aug and left for a session that was not already shipping: the
+     bot emits both of these and neither was a key here, so they fell through to the
+     console warning and rendered nothing — including the one that says "check the app
+     shows it as confirmed". Both fail toward NOT cancelling, so the exposure was bounded,
+     but the advice could never reach anyone. Same surface as refresh_failed: a quiet line,
+     because neither is an instruction the member can act on beyond re-checking. */
+  confirm_unreadable:'note', confirm_push_failed:'note'
 };
 const unmappedKinds = {};
 function checkLogKinds(){
@@ -3340,6 +3822,35 @@ function logSlot(e){
   if(!date || !time) return null;
   return {key: date+'|'+time+'|'+(studio||'?'), date:date, time:time, studio:studio,
           name: t.name || e.name || p.name || ''};
+}
+/* Definite NEGATIVES about one slot: the bot reached FIT, read the account, and the class
+   is not on it. Separated from the settled set above because they answer the opposite
+   question, and the settle window has to be able to tell them apart. */
+const BOOK_FAILED_KINDS = {booknow_notfound:1, booknow_ambiguous:1, snipe_failed:1,
+                           snipe_rejected:1, snipe_full:1, snipe_notfound:1};
+const BOOK_OK_KINDS = {booked:1, booknow:1, book_recovered:1};
+/* What does the bot itself say about this slot — 'ok', 'failed', or '' for nothing?
+   The chronology is array order, so the LAST entry about the slot wins. */
+function botVerdictFor(date, time, studio, sinceMs){
+  let v = '';
+  (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+    if(!e || !e.kind) return;
+    if(!BOOK_OK_KINDS[e.kind] && !BOOK_FAILED_KINDS[e.kind]) return;
+    /* AUDIT round 2 — `cancelled` is in neither set, so it could not supersede an older
+       `booked`: a slot booked, cancelled, then re-booked and failed verdicted "ok", and the
+       app showed a green "Booked" for a class FIT had never confirmed. When the caller is
+       asking about an attempt it just made, only entries written AFTER that attempt can be
+       about it. */
+    if(sinceMs){ const t = Date.parse(e.ts || ''); if(!isFinite(t) || t < sinceMs) return; }
+    const s = logSlot(e);
+    if(!s || s.date !== date || s.time !== time) return;
+    if(s.studio && studio && s.studio !== studio) return;
+    /* `booknow`/`booked` carry the outcome in the entry itself; an explicitly false one is
+       the bot saying it could NOT confirm the booking on the account. */
+    if(BOOK_OK_KINDS[e.kind]) v = (e.booked === false) ? 'failed' : 'ok';
+    else v = 'failed';
+  });
+  return v;
 }
 /* {slotKey: {kind,date,time,studio,name}} — unresolved "did this book?" doubts */
 function botBookDoubts(){
@@ -3500,6 +4011,73 @@ function syncBotAlerts(){
   /* Retire it the moment the log stops saying it: a later definite outcome, the class
      appearing on the account, the date passing, or the entry ageing out of the log. */
   alerts.filter(a => a.id.indexOf('bookdoubt:') === 0 && !seen[a.id]).forEach(a => dropAlert(a.id));
+
+  /* ── a definite booknow failure, from the log ────────────────────────────────────
+     The settle window is memory-only and does not survive the app being purged, so the
+     bot's own "I did not book it" has to be able to speak for itself. */
+  (Array.isArray(logdata) ? logdata : []).forEach(e=>{
+    if(!e || (e.kind !== 'booknow_notfound' && e.kind !== 'booknow_ambiguous')) return;
+    const s = logSlot(e);
+    if(!s || s.date < sydToday()) return;
+    if(botVerdictFor(s.date, s.time, s.studio) !== 'failed') return;   // a later run booked it
+    if(realBookings().some(b => b.date === s.date && b.time === s.time &&
+        (studioOfBooking(b) === null || !s.studio || studioOfBooking(b) === s.studio))) return;
+    const id = 'booknowfail:'+s.key;
+    seen[id] = true;
+    pushAlert({id:id, tone:'amber', tab:'booked',
+      title:'That booking didn’t go through',
+      body:(s.name || 'A class')+' · '+shortDate(s.date)+', '+fmt12(s.time).full+
+           (e.kind === 'booknow_ambiguous'
+             ? ' — the bot found more than one class matching that slot and refused to guess. '+
+               'Book it in the FIT app if you still want it.'
+            : e.full
+             ? ' — that class was full, so the bot didn’t book it. Joining the waitlist in '+
+               'the FIT app can turn into a booking you would have to attend, so only do '+
+               'that if you will go.'
+             : ' — the bot couldn’t find that class on FIT, so nothing was booked. '+
+               'Book it in the FIT app if you still want it.')});
+  });
+  /* AUDIT round 2 — retiring these on "the log no longer says it" un-warned the user the
+     moment the entry aged out of the bot's 200-entry log, which CONTRACT §9 forbids
+     precisely because the class is still not booked. Retire only on positive evidence:
+     the slot is on the account, or its date has gone. */
+  alerts.filter(a => a.id.indexOf('booknowfail:') === 0).forEach(a=>{
+    const bits = a.id.slice('booknowfail:'.length).split('|');
+    const date = bits[0] || '', time = bits[1] || '', studio = bits[2] === '?' ? '' : (bits[2] || '');
+    if(!date || date < sydToday()){ dropAlert(a.id); return; }
+    const on = realBookings().some(b => b.date === date && b.time === time &&
+      (!studio || studioOfBooking(b) === null || studioOfBooking(b) === studio));
+    if(on) dropAlert(a.id);
+  });
+
+  /* ── the settle window's own notices ─────────────────────────────────────────────
+     AUDIT (18 Aug) — `bookfail:` and `bookunknown:` were the only notices in the app with
+     no sweep at all. Reproduced: the booking lands ten seconds after the settle window
+     expires, and Booked then shows "…is not on your FIT account. Nothing was booked — try
+     again" directly above the booking itself, for ever. And `bookunknown:` persists across
+     a relaunch while the pending record, the fast poll and the watch timer do not — so it
+     kept promising "the app is checking; it will tell you either way" when nothing was.
+     Both are about one slot, so both retire on the same evidence any other notice would
+     accept: the class is on the account, or its date has gone. */
+  const bookedSlots = {};
+  realBookings().forEach(b=>{
+    const st = studioOfBooking(b);
+    bookedSlots[String(b.date)+'|'+String(b.time)] = true;
+    if(st) bookedSlots[String(b.date)+'|'+String(b.time)+'|'+st] = true;
+  });
+  ['bookfail:', 'bookunknown:'].forEach(pre=>{
+    alerts.filter(a => a.id.indexOf(pre) === 0).forEach(a=>{
+      const key = a.id.slice(pre.length);
+      /* keys are bookingKey() of the optimistic row: 'dts:<date>|<time>|<studio>' */
+      if(key.indexOf('dts:') !== 0) return;
+      const bits = key.slice(4).split('|');
+      const date = bits[0] || '', time = bits[1] || '', studio = bits[2] || '';
+      if(!date) return;
+      if(date < sydToday()){ dropAlert(a.id); return; }
+      if(bookedSlots[date+'|'+time+'|'+studio] || bookedSlots[date+'|'+time]) dropAlert(a.id);
+      else if(pre === 'bookunknown:' && botVerdictFor(date, time, studio)) dropAlert(a.id);
+    });
+  });
   /* A "that cancel didn't go through" / "couldn't confirm that cancel" notice is about ONE
      booking. Once that booking is genuinely off the account there is nothing left to act
      on, so retire it rather than making the user dismiss a solved problem — the notices
@@ -3599,9 +4177,13 @@ function renderBooked(){
          because cancelling something that does not exist yet is how you end up with
          neither. That guard is invisible — the button is simply absent. */
       const pending = !!b.__pending;
-      /* correctness #3 — measure against when the BOT will reach FIT, not against now */
+      /* correctness #3 — measure against when the BOT will reach FIT, not against now.
+         AUDIT (18 Aug) — a pending row showed the full "Free cancel for 1d 9h" countdown
+         while deliberately having no Cancel button. CONTRACT §7's free-cancel rule is
+         about a cancel that will land in time; there is no cancel to land here, and the
+         row is making a durational promise about a booking FIT has not confirmed. */
       let free = '', freeCls = 'go', freeAt = null, freeG = null;
-      if(startMs){
+      if(startMs && !pending){
         const freeUntil = startMs - 3600000, dt = freeUntil - Date.now();
         if(dt > CANCEL_LATENCY_MS){
           freeAt = freeUntil - CANCEL_LATENCY_MS;
@@ -3848,8 +4430,29 @@ function picksSummary(){
   if(once) bits.push(once + (once===1?' one-off':' one-offs'));
   return bits.join(' · ');
 }
+/* ── picks that compete for the same studio on the same DATE ────────────────────────
+   AUDIT (18 Aug) — this was computed twice, in two separate maps: weekly picks keyed on
+   `day|studio` inside the weekly group, one-offs keyed on `date|studio` inside theirs. So
+   the one pairing nothing compared was a weekly pick against a one-off — which is exactly
+   what you create by adding a one-off to a day you already cover. The bot books one and
+   logs snipe_skipped_studio_limit for the other; the app said nothing on any surface.
+   Resolve every pick to the concrete occurrence the bot will actually take, then group. */
+function pickDupes(){
+  const first = {}, out = {};
+  picks.forEach(p=>{
+    const st = pickStateFor(p);
+    const d = (st && st.cls) ? st.cls.date : (isOneOff(p) ? pickDate(p) : '');
+    if(!d) return;
+    const k = d+'|'+p.studio;
+    if(first.hasOwnProperty(k)) out[pickKey(p)] = true;      // the later one carries the flag
+    else first[k] = pickKey(p);
+  });
+  return out;
+}
 function renderPicks(){
   const w = $('#w-picks');
+  resetDerived();
+  const dupes = pickDupes();
   const byDay =(a,b)=> (DAY_ORDER.indexOf(a.day)-DAY_ORDER.indexOf(b.day)) || String(a.time).localeCompare(String(b.time));
   const weekly = picks.filter(p=>!isOneOff(p)).sort(byDay);
   const single = picks.filter(isOneOff).sort((a,b)=>
@@ -3864,21 +4467,13 @@ function renderPicks(){
       '<button class="btn gray" data-act="goBook">Browse classes</button></div></div>';
   } else {
     if(weekly.length){
-      const seen = {};
       pickHTML += '<div class="ghead">Every week<span class="gh-r">'+weekly.length+'</span></div><div class="group">' +
-        weekly.map(p=>{
-          const key = p.day+'|'+p.studio, dupe = !!seen[key]; seen[key] = true;
-          return pickRowHTML(p, dupe);
-        }).join('') + '</div>';
+        weekly.map(p => pickRowHTML(p, !!dupes[pickKey(p)])).join('') + '</div>';
     }
     if(single.length){
-      const seen = {};
       pickHTML += '<div class="ghead">Just this one<span class="gh-k">one-off</span>'+
         '<span class="gh-r">'+single.length+'</span></div><div class="group">' +
-        single.map(p=>{
-          const key = pickDate(p)+'|'+p.studio, dupe = !!seen[key]; seen[key] = true;
-          return pickRowHTML(p, dupe);
-        }).join('') + '</div>'+
+        single.map(p => pickRowHTML(p, !!dupes[pickKey(p)])).join('') + '</div>'+
         '<div class="gfoot">A one-off pick is booked on its date only and never repeats. '+
         'Remove it any time with '+'×'+'.</div>';
     }
@@ -3886,11 +4481,19 @@ function renderPicks(){
       'within 45 minutes fires a booking run straight away.</div>';
   }
 
+  /* The hero is gone. On Picks it restated the tab it was sitting on — "Auto-booking ·
+     1 pick · Next up: …" above the list of those very picks, with a chevron pointing at
+     the screen you were already on. Josh: "It isn't required info."
+     D-27's rule applies — check what ELSE was riding on the surface before removing it.
+     What rode on it: the needy/booked summary ("1 pick needs you"), which every row states
+     for itself and more precisely, and the jump-to-class chevron, which the rows also
+     carry. What did NOT have another home is the alert strip, so it takes the slot: a
+     failed pick write has to be visible on the tab it happened on. */
   w.innerHTML =
     '<div class="ltitle">Picks</div>'+
     '<div class="lsub">'+esc(picksSummary())+'</div>'+
     offlineBanner()+
-    heroHTML()+
+    alertsHTML('picks')+
     pickHTML+
     '<div class="spacer"></div>';
 }
@@ -4042,39 +4645,69 @@ function enterApp(){
 function findClass(bid){ return (timetable.classes||[]).find(c => String(c.bid)===String(bid)); }
 
 function openClassSheet(bid){
-  const c = findClass(bid); if(!c) return;
+  const c = findClass(bid);
+  if(!c){ toast('That class is no longer on the timetable — pull down to refresh.', 3600); return; }
   const av = availInfo(c);
-  const opensMs = new Date(c.opens_iso).getTime();
-  const open = opensMs <= Date.now();
+  const opensMs = opensAtMs(c);
+  const open = isFinite(opensMs) && opensMs <= Date.now();
   const recurring = pickIndex(c.day,c.time,c.studio,'') >= 0;
   const oneOff = pickIndex(c.day,c.time,c.studio,c.date) >= 0;
   const dur = durationMins(c);
   const t = fmt12(c.time);
-  const conflict = bookedStudiosOn(c.date)[c.studio];
+  const mine = bookingForClass(c);
+  const conflict = mine ? null : bookedStudiosOn(c.date)[c.studio];
+  const unknownClash = mine ? null : unknownClashAt(c);
+  const clash = (mine || conflict) ? null : pickClash(c);
 
   /* The sheet is where a decision gets made, so it keeps the DATE the window opens — a
      fact you could act on — but not a live countdown to it. */
-  const windowVal = open
-    ? '<span style="color:var(--go)">Open now</span>'
-    : esc(shortDate(isoDateStr(c.opens_iso)) + ', ' + isoClock(c.opens_iso));
+  const windowVal = !isFinite(opensMs) ? 'Not published yet'
+    : open ? '<span style="color:var(--go)">Open now</span>'
+    : esc(shortDate(fromUTC(opensMs)) + ', ' + isoClock(new Date(opensMs).toISOString()));
 
   let primary;
-  if(av.full){
+  if(mine){
+    /* AUDIT (18 Aug) — the sheet for a class you already hold offered "Book anyway" over
+       a note telling you to cancel the booking you already have, because the one-per-day
+       caution keyed on date+studio and matched the class against itself. Acted on inside
+       the hour before the class, that advice is a late cancel: a strike in itself. */
+    primary = '<button class="btn" disabled>'+G.check+' '+
+      (mine.__pending ? 'Booked' : 'You’re booked in')+'</button>';
+  } else if(av.full){
     primary = '<button class="btn" disabled>'+esc(av.long)+'</button>';
+  } else if(c.projected){
+    /* AUDIT (18 Aug) — the row's Book pill refuses a projected class (`canBook` checks
+       `c.projected`); this button checked only full/open, and `availInfo` reports a
+       projected class as not full. A stale in-memory projection whose window had passed
+       therefore offered "Book this class now" for a date FIT has not rostered. */
+    primary = '<button class="btn" disabled>'+G.clock+' Not published yet</button>';
   } else if(!open){
     primary = '<button class="btn" disabled>'+G.lock+' Opens '+
-      esc(shortDate(isoDateStr(c.opens_iso)))+'</button>';
+      esc(isFinite(opensMs) ? shortDate(fromUTC(opensMs)) : 'later')+'</button>';
   } else {
     /* a same-day booking in this studio is a caution, not a lock — bookings.json can be
        hours stale and FIT, not this app, is the authority on what is allowed */
     primary = '<button class="btn filled" data-act="booknow" data-bid="'+esc(c.bid)+'">'+G.boltL+' '+
       (conflict ? 'Book anyway' : 'Book this class now')+'</button>';
   }
+  const conflictWhen = conflict ? (conflict.time_raw || (conflict.time ? fmt12(conflict.time).full : '')) : '';
   const conflictNote = conflict
     ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
       '<div class="rt"><b>'+esc(SLABEL[c.studio]||c.studio)+' already booked today</b><span>'+
-      esc((conflict.name||'A class')+' at '+(conflict.time_raw || (conflict.time?fmt12(conflict.time).full:'')))+
+      esc((conflict.name||'A class')+(conflictWhen ? ' at '+conflictWhen : ''))+
       '. FIT allows one class per studio per day — cancel that one first, or this booking may be refused.'+
+      '</span></div></div></div>'
+    : unknownClash
+    ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
+      '<div class="rt"><b>Something else is booked at this time</b><span>'+
+      esc((unknownClash.name||'A booking')+' is on your account at '+t.full+' and the app can’t tell '+
+      'which studio it belongs to. Booking this may still work — check the FIT app if it doesn’t.')+
+      '</span></div></div></div>'
+    : clash
+    ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
+      '<div class="rt"><b>Clashes with another pick</b><span>'+
+      esc('The bot is already set to take '+fmt12(clash.time).full+' '+(SLABEL[c.studio]||c.studio)+
+          ' that day, and FIT allows one class per studio per day — only one of them will book.')+
       '</span></div></div></div>'
     : '';
 
@@ -4208,15 +4841,34 @@ function openInfoSheet(){
    Actions (every destructive/committing action confirms)
    ════════════════════════════════════════════════════════════════ */
 async function bookNow(bid, fromSheet){
-  const c = findClass(bid); if(!c) return;
+  const c = findClass(bid);
+  /* a poll can replace the timetable between the sheet closing and this running, and the
+     old code returned in silence — the user tapped Book and nothing at all happened */
+  if(!c){ toast('That class is no longer on the timetable — pull down to refresh.', 3600); return; }
+  if(c.projected){ toast('FIT hasn’t published this week yet, so this one can’t be booked.', 4000); return; }
   const t = fmt12(c.time);
+  const already = bookingForClass(c);
+  /* An optimistic row is an ASK, not an account fact, so say the thing that is true of
+     both cases rather than asserting FIT has it (round 2). */
+  if(already){ toast(already.__pending ? 'That one is already on your Booked list.'
+                                       : 'You’re already booked into this class.', 2800); return; }
   const conflict = bookedStudiosOn(c.date)[c.studio];
+  const unknownClash = unknownClashAt(c);
+  /* a booking made this close to the class cannot be cancelled for free (FIT's line is one
+     hour) and the dispatch itself takes about a minute — say so rather than let §7's
+     "free cancel" promise be made for us by silence */
+  const startsIn = new Date(c.start_iso).getTime() - Date.now();
+  const tight = isFinite(startsIn) && startsIn < 75*60000;
   const choice = await actionSheet({
     title: 'Book ' + (c.name || c.studio) + '?',
     message: longDate(c.date) + ' at ' + t.full + ' · ' + (SLABEL[c.studio]||c.studio) +
-             '\nThis books immediately on your FIT account.' +
+             '\nThis books on your FIT account — it takes about a minute.' +
              (conflict ? '\nHeads up: you already have ' + (SLABEL[c.studio]||c.studio) +
-                         ' booked that day. FIT allows one class per studio per day, so this may be refused.' : ''),
+                         ' booked that day. FIT allows one class per studio per day, so this may be refused.' : '') +
+             (!conflict && unknownClash ? '\nHeads up: something else is already booked at this time '+
+                         'and the app can’t tell which studio it is.' : '') +
+             (tight ? '\nIt starts soon, so you won’t be able to cancel it for free — '+
+                      'not turning up would be a no-show.' : ''),
     actions: [{label: conflict ? 'Book Anyway' : 'Book Now', style:'default'}]
   });
   if(choice !== 0){ if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
@@ -4225,7 +4877,11 @@ async function bookNow(bid, fromSheet){
      with no Cancel button until it is real. It is memory-only — nothing about it is
      persisted — so the worst case is that it disappears at the next launch, never that a
      phantom booking outlives the session. reconcilePending() withdraws it with a toast if
-     FIT does not have it SETTLE_MS from now. */
+     FIT does not have it SETTLE_MS from now.
+     Since 18 Aug the BOOK tab reads it too (bookingForClass / bookedStudiosOn): the row
+     says "Booked", loses its Book button, and every other class in that studio that day
+     picks up the one-per-day caution — immediately, rather than after the next sync.
+     Everything that makes a CLAIM still reads realBookings() and cannot see this row. */
   const optimistic = {
     date: c.date, time: c.time,
     name: c.name || SLABEL[c.studio] || c.studio,
@@ -4457,6 +5113,11 @@ function switchTab(t){
   activeTab = t;
   const next = $('#page-'+activeTab);
   next.classList.add('active');
+  /* AUDIT round 2 — flushing BEFORE the page was activated meant renderBook measured a
+     display:none page: offsetLeft/clientWidth are 0, so the chip rail's scroll restore and
+     the keep-the-selected-chip-visible guard both silently did nothing. Activate, then
+     draw. */
+  flushTab(t);
   void next.offsetHeight;
   next.scrollTop = scrollMemo[activeTab] || 0;
   updateNav();
@@ -4487,20 +5148,28 @@ function setDay(date, dir){
   if(slide && dir) slide.classList.add(dir > 0 ? 'out-l' : 'out-r');
   selDate = date;
   weekStart = pageOf(date);   // the strip follows the day, one rolling page at a time
-  setTimeout(()=>{
-    renderBook();
+  bookRenderSoon(dir ? 165 : 0, ()=>{
     const s2 = $('#dayslide');
     if(s2 && dir){
       s2.classList.add(dir > 0 ? 'out-r' : 'out-l');
       requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ s2.classList.remove('out-r','out-l'); }); });
     }
     updateNav();
-  }, dir ? 165 : 0);
+  });
 }
 function stepDay(delta){
   if(!allDates.length) return;
   const i = allDates.indexOf(selDate);
-  if(i < 0) return;
+  /* AUDIT (18 Aug) — `allDates` only holds days that HAVE classes, while the strip renders
+     every cell of the page and lets you tap any of them. Landing on a class-free day
+     therefore killed the day swipe in both directions, silently, until the user noticed
+     the strip still worked. Step from the nearest neighbour instead of bailing. */
+  if(i < 0){
+    const to = delta > 0 ? allDates.filter(d => d > selDate)[0]
+                         : allDates.filter(d => d < selDate).slice(-1)[0];
+    if(to) setDay(to, delta);
+    return;
+  }
   const j = i + delta;
   if(j < 0 || j >= allDates.length){
     const s = $('#dayslide');
@@ -4710,8 +5379,31 @@ function rerenderBook(){
   safeRender('book', renderBook);
   if(p) p.scrollTop = s;
 }
+/* AUDIT (18 Aug) — the chip filter, setDay and stepWeek each redraw Book from their own
+   setTimeout, and all three called renderBook() directly, so `pointerHeld` was never
+   consulted: a finger that went down on a row during those 100-165 ms had its row detached
+   and its click resolved against whatever slid into those coordinates. Waiting for the
+   finger to lift is invisible (a tap is ~100 ms) and cannot mis-target. */
+function bookRenderSoon(ms, after){
+  setTimeout(function run(){
+    if(holdActive()){ setTimeout(run, 60); return; }
+    try{ renderBook(); }catch(e){ safeRender('book', renderBook); }
+    if(after) try{ after(); }catch(e){}
+  }, ms);
+}
+/* Said on every route that adds a pick, because the route that had it was not the route
+   the app's own empty state tells you to use. AUDIT (18 Aug): adding a clashing pick from
+   the class sheet's switch produced no warning at all — the guard was on the repeat glyph
+   only, which is D-25's round-2 lesson repeating in mirror image. */
+function warnPickClash(c){
+  const clash = pickClash(c);
+  if(clash) toast('Heads up: you already pick '+fmt12(clash.time).full+' '+
+                  (SLABEL[c.studio]||c.studio)+' on '+c.day+
+                  ' — FIT allows one per studio per day', 4200);
+}
 async function handlePickToggle(bid, btn){
-  const c = findClass(bid); if(!c) return;
+  const c = findClass(bid);
+  if(!c){ toast('That class is no longer on the timetable — pull down to refresh.', 3600); return; }
   const existing = pickFor(c);
 
   if(existing){
@@ -4720,6 +5412,7 @@ async function handlePickToggle(bid, btn){
     toast(wasOnce ? 'One-off pick removed' : 'Weekly pick removed', 1800);
     rerenderBook();
     safeRender('picks', renderPicks);
+    commitPicks();
     return;
   }
 
@@ -4757,11 +5450,10 @@ async function handlePickToggle(bid, btn){
   addPick(c.day, c.time, c.studio, c.name, once ? c.date : null);
   toast(once ? 'One-off pick added for '+shortDate(c.date)
              : 'Weekly pick added — every '+c.day+', until you remove it', 3000);
-  const clash = pickClash(c);
-  if(clash) toast('Heads up: you already pick '+fmt12(clash.time).full+' '+(SLABEL[c.studio]||c.studio)+
-                  ' on '+c.day+' — FIT allows one per studio per day', 4200);
+  warnPickClash(c);
   rerenderBook();
   safeRender('picks', renderPicks);
+  commitPicks();
 }
 
 /* ── delegated events ───────────────────────────────────────── */
@@ -4786,8 +5478,7 @@ document.addEventListener('click', function(e){
     $$('.chip').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.studio===studioFilter)));
     const slide = $('#dayslide');
     if(slide) slide.style.opacity = '.3';
-    const chips = $('#chips'); const cs = chips ? chips.scrollLeft : 0;
-    setTimeout(()=>{ renderBook(); const c2 = $('#chips'); if(c2) c2.scrollLeft = cs; }, 100);
+    bookRenderSoon(100);          // renderBook preserves the chip rail's own scroll now
     return;
   }
 
@@ -4800,6 +5491,7 @@ document.addEventListener('click', function(e){
     removePick(a[0], a[1], a[2], a[3] || '');
     safeRender('picks', renderPicks);
     rerenderBook();
+    commitPicks();
     return;
   }
   const cf = T('[data-confirm]'); if(cf){ confirmBooking(cf.dataset.confirm); return; }
@@ -4824,16 +5516,19 @@ document.addEventListener('click', function(e){
     else if(a === 'booknow'){ closeSheet(); setTimeout(()=>bookNow(act.dataset.bid, true), 200); }
     else if(a === 'togglepick' || a === 'toggleonce'){
       const c = findClass(act.dataset.bid);
-      if(c){
+      if(!c){ toast('That class is no longer on the timetable — pull down to refresh.', 3600); return; }
+      {
         const date = (a === 'toggleonce') ? c.date : null;
         const on = togglePick(c.day, c.time, c.studio, c.name, date);
         act.setAttribute('aria-checked', String(on));
         /* a weekly pick already covers this date — drop a redundant one-off */
         if(a === 'togglepick' && on) removePick(c.day, c.time, c.studio, c.date);
+        if(on) warnPickClash(c);
         safeRender('picks', renderPicks);
         rerenderBook();
         const sib = $('[data-act="'+(a==='togglepick'?'toggleonce':'togglepick')+'"][data-bid="'+c.bid+'"]');
         if(sib) sib.setAttribute('aria-checked', String(pickIndex(c.day,c.time,c.studio, a==='togglepick'?c.date:'') >= 0));
+        commitPicks();
       }
     }
     return;
@@ -4842,6 +5537,11 @@ document.addEventListener('click', function(e){
   const row = T('.crow[data-bid]'); if(row){ openClassSheet(row.dataset.bid); return; }
 }, false);
 
+/* Escape closes the sheet. Nothing on the phone sends it, but the app is also opened on
+   a Mac, and a modal with no keyboard dismissal is a trap there. */
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && sheetOpen()) closeSheet();
+});
 $('#infoBtn').addEventListener('click', openInfoSheet);
 $('#saveBtn').addEventListener('click', savePicks);
 
@@ -4852,8 +5552,13 @@ setInterval(function(){
     /* F19 — this used to run a document-wide querySelectorAll every second for the life of
        the page, hidden or not */
     if(!booted || document.hidden) return;
+    /* `now` is read by every countdown node below. An 18 Aug edit replaced the old
+       watchdog line and took this declaration with it, and because the whole tick is
+       wrapped in a swallowing try/catch the symptom was silent: a ReferenceError on the
+       first [data-cd] node aborted the tick, so every live countdown on Booked froze and a
+       deadline passing never triggered its redraw. tests/tick_probe.py catches it. */
     const now = Date.now();
-    if(pointerHeld && now - pointerHeld > 1500) releasePointer();
+    if(!holdActive() && renderHeld) releasePointer();
     let flip = false;
     const nodes = document.querySelectorAll('[data-cd]');
     for(let i=0;i<nodes.length;i++){
@@ -4875,17 +5580,22 @@ setInterval(function(){
   }catch(e){}
 }, 1000);
 
-/* keep the lists honest as classes fall into the past */
+/* keep the lists honest as classes fall into the past.
+   Was every 5 minutes, which was the window in which a started class kept a Book button.
+   Every 30 s now, and it costs nothing when nothing has changed: timeMoved() is a date
+   string and one pass over the class list, and a redraw only happens when the answer it
+   gives has actually moved. Still skipped while hidden or while a sheet is open — but a
+   skipped tick is made up by the next one, because the bucket comparison is stateful. */
 setInterval(function(){
   try{
     if(!booted || document.hidden || sheetOpen()) return;   // F19
-    heroCache = null;
+    if(!timeMoved()) return;
     indexDates();
     const p = $('#page-'+activeTab), s = p ? p.scrollTop : 0;
     renderAllIdle();
     if(p) p.scrollTop = s;
   }catch(e){}
-}, 300000);
+}, 30000);
 
 /* ── safe-area top backstop ─────────────────────────────────────
    Under the iOS 26/27 standalone regression env(safe-area-inset-top) reports 0, which

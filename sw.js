@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v7';   // v7: four-week planning, rolling date strip, states not stopwatches
+const CACHE = 'fit-booker-v8';   // v8: Book-tab audit batch + the fitbot icon
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
