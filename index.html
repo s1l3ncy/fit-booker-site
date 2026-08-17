@@ -3170,6 +3170,10 @@ const BOT_LOG_SURFACE = {
      row read "Booking scheduled" while a real, still-fixable miss went unsaid on every
      surface. They are pickMiss() kinds now, and pickMiss draws on the row. */
   snipe_late:'row', snipe_notfound:'row', snipe_skipped_studio_limit:'row',
+  /* 17 Aug 2026. The booking pass could not sign in to FIT, so nothing was booked and
+     nothing was checked. It is not attached to one pick — it is the whole run — so it
+     cannot go on a row; it is the same shape as refresh_failed and gets the same surface. */
+  snipe_login_failed:'note',
   snipe_waiting:'',
   snipe_nopicks:'', snipe_skipped:'', snipe_nothing_due:'',
 
