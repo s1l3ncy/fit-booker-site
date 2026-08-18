@@ -9,11 +9,16 @@
 <meta name="apple-mobile-web-app-title" content="FIT Booker">
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
-<!-- theme-color is what iOS paints into the ~62px strip below the web view under WebKit
-     301994, so these MUST stay identical to --tabbg in each scheme: that is what makes the
-     tab bar read as running to the screen edge instead of floating above a band.
-     Media-conditional metas are fine — variants S1 (plain light) and S3 (plain dark) both
-     still failed, so the media attribute was never the cause of the short viewport. -->
+<!-- theme-color and the ~62px WebKit-301994 strip, re-measured 18 Aug 2026 on iOS 26.6
+     (dt/ probes t1–t9): iOS now paints the strip iOS-DEFAULT BLACK and IGNORES these metas
+     and both manifest colours. The colour-matching strategy therefore no longer works in
+     light mode; the fix is html.deadstrip (see "dead-strip absorption" CSS + fixBottomInset),
+     which turns the tab bar itself black while the shortfall is measured. So: under
+     deadstrip, light --tabbg deliberately DIVERGES from this white meta. Keep the metas as
+     they are — they are what self-heals the strip if a future iOS paints it again, and they
+     still tint browser-tab UI. Media-conditional metas are fine — variants S1 (plain light)
+     and S3 (plain dark) both still failed, so the media attribute was never the cause of the
+     short viewport. -->
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -92,7 +97,9 @@
   --fill:rgba(18,20,24,.055);
   --fill2:rgba(18,20,24,.10);
   --barbg:rgba(243,243,240,.94);
-  --tabbg:#FFFFFF;   /* == theme-color: matches the strip iOS leaves below the web view */
+  --tabbg:#FFFFFF;   /* == light theme-color — EXCEPT under html.deadstrip, which forces the
+                        bar black because iOS 26.6 paints the 301994 strip black regardless
+                        of these metas (measured 18 Aug 2026; see dead-strip absorption) */
   --sheet:#FFFFFF;
   --scrim:rgba(14,16,18,.34);
   --shadow:0 1px 2px rgba(12,14,18,.05),0 8px 22px -14px rgba(12,14,18,.30);
@@ -674,6 +681,31 @@ svg{display:block;flex:none}
 .tabbtn[aria-selected="true"] .tbadge{background:var(--ink);color:var(--bg)}
 #app.dirty .tabbtn[data-tab="picks"] .tbadge{background:var(--amber-rail);color:var(--on-amber)}
 
+/* ── dead-strip absorption (WebKit 301994) ───────────────────────
+   html.deadstrip is set by fixBottomInset() when the web view is measurably shorter
+   than the physical screen in iOS standalone mode. Measured on-device 18 Aug 2026
+   (iOS 26.6, dt/ probes t1–t9): the ~62px band iOS leaves below the viewport is
+   painted iOS-DEFAULT BLACK — it ignores the theme-color meta and both manifest
+   colours, so the colour-matching strategy no longer works in light mode, and no DOM
+   element can paint the band (t9: an lvh painter clips at the viewport edge).
+   Absorb it instead: the tab bar itself goes black, so bar + band read as ONE
+   continuous black bar running to the physical bottom edge, with the home indicator
+   sitting in it like a native dark tab bar. Dark mode already looks like this
+   (--tabbg is #000), so the overrides are scoped to light. Values are the dark
+   theme's own bar tokens, as literals — the dark :root block cannot be reached from
+   a light-scheme page. The class is re-decided on every fixBottomInset() call, so
+   the moment iOS reports a full-height viewport again the white bar returns with no
+   code change. */
+@media (prefers-color-scheme: light){
+  html.deadstrip .tabbar{--tabbg:#000000}
+  html.deadstrip .tabbar::before{background:rgba(255,255,255,.13)}
+  html.deadstrip .tabbtn{color:#767C85}
+  html.deadstrip .tabbtn[aria-selected="true"]{color:#F2F3F4}
+  html.deadstrip .tabbtn .tbadge{background:#767C85;color:#0B0C0D}
+  html.deadstrip .tabbtn[aria-selected="true"] .tbadge{background:#F2F3F4;color:#0B0C0D}
+  html.deadstrip #app.dirty .tabbtn[data-tab="picks"] .tbadge{background:#F2B441;color:#26190A}
+}
+
 /* ── empty state ─────────────────────────────────────────────── */
 /* deliberately NOT called `.empty`: that name is generic enough to collide with a
    modifier on an unrelated component (it did — on .dcell). */
@@ -787,9 +819,11 @@ svg{display:block;flex:none}
 .setup{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;
   padding:0 calc(24px + var(--sar)) 30px calc(24px + var(--sal))}
 /* the sign-in tile carries the app icon, so it uses the icon's own colours rather than
-   the amber accent. Deliberately NOT a theme-color change: the two theme-color metas are
-   pinned to the tab-bar background and paint the strip iOS leaves below the web view — see
-   IOS-VIEWPORT.md before touching those. */
+   the amber accent. Deliberately NOT a theme-color change: the two theme-color metas stay
+   pinned to the NON-deadstrip tab-bar background (iOS 26.6 ignores them for the 301994
+   strip — the dead-strip absorption block is what handles that — but they self-heal the
+   strip on any iOS that paints it again, and they tint browser-tab UI). See IOS-VIEWPORT.md
+   in the project folder before touching them. */
 .setup .mark{
   width:78px;height:78px;border-radius:22px;margin:0 auto 18px;
   background:#0B1628;
@@ -4800,6 +4834,9 @@ function layoutDiag(){
     ['outerHeight', String(window.outerHeight)],
     ['missing vs screen', (screen.height - window.innerHeight) + 'px'],
     ['reserved (--tabpadref)', cs.getPropertyValue('--tabpadref').trim() || 'n/a'],
+    ['dead-strip bar', !document.documentElement.classList.contains('deadstrip') ? 'off' :
+      (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ?
+        'absorbed (black bar)' : 'absorbed (bar already black in dark)')],
     ['tab bar top', r ? Math.round(r.top) + 'px' : 'n/a'],
     ['tab bar bottom', r ? Math.round(r.bottom) + 'px' : 'n/a'],
     ['gap below bar', r ? Math.round(window.innerHeight - r.bottom) + 'px' : 'n/a'],
@@ -5635,14 +5672,29 @@ function fixSafeAreaTop(){
    the property is removed and re-decided on every call. */
 function fixBottomInset(){
   try{
+    /* A pinch/accessibility zoom shrinks innerHeight without changing the layout, which
+       would read as a huge "shortfall" and flash the bar white mid-gesture now that this
+       re-runs on resize. While zoomed, keep whatever state was last decided at scale 1. */
+    if(window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.02) return;
     const root = document.documentElement;
     root.style.removeProperty('--tabpadref');
+    root.classList.remove('deadstrip');
     const standalone = (window.navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     if(!standalone) return;
     const missing = (window.screen && window.screen.height ? window.screen.height : 0) -
                     window.innerHeight;
-    if(missing >= 40 && missing <= 200) root.style.setProperty('--tabpadref', '2px');
+    if(missing >= 40 && missing <= 200){
+      root.style.setProperty('--tabpadref', '2px');
+      /* Absorb the dead strip (see the html.deadstrip CSS block): iOS ONLY. An Android
+         standalone app also measures a shortfall here — its own status/nav chrome — but
+         paints no dead band below the viewport, so a black bar there would be a
+         regression, not a fix. Same iOS test the manifest-injection snippet uses. */
+      const ua = navigator.userAgent || '';
+      if(/iPad|iPhone|iPod/.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1)){
+        root.classList.add('deadstrip');
+      }
+    }
   }catch(e){}
 }
 fixBottomInset();
@@ -5650,10 +5702,14 @@ fixBottomInset();
    so the moment env() starts reporting a real inset the override is dropped again. Run once
    now (before first paint) and again after load, in case styles resolve late. */
 fixSafeAreaTop(); fixBottomInset();
-window.addEventListener('load', fixSafeAreaTop);
-setTimeout(fixSafeAreaTop, 400);
-window.addEventListener('resize', fixSafeAreaTop);
-window.addEventListener('orientationchange', ()=> setTimeout(fixSafeAreaTop, 250));
+/* fixBottomInset re-runs alongside fixSafeAreaTop everywhere: both read the same
+   screen-vs-window shortfall, and a rotate or an OS fix changes it for both. Before
+   18 Aug 2026 only the top backstop re-ran, so a stale --tabpadref (and now a stale
+   deadstrip class) could survive a rotation. */
+window.addEventListener('load', ()=>{ fixSafeAreaTop(); fixBottomInset(); });
+setTimeout(()=>{ fixSafeAreaTop(); fixBottomInset(); }, 400);
+window.addEventListener('resize', ()=>{ fixSafeAreaTop(); fixBottomInset(); });
+window.addEventListener('orientationchange', ()=> setTimeout(()=>{ fixSafeAreaTop(); fixBottomInset(); }, 250));
 
 /* ── boot ───────────────────────────────────────────────────── */
 (function boot(){
