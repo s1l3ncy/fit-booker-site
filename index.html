@@ -2,33 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- NO viewport-fit=cover — deliberate, 18 Aug 2026, and the single most important line
+     of the WebKit-301994 saga. Measured on-device (probe t5 vs t1/t2/t4/t7/t9, iOS 26.6):
+     WITH cover, iOS sizes the standalone web view 62px short AND anchors it at the top of
+     the screen — dead, unpaintable band at the BOTTOM, under the tab bar. WITHOUT cover,
+     the same short view is seated BELOW the status bar and ends flush at the physical
+     bottom — the 62px becomes a normal status-bar strip at the top, painted from the page
+     background with the clock drawn over it (same as Sonarr, the one app on Josh's phone
+     that never showed the gap). Restoring cover restores the bottom gap on any install.
+     See IOS-VIEWPORT.md. Consequence: env(safe-area-inset-*) report 0 — the JS backstops
+     below the boot script restore --sat/--sab by measurement instead. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FIT Booker">
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
-<!-- theme-color and the ~62px WebKit-301994 strip, re-measured 18 Aug 2026 on iOS 26.6
-     (dt/ probes t1–t9): iOS now paints the strip iOS-DEFAULT BLACK and IGNORES these metas
-     and both manifest colours. The colour-matching strategy therefore no longer works in
-     light mode; the fix is html.deadstrip (see "dead-strip absorption" CSS + fixBottomInset),
-     which turns the tab bar itself black while the shortfall is measured. So: under
-     deadstrip, light --tabbg deliberately DIVERGES from this white meta. Keep the metas as
-     they are — they are what self-heals the strip if a future iOS paints it again, and they
-     still tint browser-tab UI. Media-conditional metas are fine — variants S1 (plain light)
-     and S3 (plain dark) both still failed, so the media attribute was never the cause of the
-     short viewport. -->
+<!-- theme-color: with viewport-fit=cover REMOVED (see the viewport meta above) there is no
+     bottom strip any more — the view ends at the physical bottom. The top status-bar strip
+     is painted from the page background, not from these metas (measured: the 301994 band
+     ignored them entirely on iOS 26.6). They stay pinned to the tab-bar colours anyway:
+     they cost nothing, they tint browser-tab UI, and on any iOS that paints OS strips from
+     theme-color again they are already correct. -->
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="apple-touch-icon.png">
 <script>
-/* WebKit 301994: on iOS 26.1+/27 a home-screen web app is laid out ~62px shorter than the
-   screen and apple-mobile-web-app-status-bar-style:black-translucent is ignored. The leading
-   theory is that a linked manifest's display:standalone supersedes the Apple meta. iOS reads
-   the manifest at Add-to-Home-Screen time, and needs none of it (apple-touch-icon and
-   apple-mobile-web-app-title cover icon and name), so link it for everyone EXCEPT iOS. */
+/* Manifest linked for everyone EXCEPT iOS. The original reason (a theory that the manifest
+   triggered the 301994 short viewport) was DISPROVEN on 18 Aug 2026 — probes t2/t7 fail
+   without one; viewport-fit=cover was the real trigger, now removed. Kept anyway: iOS needs
+   none of it (apple-touch-icon + apple-mobile-web-app-title cover icon and name), and not
+   linking it keeps iOS install behaviour down to one variable. */
 (function(){
   var ua = navigator.userAgent || '';
   var iOS = /iPad|iPhone|iPod/.test(ua) ||
@@ -97,9 +103,9 @@
   --fill:rgba(18,20,24,.055);
   --fill2:rgba(18,20,24,.10);
   --barbg:rgba(243,243,240,.94);
-  --tabbg:#FFFFFF;   /* == light theme-color — EXCEPT under html.deadstrip, which forces the
-                        bar black because iOS 26.6 paints the 301994 strip black regardless
-                        of these metas (measured 18 Aug 2026; see dead-strip absorption) */
+  --tabbg:#FFFFFF;   /* == light theme-color meta. The bar sits at the PHYSICAL bottom now —
+                        viewport-fit=cover is gone (see the viewport meta), so there is no
+                        strip below it to match */
   --sheet:#FFFFFF;
   --scrim:rgba(14,16,18,.34);
   --shadow:0 1px 2px rgba(12,14,18,.05),0 8px 22px -14px rgba(12,14,18,.30);
@@ -179,12 +185,11 @@
    own scroller. This is also what stops Safari's toolbar from resizing under us. */
 html,body{width:100%;max-width:100%;height:100%;overflow:hidden;background:var(--bg)}
 
-/* iOS 26.1+/27 regression (WebKit bug 301994): in a home-screen web app the layout
-   viewport comes back ~62px shorter than the physical screen, leaving a system-painted
-   strip no DOM element can reach. `lvh` still measures the full screen while `dvh` does
-   not, so paint the whole screen from behind everything else. `var(--bg)` means the strip
-   follows prefers-color-scheme, which a manifest colour can never do. Harmless where the
-   bug is absent: lvh == dvh and this is exactly the viewport.
+/* Historical full-bleed painter from the with-cover 301994 era. With viewport-fit=cover
+   removed (18 Aug 2026) lvh == dvh, so this is exactly the viewport — a plain background
+   layer, harmless and kept as a belt-and-braces backstop for any future geometry where
+   lvh grows again (probe t9 proved it can never paint OUTSIDE the view, so it can never
+   hurt, only cover gaps inside it).
    NOTE: only this painter uses lvh. Layout MUST stay on dvh — sizing the interactive shell
    to lvh would push the tab bar below the region that actually accepts touches. */
 #bleed{
@@ -681,31 +686,6 @@ svg{display:block;flex:none}
 .tabbtn[aria-selected="true"] .tbadge{background:var(--ink);color:var(--bg)}
 #app.dirty .tabbtn[data-tab="picks"] .tbadge{background:var(--amber-rail);color:var(--on-amber)}
 
-/* ── dead-strip absorption (WebKit 301994) ───────────────────────
-   html.deadstrip is set by fixBottomInset() when the web view is measurably shorter
-   than the physical screen in iOS standalone mode. Measured on-device 18 Aug 2026
-   (iOS 26.6, dt/ probes t1–t9): the ~62px band iOS leaves below the viewport is
-   painted iOS-DEFAULT BLACK — it ignores the theme-color meta and both manifest
-   colours, so the colour-matching strategy no longer works in light mode, and no DOM
-   element can paint the band (t9: an lvh painter clips at the viewport edge).
-   Absorb it instead: the tab bar itself goes black, so bar + band read as ONE
-   continuous black bar running to the physical bottom edge, with the home indicator
-   sitting in it like a native dark tab bar. Dark mode already looks like this
-   (--tabbg is #000), so the overrides are scoped to light. Values are the dark
-   theme's own bar tokens, as literals — the dark :root block cannot be reached from
-   a light-scheme page. The class is re-decided on every fixBottomInset() call, so
-   the moment iOS reports a full-height viewport again the white bar returns with no
-   code change. */
-@media (prefers-color-scheme: light){
-  html.deadstrip .tabbar{--tabbg:#000000}
-  html.deadstrip .tabbar::before{background:rgba(255,255,255,.13)}
-  html.deadstrip .tabbtn{color:#767C85}
-  html.deadstrip .tabbtn[aria-selected="true"]{color:#F2F3F4}
-  html.deadstrip .tabbtn .tbadge{background:#767C85;color:#0B0C0D}
-  html.deadstrip .tabbtn[aria-selected="true"] .tbadge{background:#F2F3F4;color:#0B0C0D}
-  html.deadstrip #app.dirty .tabbtn[data-tab="picks"] .tbadge{background:#F2B441;color:#26190A}
-}
-
 /* ── empty state ─────────────────────────────────────────────── */
 /* deliberately NOT called `.empty`: that name is generic enough to collide with a
    modifier on an unrelated component (it did — on .dcell). */
@@ -820,10 +800,9 @@ svg{display:block;flex:none}
   padding:0 calc(24px + var(--sar)) 30px calc(24px + var(--sal))}
 /* the sign-in tile carries the app icon, so it uses the icon's own colours rather than
    the amber accent. Deliberately NOT a theme-color change: the two theme-color metas stay
-   pinned to the NON-deadstrip tab-bar background (iOS 26.6 ignores them for the 301994
-   strip — the dead-strip absorption block is what handles that — but they self-heal the
-   strip on any iOS that paints it again, and they tint browser-tab UI). See IOS-VIEWPORT.md
-   in the project folder before touching them. */
+   pinned to the tab-bar colours (see the head comment — with viewport-fit=cover gone there
+   is no bottom strip; the metas cost nothing and self-heal any iOS that paints OS strips
+   from theme-color again). */
 .setup .mark{
   width:78px;height:78px;border-radius:22px;margin:0 auto 18px;
   background:#0B1628;
@@ -4834,9 +4813,15 @@ function layoutDiag(){
     ['outerHeight', String(window.outerHeight)],
     ['missing vs screen', (screen.height - window.innerHeight) + 'px'],
     ['reserved (--tabpadref)', cs.getPropertyValue('--tabpadref').trim() || 'n/a'],
-    ['dead-strip bar', !document.documentElement.classList.contains('deadstrip') ? 'off' :
-      (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ?
-        'absorbed (black bar)' : 'absorbed (bar already black in dark)')],
+    ['container', (function(){
+      var m = screen.height - window.innerHeight;
+      var sa = (window.navigator.standalone === true) ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      if(!sa) return 'browser tab (' + m + 'px is Safari chrome, not the bug)';
+      if(m <= 8) return 'full height';
+      if(m >= 40 && m <= 200) return 'letterboxed below status bar (WebKit 301994; bottom edge is flush)';
+      return 'other (' + m + 'px short)';
+    })()],
     ['tab bar top', r ? Math.round(r.top) + 'px' : 'n/a'],
     ['tab bar bottom', r ? Math.round(r.bottom) + 'px' : 'n/a'],
     ['gap below bar', r ? Math.round(window.innerHeight - r.bottom) + 'px' : 'n/a'],
@@ -5634,78 +5619,89 @@ setInterval(function(){
   }catch(e){}
 }, 30000);
 
-/* ── safe-area top backstop ─────────────────────────────────────
-   Under the iOS 26/27 standalone regression env(safe-area-inset-top) reports 0, which
-   silently removes the .navbar's Dynamic Island clearance and puts the Info button under
-   the Island. Nothing in CSS can detect that, so measure it.
+/* ── safe-area backstops for the no-cover world ─────────────────
+   Without viewport-fit=cover, iOS reports env(safe-area-inset-*) as 0 — always — so the
+   stylesheet's env() fallbacks resolve to 0 and these two functions restore the values by
+   MEASUREMENT, only where the geometry actually demands them. Measured on-device 18 Aug
+   2026 (iOS 26.6, dt/ probes — see IOS-VIEWPORT.md):
 
-   Deliberately narrow, so it cannot misfire:
-     • only when the RESOLVED --sat really is 0 (a healthy device keeps its own value);
-     • only in standalone display mode (in a browser tab the missing height is Safari's
-       own toolbars, not an inset — treating those as a top inset would wreck the layout);
-     • only when the window is 40–200px shorter than the physical screen, which is the
-       signature of the regression on a notched device and not of anything else.
-   Re-measured on rotate/resize because screen and window swap axes.                    */
+     • LETTERBOXED (the current 301994 behaviour, probe t5): the standalone view is
+       62px short and seated BELOW the status bar, ending at the PHYSICAL bottom.
+       Top clearance needed: NONE (the island is above the view). Bottom clearance:
+       the home indicator floats over the view's bottom → restore --sab.
+     • FULL-BLEED (classic behaviour, and the likely shape of any Apple fix): the view
+       is full-height, underlapping the island at the top and the indicator at the
+       bottom → restore BOTH --sat and --sab.
+
+   Signature-gated exactly like their with-cover predecessors: standalone only (a browser
+   tab's shortfall is Safari's own chrome), iOS only (Android standalone measures a
+   shortfall from its own system bars but its view never underlaps them), and env() wins
+   whenever it reports anything — so an iOS that starts reporting insets again silently
+   takes over. Self-undoing: every call removes its own override and re-decides. */
+function isIOSDevice(){
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
+}
+function isStandalone(){
+  return (window.navigator.standalone === true) ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+}
+function measuredVar(name){
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:var(' + name + ');' +
+                        'visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return h;
+}
+/* A pinch/accessibility zoom shrinks innerHeight without changing the layout, which would
+   misread as a container change mid-gesture. While zoomed, hold the last scale-1 decision. */
+function zoomHeld(){
+  return window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.02;
+}
+function containerShortfall(){
+  return (window.screen && window.screen.height ? window.screen.height : 0) -
+         window.innerHeight;
+}
 function fixSafeAreaTop(){
   try{
+    if(zoomHeld()) return;
     const root = document.documentElement;
     root.style.removeProperty('--sat');            // re-measure the stylesheet's own value
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:var(--sat);' +
-                          'visibility:hidden;pointer-events:none';
-    document.body.appendChild(probe);
-    const measured = probe.getBoundingClientRect().height;
-    probe.remove();
-    if(measured > 0) return;                       // env() works here — leave it alone
-    const standalone = (window.navigator.standalone === true) ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    if(!standalone) return;
-    const missing = (window.screen && window.screen.height ? window.screen.height : 0) -
-                    window.innerHeight;
-    if(missing >= 40 && missing <= 200) root.style.setProperty('--sat', missing + 'px');
+    if(measuredVar('--sat') > 0) return;           // env() works here — leave it alone
+    if(!isStandalone() || !isIOSDevice()) return;
+    const missing = containerShortfall();
+    /* FULL-BLEED only: the view reaches the physical top, so the Dynamic Island overlaps
+       it. 62px is this device's measured island band; on smaller Face-ID phones it is a
+       few px generous, which errs cosmetic. LETTERBOXED (missing 40–200) needs NOTHING —
+       the old with-cover backstop set --sat = missing here, which would now double-pad. */
+    if(missing >= 0 && missing <= 8) root.style.setProperty('--sat', '62px');
   }catch(e){}
 }
-
-/* Under the same regression the web view ends ~62px above the physical bottom, which means
-   the home indicator sits in the dead strip OUTSIDE the viewport — so reserving room for it
-   inside the tab bar strands the icons even higher for no benefit. Reclaim it. Self-undoing:
-   the property is removed and re-decided on every call. */
 function fixBottomInset(){
   try{
-    /* A pinch/accessibility zoom shrinks innerHeight without changing the layout, which
-       would read as a huge "shortfall" and flash the bar white mid-gesture now that this
-       re-runs on resize. While zoomed, keep whatever state was last decided at scale 1. */
-    if(window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.02) return;
+    if(zoomHeld()) return;
     const root = document.documentElement;
-    root.style.removeProperty('--tabpadref');
-    root.classList.remove('deadstrip');
-    const standalone = (window.navigator.standalone === true) ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    if(!standalone) return;
-    const missing = (window.screen && window.screen.height ? window.screen.height : 0) -
-                    window.innerHeight;
-    if(missing >= 40 && missing <= 200){
-      root.style.setProperty('--tabpadref', '2px');
-      /* Absorb the dead strip (see the html.deadstrip CSS block): iOS ONLY. An Android
-         standalone app also measures a shortfall here — its own status/nav chrome — but
-         paints no dead band below the viewport, so a black bar there would be a
-         regression, not a fix. Same iOS test the manifest-injection snippet uses. */
-      const ua = navigator.userAgent || '';
-      if(/iPad|iPhone|iPod/.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1)){
-        root.classList.add('deadstrip');
-      }
+    root.style.removeProperty('--sab');
+    if(measuredVar('--sab') > 0) return;           // env() works here — leave it alone
+    if(!isStandalone() || !isIOSDevice()) return;
+    const missing = containerShortfall();
+    /* In BOTH standalone geometries the view's bottom edge is the physical bottom, with
+       the home indicator floating over it — restore the device's real 34px inset that
+       env() no longer reports. Everything downstream derives from it unchanged
+       (--tabpadref = max(--sab − 16px, 6px) → 18px, sheets pad by 8px + --sab).
+       Outside both signatures (e.g. a keyboard-resized viewport) leave 0 alone. */
+    if(missing <= 8 || (missing >= 40 && missing <= 200)){
+      root.style.setProperty('--sab', '34px');
     }
   }catch(e){}
 }
-fixBottomInset();
-/* Re-run rather than latch: every call first REMOVES its own inline value and re-measures,
-   so the moment env() starts reporting a real inset the override is dropped again. Run once
-   now (before first paint) and again after load, in case styles resolve late. */
 fixSafeAreaTop(); fixBottomInset();
-/* fixBottomInset re-runs alongside fixSafeAreaTop everywhere: both read the same
-   screen-vs-window shortfall, and a rotate or an OS fix changes it for both. Before
-   18 Aug 2026 only the top backstop re-ran, so a stale --tabpadref (and now a stale
-   deadstrip class) could survive a rotation. */
+/* Re-run rather than latch: every call first REMOVES its own inline value and re-measures,
+   so the moment env() starts reporting real insets the overrides are dropped again. Run
+   once now (before first paint) and again after load, in case styles resolve late; re-run
+   both on resize/rotate because the container geometry is what they read. */
 window.addEventListener('load', ()=>{ fixSafeAreaTop(); fixBottomInset(); });
 setTimeout(()=>{ fixSafeAreaTop(); fixBottomInset(); }, 400);
 window.addEventListener('resize', ()=>{ fixSafeAreaTop(); fixBottomInset(); });
