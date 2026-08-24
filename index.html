@@ -381,9 +381,15 @@ svg{display:block;flex:none}
    top of the render section). */
 
 /* ── sticky date rail + studio chips ─────────────────────────── */
+/* PADDING-top, not margin-top (24 Aug 2026, Josh's report). A sticky element travels the
+   distance between its natural position and its stuck position before pinning, and a
+   margin above the bar put its natural top 7px below `top:` — so the strip visibly crept
+   up 7px on every scroll before freezing. The same 7px as padding is INSIDE the bar: its
+   natural top equals its stuck top, travel is zero, and the strip never moves at all.
+   The bar's own background paints the padding, so nothing scrolls through the gap. */
 .stickybar{
   position:sticky;top:calc(var(--sat) + var(--navh));z-index:30;
-  margin-top:7px;min-width:0;
+  padding-top:7px;min-width:0;
   background:var(--barbg);              /* F15 — see .navbar */
 }
 .stickybar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:.5px;background:var(--hair)}
@@ -558,12 +564,18 @@ svg{display:block;flex:none}
   display:flex;align-items:center;justify-content:center;gap:4px;
 }
 .bookpill:active{opacity:.6}
-/* bookable, but you already have that studio today — warn, never block */
-.bookpill.caution{background:var(--amber-bg);color:var(--amber);box-shadow:inset 0 0 0 1.5px var(--amber-rail)}
+/* .bookpill.caution ("Book anyway") is GONE — since 24 Aug 2026 a same-studio or
+   overlapping-time collision is a hard refusal drawn as an inert .wlpill label, not a
+   warned button. See bookBlock() and CONTRACT §12. */
 /* Join Waitlist: a real action, one rung down from Book. Weight, not hue — amber is
    already spoken for by confirm deadlines and picks, and spending it here would make the
-   Booked tab's amber mean less. */
-.bookpill.wl{background:var(--fill2);color:var(--ink);font-size:13.5px;padding:0 6px}
+   Booked tab's amber mean less.
+   STACKED (24 Aug 2026, Josh's report): "Join Waitlist" on one 13.5px line measured ~86px
+   in an 80px pill — the text ran to both edges while Book sat centred with air around it.
+   Two centred lines keep the label inside the same 80px column with the same breathing
+   room as Book, at every width, without shrinking the type into a squint. */
+.bookpill.wl{background:var(--fill2);color:var(--ink);font-size:12.5px;
+  flex-direction:column;gap:0;line-height:15px;letter-spacing:-.1px}
 /* AUDIT (19 Aug) — right edges lined up, left edges did not: Book began ~46px further right
    than Join Waitlist, so scanning a mixed list the five states never shared an axis. One
    width for the whole column fixes it, and the column is what identifies the control. */
@@ -690,12 +702,14 @@ svg{display:block;flex:none}
      tab, did not — switchTab early-returns for the tab you are already on, so the second tap
      of a Book-on-Book double tap had no intervening relayout to interrupt WebKit's gesture
      detector). `manipulation` disables double-tap-to-zoom on these elements and nothing else:
-     single tap, pan and PINCH zoom all still work — which matters, because zoomHeld() reads
-     visualViewport.scale to hold the safe-area decision mid-pinch. Scoped to the tab bar
-     deliberately: on an ancestor it would also override .rail's `pan-y` and fight the
-     preventDefault paths in attachGestures. NOT fixed with user-scalable=no / maximum-scale,
-     which would kill accessibility zoom, and NOT with anything touching the viewport meta —
-     see the WebKit-301994 comment at the top of this file. */
+     single tap and pan still work. Scoped to the tab bar deliberately: on an ancestor it
+     would also override .rail's `pan-y` and fight the preventDefault paths in
+     attachGestures. NOT fixed with user-scalable=no / maximum-scale, which would kill
+     accessibility zoom, and NOT with anything touching the viewport meta — see the
+     WebKit-301994 comment at the top of this file. (Pinch zoom is separately suppressed
+     app-wide since 24 Aug — the gesture* / touchmove-scale guards near the safe-area
+     backstops — with the same two constraints: accessibility zoom untouched, viewport meta
+     untouched. zoomHeld() stays as the guard for the zooms that remain possible.) */
   touch-action:manipulation;
   flex:1 1 0;min-width:0;height:var(--tabh);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -887,8 +901,7 @@ svg{display:block;flex:none}
      an inert label reading "Waitlist full" — near-identical words, one pressable, one not.
      "Join" stays an instruction. aria-label carries the full sentence either way. */
   .bookpill.wl .wln{display:none}
-  .bookpill.wl .wlj{margin-right:0}
-  .bookpill.wl{font-size:13.5px}
+  .bookpill.wl{font-size:13.5px;line-height:16px}
   .bookpill,.wlpill{width:66px;min-width:66px}
   .wlpill{font-size:11.5px}
 }
@@ -2559,18 +2572,17 @@ function pendingBookFor(date, time, studio){
    to book the class from the app at all. The `=== null` acceptance was borrowed from
    `fitbot.booking_matches`, where the studio had already been asked for and date+time
    legitimately pin the row; here the studio is the whole question, so the precedent that
-   applies is `fitbot.resolve_booking_id`, which refuses a row it cannot classify.
-   An unidentifiable clash at the same time is now a caution in the confirm sheet. */
+   applies is `fitbot.resolve_booking_id`, which refuses a row it cannot classify. */
 function alreadyBookedSlot(c){
   return realBookings().some(b => b.date === c.date && b.time === c.time &&
     studioOfBooking(b) === c.studio);
 }
-/* a real booking at the same date+time whose studio cannot be established — not proof of
-   anything, so it warns and never blocks */
-function unknownClashAt(c){
-  return realBookings().find(b => b.date === c.date && b.time === c.time &&
-    studioOfBooking(b) === null) || null;
-}
+/* unknownClashAt() is GONE (24 Aug 2026). It found a same-time booking whose studio could
+   not be classified and raised a caution that never blocked. The time-overlap side of
+   bookBlock() now covers it — an unclassifiable booking still says WHEN he is busy, and
+   "booked at the same time" is a refusal under the owner's no-double-booking rule whatever
+   the studio turns out to be. The honesty rule survives inside bookBlock: an unclassified
+   studio never satisfies the STUDIO block, only the time one. */
 /* Re-apply pending changes to the list that just arrived and decide any that have run out
    of time. Returns true when something was decided, so the caller re-renders even if the
    payload was byte-identical. */
@@ -3070,8 +3082,9 @@ function studiosOn(date){
    "realBookings() only". The rule that matters is CLAIM vs CAUTION, not real vs pending:
    pickState's green tick, `botBookDoubts`'s "it is on the account", the settle window —
    all still read realBookings() and cannot be satisfied by a row this app invented. This
-   map only ever produces a WARNING and a `Book anyway` pill, and the safe direction for a
-   warning is to appear. Leaving pending rows out meant tapping Book on a second class in
+   map only ever REFUSES things (since 24 Aug via bookBlock, whose studio side it feeds
+   conceptually; liveOccurrence still reads it directly), and the safe direction for a
+   refusal is to appear. Leaving pending rows out meant tapping Book on a second class in
    the same studio the same day dispatched a second run FIT was always going to refuse,
    and nothing on the screen said so until the sync landed minutes later. */
 function bookedStudiosOn(date){
@@ -3118,6 +3131,111 @@ function pickClash(c){
     const st = pickStateFor(p);
     return !!(st && st.cls && st.cls.date === c.date);
   }) || null;
+}
+
+/* ── hard blocks: one class at a time, one class per studio per day (24 Aug 2026) ────
+   The owner's rule, replacing the old "warn, never block" cautions: once something reads
+   Booked, nothing that would collide with it may be booked at all — not a second class in
+   the same studio that day (FIT refuses those anyway), and not anything whose time range
+   overlaps it (he cannot be in two rooms). A block is the SAFE direction here — the worst
+   a wrong block costs is a tap on a class he could not attend or that FIT would refuse,
+   while the old Book-anyway path cost a wasted dispatch at best and a no-show at worst.
+   Per CONTRACT §7a this is caution-side machinery: it refuses to ACT and never claims a
+   booking exists, so it reads the whole list — real bookings, the optimistic rows a tap
+   just created (P-12: his own tap lands everywhere instantly), and the occurrence a live
+   pick will take (P-17: a row that says Booked is booked, so it blocks like one). Every
+   CLAIM in the app still goes through realBookings().
+
+   busyOn(date): everything already holding a slice of that day. Sources, and why each:
+     bookingList()      real rows AND __pending optimistic ones (the tap is instant);
+     picks              only via pickStateFor — kinds waiting/open, i.e. exactly the
+                        occurrences pickIsLive would claim; booked/booking kinds are
+                        already in bookingList, dead kinds must not block (§12.4).
+   Durations come from the timetable. A busy item whose duration cannot be established
+   blocks only its own start minute — under-blocking is the accepted failure direction,
+   because a wrong block has no override and the old warnings are gone. */
+let busyCache = null;   // per render, dropped by resetDerived() like psCache
+function busyOn(date){
+  if(!busyCache) busyCache = {};
+  if(busyCache.hasOwnProperty(date)) return busyCache[date];
+  const out = [];
+  /* the duration FIT publishes for this slot; with no studio (an unclassifiable booking)
+     take the longest class at that time — it is his booking, so he is busy at most that long */
+  const durAt = function(time, studio){
+    let dur = null;
+    (timetable.classes||[]).forEach(function(x){
+      if(!x || x.date !== date || x.time !== time) return;
+      if(studio && x.studio !== studio) return;
+      const m = durationMins(x);
+      if(m !== null && (dur === null || m > dur)) dur = m;
+    });
+    return dur;
+  };
+  bookingList().forEach(function(b){
+    if(!b || b.date !== date || !b.time) return;
+    const st = b.__pending ? b.__pendingStudio : studioOfBooking(b);
+    const s = bookingStartMs(b);
+    out.push({studio: st || null, time: b.time,
+              name: b.name || (st ? (SLABEL[st]||st) : ''),
+              startMs: (s !== null && isFinite(s)) ? s : null,
+              mins: durAt(b.time, st)});
+  });
+  (picks||[]).forEach(function(p){
+    /* the pick's occurrence ON THIS DATE, if it has one — a weekly pick claims every week
+       it is live for, not just the next one, so the question is per occurrence and the
+       answer is pickIsLive (§12.4), never re-derived. */
+    const c = (timetable.classes||[]).find(function(x){
+      return x && x.date === date && x.time === p.time && x.studio === p.studio &&
+             x.day === p.day && (!pickDate(p) || pickDate(p) === date);
+    });
+    if(!c) return;
+    if(bookingForClass(c)) return;        // that day is really booked — counted above
+    /* an occurrence whose window opened longer ago than the bot's grace is one no pass
+       will ever take (same rule as liveOccurrence / pickState) — it must not block */
+    const om = opensAtMs(c);
+    if(isFinite(om) && om < Date.now() - BOOK_GRACE_MS) return;
+    let live = false;
+    try{ live = pickIsLive(p, c); }catch(e){ live = false; }
+    if(!live) return;
+    const t = new Date(c.start_iso||'').getTime();
+    out.push({studio: p.studio, time: c.time,
+              name: c.name || SLABEL[p.studio] || p.studio,
+              startMs: isFinite(t) ? t : null,
+              mins: durationMins(c)});
+  });
+  busyCache[date] = out;
+  return out;
+}
+/* Why this class cannot be booked — {kind:'studio'|'time', by:<busy item>} — or null.
+   The class's own slot (same time AND same studio) never blocks itself: that is `mine`
+   or its own pick, and the row answers those first. A studio hit outranks a time hit:
+   it is the more durable fact (the whole day, not one hour). */
+function bookBlock(c){
+  if(!c || !c.date) return null;
+  const busy = busyOn(c.date);
+  const cs = new Date(c.start_iso||'').getTime();
+  const ce = isFinite(cs) ? cs + Math.max(1, durationMins(c) || 1) * 60000 : NaN;
+  let hit = null;
+  for(let i = 0; i < busy.length; i++){
+    const x = busy[i];
+    if(x.time === c.time && x.studio === c.studio) continue;   // this class itself
+    if(x.studio && x.studio === c.studio) return {kind:'studio', by:x};
+    if(!hit && x.startMs !== null && isFinite(cs)){
+      const xe = x.startMs + Math.max(1, x.mins || 1) * 60000;
+      if(x.startMs < ce && cs < xe) hit = {kind:'time', by:x};
+    }
+  }
+  return hit;
+}
+/* One sentence saying why, shared by the row warning, the sheet note and the refusal
+   toasts, so no two surfaces can describe one block differently. */
+function blockLine(blk, c){
+  if(!blk) return '';
+  if(blk.kind === 'studio')
+    return (SLABEL[c.studio]||c.studio)+' already booked today — FIT allows one per day';
+  const x = blk.by;
+  const when = x.time ? fmt12(x.time).full : '';
+  return 'Clashes with your '+(when ? when+' ' : '')+(x.name || 'booking');
 }
 
 /* Every future timetable occurrence of a saved pick, soonest first. */
@@ -3208,7 +3326,7 @@ function pickMiss(p){
    pass — every input it reads is a module global, so anything that changes one of them
    drops the memo through resetDerived(). */
 let psCache = null;
-function resetDerived(){ psCache = null; heroCache = null; }
+function resetDerived(){ psCache = null; heroCache = null; busyCache = null; }
 function pickStateFor(p){
   const k = pickKey(p);
   if(!psCache) psCache = {};
@@ -3419,7 +3537,7 @@ function chipsHTML(){
 }
 
 /* ── class row ──────────────────────────────────────────────── */
-function classRowHTML(c, bookedStudios){
+function classRowHTML(c){
   const t = fmt12(c.time);
   const av = availInfo(c);
   const opensMs = opensAtMs(c);
@@ -3439,11 +3557,15 @@ function classRowHTML(c, bookedStudios){
      CONTRACT §7a and D-41. If the booking never lands, the pick row and the Booked tab both
      say so loudly, which is the whole failure story the owner asked for. */
   const willBook = !!mine || (picked && pickIsLive(pk, c));
-  const conflict = (mine || av.full) ? null : bookedStudios[c.studio];
+  /* The reason this row cannot be offered at all — a same-studio class already taken that
+     day, or a time overlap with something booked. Replaces the old one-per-day CAUTION
+     ("Book anyway"): the owner's rule since 24 Aug is that a collision is a refusal, not a
+     question. Suppressed for a row that is itself booked or claimed — Booked outranks. */
+  const block = (mine || willBook) ? null : bookBlock(c);
   /* AUDIT (18 Aug) — `picked` used to suppress the clash line, which disabled the one
      surface that could report a genuine two-picks-one-studio-one-day conflict exactly
      when it was real. The clash is a fact about the pick beside it, not about this row. */
-  const clash = (mine || conflict || av.full) ? null : pickClash(c);
+  const clash = (mine || block || av.full) ? null : pickClash(c);
 
   /* The status line now only says what the action column CANNOT. "Open now" was six green
      flags down one screen all restating the Book button beside them, and "Not open yet" is
@@ -3477,30 +3599,42 @@ function classRowHTML(c, bookedStudios){
   const staff = c.staff && String(c.staff).trim() ? String(c.staff).trim() : '';
   const tail = (SLABEL[c.studio]||c.studio) + (staff ? ' · ' + staff : '');
 
-  /* ── the action column: one slot, one width, five states, decided once ──────────────
+  /* ── the action column: one slot, one width, six states, decided once ───────────────
      Precedence, and why it is this order (amended by audit round 2 — a pick's claim used to
-     sit above the full states, so a full class held by a pick was painted as booked):
+     sit above the full states, so a full class held by a pick was painted as booked; and on
+     24 Aug — a collision became a refusal rather than a "Book anyway" caution):
        1. it is on the account                    → Booked (inert)
-       2. full AND its window is open, waitlist   → Join Waitlist
-       3. full AND its window is open, no waitlist→ an inert LABEL, not a disabled button:
+       2. it collides with something booked       → an inert LABEL (One per day / Clashes):
+          same studio already taken that day, or a time overlap. Above the waitlist states
+          because every action this slot could offer — book now, save the date, join the
+          waitlist — ends in a class he cannot attend or FIT will refuse.
+       3. full AND its window is open, waitlist   → Join Waitlist
+       4. full AND its window is open, no waitlist→ an inert LABEL, not a disabled button:
           a shape is what says "press me", so removing the shape removes the question.
           Rendered as a <span> for the same reason.
-       4. a pick will take this occurrence        → Booked (inert)
-       5. its window has not opened               → Book, which saves a pick
-       6. otherwise                               → Book, right now
-     The `open &&` guard on 2 and 3 is what keeps a not-yet-open row out of them: before a
+       5. a pick will take this occurrence        → Booked (inert)
+       6. its window has not opened               → Book, which saves a pick
+       7. otherwise                               → Book, right now
+     The `open &&` guard on 3 and 4 is what keeps a not-yet-open row out of them: before a
      window opens nobody can hold a place in the class, so a "full" flag on a future row is
      stale data from the week the app copied it, and offering a waitlist against it would be
-     inventing a fact. 2 and 3 sit above 4 because FIT's answer outranks our intention. */
+     inventing a fact. 3 and 4 sit above 5 because FIT's answer outranks our intention. */
   let actHTML;
   if(!!mine){
     actHTML = '<span class="wlpill go">'+G.check+'<span>Booked</span></span>';
+  } else if(block){
+    /* A collision is a refusal, not a question (24 Aug). Inert for the same reason the
+       full states are: no shape, no poke. The longform line below carries the why, so the
+       refusal is never silent (P-18). Grey, not red — nothing is wrong, he is simply
+       already committed, and the amber line beneath is the explanation. */
+    actHTML = '<span class="wlpill">'+G.noentry+'<span>'+
+      (block.kind==='studio' ? 'One per day' : 'Clashes')+'</span></span>';
   } else if(open && av.full && av.waitlist){
     /* A full class you do not hold outranks a pick's claim on it: the pick will try and be
        refused, and meanwhile there is a real waitlist place to be had. */
     actHTML = '<button class="bookpill wl" data-book="'+esc(c.bid)+'" data-mode="waitlist" '+
       'aria-label="Join the waitlist for '+esc(c.name || c.studio)+'">'+
-      '<span class="wlj">Join </span><span class="wln">Waitlist</span></button>';
+      '<span class="wlj">Join</span><span class="wln">Waitlist</span></button>';
   } else if(open && av.full){
     actHTML = '<span class="wlpill bad">'+G.noentry+'<span>Waitlist full</span></span>';
   } else if(shownBooked){
@@ -3509,11 +3643,8 @@ function classRowHTML(c, bookedStudios){
     actHTML = '<button class="bookpill" data-book="'+esc(c.bid)+'" data-mode="pick" '+
       'aria-label="Book '+esc(c.name || c.studio)+' on '+esc(longDate(c.date))+'">Book</button>';
   } else {
-    /* A same-day booking in the same studio is a WARNING (bookings.json can be up to 8
-       hours stale), never a block. */
-    actHTML = '<button class="bookpill'+(conflict?' caution':'')+'" data-book="'+esc(c.bid)+'" '+
-      'data-mode="now" aria-label="'+(conflict?'Book anyway — you already have this studio today'
-                                              :'Book this class now')+'">Book</button>';
+    actHTML = '<button class="bookpill" data-book="'+esc(c.bid)+'" '+
+      'data-mode="now" aria-label="Book this class now">Book</button>';
   }
 
   return '<div class="crow'+(shownBooked?' isbooked':'')+(av.full&&!shownBooked?' isfull':'')+
@@ -3527,8 +3658,8 @@ function classRowHTML(c, bookedStudios){
           '<span>'+esc(tail)+'</span></span>'+
       '</div>'+
       /* a warning gets its own full-width line so it can wrap instead of truncate */
-      (conflict ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
-        '<span>'+esc(SLABEL[c.studio]||c.studio)+' already booked today — FIT allows one per day</span></span></div>' : '')+
+      (block ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
+        '<span>'+esc(blockLine(block, c))+'</span></span></div>' : '')+
       (clash ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
         '<span>Clashes with your '+esc(fmt12(clash.time).full)+' pick</span></span></div>' : '')+
     '</div>'+
@@ -3577,7 +3708,6 @@ function renderBook(){
     return;
   }
   const list = classesFor(selDate);
-  const bookedStudios = bookedStudiosOn(selDate);
   /* The day heading carried "N left · M open". It is gone with the heading: the bucket
      headings already count their own rows, and "open" stopped meaning anything once every
      future class got a Book button too. A summary that restates the screen under it is noise. */
@@ -3623,7 +3753,7 @@ function renderBook(){
       const rows = list.filter(b.f);
       if(!rows.length) return;
       listHTML += '<div class="ghead tight">'+b.k+'<span class="gh-r">'+rows.length+'</span></div>'+
-                  '<div class="group">'+rows.map(c=>classRowHTML(c,bookedStudios)).join('')+'</div>';
+                  '<div class="group">'+rows.map(c=>classRowHTML(c)).join('')+'</div>';
     });
     /* The footer explained the two controls, the booking window and what a tap does. The
        controls say all of that by being a Book button and a repeat glyph, and the rest was
@@ -5090,6 +5220,10 @@ function findClass(bid){ return (timetable.classes||[]).find(c => String(c.bid)=
 function openClassSheet(bid){
   const c = findClass(bid);
   if(!c){ toast('That class is no longer on the timetable — pull down to refresh.', 3600); return; }
+  /* This sheet is the one fresh surface built OUTSIDE a render pass (a row tap reaches it
+     directly), so it must drop the per-render memos itself — a stale busyCache here drew
+     a refusal for a class whose collision had meanwhile expired (audit F4). */
+  resetDerived();
   const av = availInfo(c);
   const opensMs = opensAtMs(c);
   const open = isFinite(opensMs) && opensMs <= Date.now();
@@ -5098,36 +5232,37 @@ function openClassSheet(bid){
   const dur = durationMins(c);
   const t = fmt12(c.time);
   const mine = bookingForClass(c);
-  const conflict = mine ? null : bookedStudiosOn(c.date)[c.studio];
-  const unknownClash = mine ? null : unknownClashAt(c);
-  const clash = (mine || conflict) ? null : pickClash(c);
 
   /* The sheet's primary mirrors the row's action column exactly — same precedence, same
-     five answers. Two controls saying different things about one class is how the "Book
+     answers. Two controls saying different things about one class is how the "Book
      anyway over a note telling you to cancel what you already hold" defect happened. */
   /* Same predicate and the same precedence as the row (classRowHTML) — two controls giving
      one class two different answers is how the "Book anyway over a note telling you to cancel
      what you already hold" defect happened, and the audit found the sheet drifting again. */
   const pkHere = pickFor(c);
   const willBook = !!mine || (!!pkHere && pickIsLive(pkHere, c));
+  /* Same rule as the row (24 Aug): a collision with something booked is a refusal, drawn
+     inert, with the note below carrying the why. */
+  const block = (mine || willBook) ? null : bookBlock(c);
+  const clash = (mine || block) ? null : pickClash(c);
   let primary;
   if(!!mine){
     primary = '<div class="btn inert go">'+G.check+' Booked</div>';
+  } else if(block){
+    /* Not a disabled <button>: the row's whole argument for the inert states is that a
+       greyed-out pill is exactly what people keep poking. It applies here too. */
+    primary = '<div class="btn inert">'+G.noentry+' '+
+      (block.kind==='studio' ? 'One per day' : 'Clashes')+'</div>';
   } else if(open && av.full && av.waitlist){
     primary = '<button class="btn filled" data-act="waitlist" data-bid="'+esc(c.bid)+'">Join Waitlist</button>';
   } else if(open && av.full){
-    /* Not a disabled <button>: the row's whole argument for the inert states is that a
-       greyed-out pill is exactly what people keep poking. It applies here too. */
     primary = '<div class="btn inert">'+G.noentry+' Waitlist full</div>';
   } else if(willBook && !(open && av.full)){
     primary = '<div class="btn inert go">'+G.check+' Booked</div>';
   } else if(!open){
     primary = '<button class="btn filled" data-act="schedule" data-bid="'+esc(c.bid)+'">Book</button>';
   } else {
-    /* a same-day booking in this studio is a caution, not a lock — bookings.json can be
-       hours stale and FIT, not this app, is the authority on what is allowed */
-    primary = '<button class="btn filled" data-act="booknow" data-bid="'+esc(c.bid)+'">'+
-      (conflict ? 'Book anyway' : 'Book')+'</button>';
+    primary = '<button class="btn filled" data-act="booknow" data-bid="'+esc(c.bid)+'">Book</button>';
   }
   /* A class held only by a one-off pick has nowhere else in this sheet to be undone — the
      weekly switch is not its control. Same word as the Booked tab uses, because to the
@@ -5135,18 +5270,18 @@ function openClassSheet(bid){
   const shownBookedSheet = !!mine || (willBook && !(open && av.full));
   const undoOne = (oneOff && !mine && !recurring && shownBookedSheet)
     ? '<button class="btn gray danger" data-act="unschedule" data-bid="'+esc(c.bid)+'">Cancel booking</button>' : '';
-  const conflictWhen = conflict ? (conflict.time_raw || (conflict.time ? fmt12(conflict.time).full : '')) : '';
-  const conflictNote = conflict
+  const blockBy = block ? block.by : null;
+  const blockWhen = blockBy && blockBy.time ? fmt12(blockBy.time).full : '';
+  const conflictNote = block
     ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
-      '<div class="rt"><b>'+esc(SLABEL[c.studio]||c.studio)+' already booked today</b><span>'+
-      esc((conflict.name||'A class')+(conflictWhen ? ' at '+conflictWhen : ''))+
-      '. FIT allows one class per studio per day — cancel that one first, or this booking may be refused.'+
-      '</span></div></div></div>'
-    : unknownClash
-    ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
-      '<div class="rt"><b>Something else is booked at this time</b><span>'+
-      esc((unknownClash.name||'A booking')+' is on your account at '+t.full+' and the app can’t tell '+
-      'which studio it belongs to. Booking this may still work — check afterwards if it doesn’t.')+
+      '<div class="rt"><b>'+esc(block.kind==='studio'
+        ? (SLABEL[c.studio]||c.studio)+' already booked today'
+        : 'You’re booked at that time')+'</b><span>'+
+      esc(block.kind==='studio'
+        ? (blockBy.name||'A class')+(blockWhen ? ' at '+blockWhen : '')+
+          '. FIT allows one class per studio per day — cancel that one first if you want this one instead.'
+        : (blockBy.name||'Your booking')+(blockWhen ? ' at '+blockWhen : '')+
+          ' overlaps this class — cancel it first if you want this one instead.')+
       '</span></div></div></div>'
     : clash
     ? '<div class="group" style="margin:0 0 12px"><div class="rulerow"><div class="ri" data-tone="amber">'+G.warn+'</div>'+
@@ -5313,8 +5448,15 @@ async function bookNow(bid, fromSheet, waitlist){
      both cases rather than asserting FIT has it (round 2). */
   if(already){ toast(already.__pending ? 'That one is already on your Booked list.'
                                        : 'You’re already booked into this class.', 2800); return; }
-  const conflict = bookedStudiosOn(c.date)[c.studio];
-  const unknownClash = unknownClashAt(c);
+  /* Guard the ACTION, not just the button (24 Aug): a blocked row renders no Book button,
+     but a poll can land between the render and the tap, and the sheet's button lives on
+     until it closes. A refusal must never be silent (P-18), so it says why.
+     resetDerived first: busyCache is a per-render memo and this path can be reached with
+     no render since it was filled (audit F4 — a stale memo must not refuse a class that
+     has come free, nor clear one that has just been taken). */
+  resetDerived();
+  const blk = bookBlock(c);
+  if(blk){ toast(blockLine(blk, c)+'.', 4200); if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
   /* a booking made this close to the class cannot be cancelled for free (FIT's line is one
      hour) and the dispatch itself takes about a minute — say so rather than let §7's
      "free cancel" promise be made for us by silence */
@@ -5324,10 +5466,12 @@ async function bookNow(bid, fromSheet, waitlist){
   /* THE RULE FOR ASKING, and it is the same everywhere in the app now: you are asked only
      when there is something you need to know. A clean booking of a free class is not a
      question — it just happens, which is what "it should just work" means. A booking that
-     may be refused, that cannot be cancelled for free, or that is a WAITLIST place rather
-     than a booking, is carrying a fact worth a tap. Waitlist always asks, because a place
-     on it is not a place in the class and can turn into one hours before the class starts. */
-  const mustAsk = !!(waitlist || conflict || unknownClash || tight);
+     cannot be cancelled for free, or that is a WAITLIST place rather than a booking, is
+     carrying a fact worth a tap. Waitlist always asks, because a place on it is not a place
+     in the class and can turn into one hours before the class starts. (The old "may be
+     refused" ask is gone — a same-studio or same-time collision now refuses outright,
+     above, rather than asking.) */
+  const mustAsk = !!(waitlist || tight);
   if(mustAsk){
     const choice = await actionSheet({
       title: waitlist ? 'Join the waitlist?' : 'Book ' + (c.name || c.studio) + '?',
@@ -5336,15 +5480,22 @@ async function bookNow(bid, fromSheet, waitlist){
                            'spot opens up you are put in the class automatically, which can '+
                            'happen as late as an hour before it starts. It also uses up your '+
                            'one class in this studio for the day.' : '') +
-               (conflict ? '\nYou already have ' + (SLABEL[c.studio]||c.studio) +
-                           ' that day, and only one class per studio per day is allowed — this may be refused.' : '') +
-               (!conflict && unknownClash ? '\nSomething else is already booked at this time '+
-                           'and the app can’t tell which studio it is.' : '') +
                (tight ? '\nIt starts soon, so you won’t be able to cancel it for free — '+
                         'not turning up would count as a no-show.' : ''),
-      actions: [{label: waitlist ? 'Join Waitlist' : (conflict ? 'Book Anyway' : 'Book'), style:'default'}]
+      actions: [{label: waitlist ? 'Join Waitlist' : 'Book', style:'default'}]
     });
     if(choice !== 0){ if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
+    /* AUDIT (24 Aug, F2) — the sheet is awaited, and the poll keeps landing under it. The
+       guards above ran BEFORE the await, so a booking that arrived while he read the
+       sheet — the bot's own snipe included — was dispatched into. Re-check both after a
+       yes, against fresh state; the tight path this sheet exists for is exactly the one
+       where the surplus booking cannot be cancelled for free. */
+    const again = bookingForClass(c);
+    if(again){ toast(again.__pending ? 'That one is already on your Booked list.'
+                                     : 'You’re already booked into this class.', 2800); return; }
+    resetDerived();
+    const blk2 = bookBlock(c);
+    if(blk2){ toast(blockLine(blk2, c)+'.', 4200); if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
   }
 
   /* A waitlist place is NOT a booking and must never be drawn as one. It has no FIT booking
@@ -5379,9 +5530,10 @@ async function bookNow(bid, fromSheet, waitlist){
      persisted — so the worst case is that it disappears at the next launch, never that a
      phantom booking outlives the session. reconcilePending() withdraws it with a toast if
      FIT does not have it SETTLE_MS from now.
-     Since 18 Aug the BOOK tab reads it too (bookingForClass / bookedStudiosOn): the row
-     says "Booked", loses its Book button, and every other class in that studio that day
-     picks up the one-per-day caution — immediately, rather than after the next sync.
+     Since 18 Aug the BOOK tab reads it too (bookingForClass / busyOn): the row says
+     "Booked", loses its Book button, and every colliding class — same studio that day, or
+     overlapping in time — flips to its inert block label immediately, rather than after
+     the next sync (24 Aug: the caution became a refusal).
      Everything that makes a CLAIM still reads realBookings() and cannot see this row. */
   const optimistic = {
     date: c.date, time: c.time,
@@ -5948,6 +6100,16 @@ function handlePickToggle(bid, btn){
     removePick(c.day, c.time, c.studio, '');
     toast('No longer booking every ' + WD_LONG[dowMon0(c.date)], 2200);
   } else {
+    /* AUDIT (24 Aug) — the glyph was the one commit path the collision blocks did not
+       guard: it wrote a weekly pick from a blocked row, said "Every Wednesday", and the
+       row flipped from its refusal straight to "Booked" — while for a TIME collision the
+       bot would then book the overlap for real (it enforces FIT's studio limit, not the
+       no-two-rooms rule, which lives only here). Same rule as bookNow/scheduleClass now:
+       a colliding date refuses out loud; the glyph on any clear week of the same slot
+       still works, and REMOVING a pick is never blocked. */
+    resetDerived();
+    const blk = bookBlock(c);
+    if(blk){ toast(blockLine(blk, c)+'.', 4200); return; }
     addPick(c.day, c.time, c.studio, c.name, null);
     dropRedundantOneOffs(c.day, c.time, c.studio);
     toast('Every ' + WD_LONG[dowMon0(c.date)], 2200);
@@ -5973,6 +6135,13 @@ function scheduleClass(bid){
     toast('That one is already booked every ' + WD_LONG[dowMon0(c.date)], 3000);
     return;
   }
+  /* Same refusal as bookNow (24 Aug): saving the date for a class that collides with
+     something already booked ends in FIT refusing it or a class he cannot attend. The
+     button on a blocked row is already gone; this catches the sheet and any stale render,
+     and it speaks (P-18). resetDerived: same stale-memo argument as bookNow (audit F4). */
+  resetDerived();
+  const blk = bookBlock(c);
+  if(blk){ toast(blockLine(blk, c)+'.', 4200); return; }
   addPick(c.day, c.time, c.studio, c.name, c.date);
   warnPickClash(c);
   afterPickChange();
@@ -6117,6 +6286,14 @@ document.addEventListener('click', function(e){
     else if(a === 'togglepick'){
       const c = findClass(act.dataset.bid);
       if(!c){ toast('That class is no longer listed — pull down to refresh.', 3600); return; }
+      /* AUDIT (24 Aug) — same guard as handlePickToggle: turning the weekly switch ON
+         from a colliding date is the third commit path and must refuse like the other
+         two. Turning it OFF is never blocked. */
+      if(pickIndex(c.day, c.time, c.studio, '') < 0){
+        resetDerived();
+        const blk = bookBlock(c);
+        if(blk){ toast(blockLine(blk, c)+'.', 4200); return; }
+      }
       const on = togglePick(c.day, c.time, c.studio, c.name, null);
       act.setAttribute('aria-checked', String(on));
       /* a weekly pick covers every date in the slot — drop the one-offs it makes redundant */
@@ -6283,6 +6460,30 @@ window.addEventListener('load', ()=>{ fixSafeAreaTop(); fixBottomInset(); });
 setTimeout(()=>{ fixSafeAreaTop(); fixBottomInset(); }, 400);
 window.addEventListener('resize', ()=>{ fixSafeAreaTop(); fixBottomInset(); });
 window.addEventListener('orientationchange', ()=> setTimeout(()=>{ fixSafeAreaTop(); fixBottomInset(); }, 250));
+
+/* ── pinch zoom does nothing (24 Aug 2026, owner's request) ─────────────────────────
+   Suppressed in JS, NOT in the viewport meta: `maximum-scale` / `user-scalable=no` would
+   also kill the OS accessibility zoom (triple-tap / three-finger), and any edit to that
+   meta line risks re-opening the WebKit-301994 saga — see the head comment. Safari routes
+   a two-finger pinch through its non-standard `gesture*` events (and, standalone, through
+   touchmove with a `scale` field); preventing those stops the page zoom and nothing else.
+   The system accessibility zoom never reaches these events, so it still works — which is
+   also why zoomHeld() stays: visualViewport.scale can still move under accessibility zoom
+   on some iOS builds, and holding the safe-area decision mid-zoom costs nothing. */
+['gesturestart','gesturechange','gestureend'].forEach(function(t){
+  document.addEventListener(t, function(e){ e.preventDefault(); }, {passive:false});
+});
+document.addEventListener('touchmove', function(e){
+  /* ANY multi-finger move is cancelled from its first frame (audit R2-2). A scale
+     threshold was tried and dropped: `e.scale` is cumulative, so a pinch's first frames
+     sit within any threshold — and WebKit commits the gesture's disposition from those
+     first uncancelled frames, after which later touchmoves arrive cancelable:false and
+     preventDefault is a no-op. Cancelling from frame one is the only order that works.
+     The deliberate cost is two-finger scrolling inside the app, which nothing here uses;
+     one-finger scroll, the axis-locked swipes and pull-to-refresh are single-touch and
+     untouched. `cancelable` is checked so late native-owned frames are not no-op noise. */
+  if(e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault();
+}, {passive:false});
 
 /* ── boot ───────────────────────────────────────────────────── */
 (function boot(){
