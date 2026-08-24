@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v11';  // v10: viewport-fit=cover removed — the bar sits at the physical bottom
+const CACHE = 'fit-booker-v12';  // v12: 24 Aug — double-booking blocks, static rail, waitlist pill, pinch kill
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
