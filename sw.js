@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v13';  // v13: 10 Nov — StudioONE studio (Body Pump, IGNITE, Metabolic, Strength, WOD)
+const CACHE = 'fit-booker-v14';  // v14: 10 Nov — a waitlist place draws as Waitlisted, never Booked
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

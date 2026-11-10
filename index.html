@@ -595,6 +595,7 @@ svg{display:block;flex:none}
 .wlpill.go{color:var(--go)}
 /* A closed waitlist is strictly worse than an open one, so it cannot be the calmer colour. */
 .wlpill.bad{color:var(--bad)}
+.wlpill.amb{color:var(--amber)}
 .wlpill svg{width:14px;height:14px}
 /* The sheet's inert primaries. Same argument as .wlpill: no fill, because a filled grey
    rectangle is a button that does not work. */
@@ -2539,6 +2540,28 @@ function bookingId(b){
    (fitbot.cmd_cancel filters on exactly that), so a row without one must not be offered a
    Cancel button that could never work. */
 function isCancellable(b){ return !!(b && !b.__pending && String(b.cancel_url || b.booking_id || '')); }
+/* A WAITLIST place IS listed on the account page (found 10 Nov 2026: a row whose location
+   read "StudioONE Waitlisted (7th in queue)", with a /cancelbooking/waitlist/<id> link and no
+   booking id). Until then every synced row was taken for a booking, so the class drew as
+   Booked on the Book tab, the sheet and the Booked tab while the member held no spot at all.
+   A waitlist place is not a booking: FIT can promote it into one up to the class, and
+   nothing here may draw it as Booked or count it as one. The bot now flags it (`waitlist`,
+   `queue_pos`); the link and the cell text are read too, so rows synced before the flag
+   existed — for any studio — are honest as well. */
+function isWaitlistRow(b){
+  if(!b || b.__pending || b.__scheduled) return false;
+  if(b.waitlist === true) return true;
+  if(/\/cancelbooking\/waitlist\//i.test(String(b.cancel_url||''))) return true;
+  return /waitlist/i.test(String(b.location||''));
+}
+function waitlistPos(b){
+  if(!b) return null;
+  if(Number.isInteger(b.queue_pos) && b.queue_pos > 0) return b.queue_pos;
+  const m = String(b.location||'').match(/(\d{1,4})\s*(?:st|nd|rd|th)?\s+in\s+(?:the\s+)?queue/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+function ordinal(n){ const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]); }
+function waitlistLabel(b){ const p = waitlistPos(b); return p ? 'Waitlisted, '+ordinal(p)+' in queue' : 'Waitlisted'; }
 function bookingKey(b){
   if(!b) return '';
   const id = bookingId(b);
@@ -2557,7 +2580,11 @@ function bookingList(){
 }
 /* rows FIT has actually confirmed — everything that makes a CLAIM must use this, so an
    optimistic row this app invented can never be read back as evidence of a real booking */
-function realBookings(){ return bookingList().filter(b => b && !b.__pending); }
+/* A waitlist place is excluded here too (10 Nov 2026): it is on the account, but it is not
+   a booking FIT has confirmed, so no claim — a pick's green tick, "already booked", an
+   optimistic row settling as real — may ever be satisfied by one. bookingList() still
+   carries it, so the one-per-studio-per-day block and the Booked tab still see it. */
+function realBookings(){ return bookingList().filter(b => b && !b.__pending && !isWaitlistRow(b)); }
 function findBookingIdx(key){ return bookingList().findIndex(b => bookingKey(b) === key); }
 function hasPending(key){
   return pendingCancels.some(p=>p.key===key) || pendingBooks.some(p=>p.key===key);
@@ -3177,7 +3204,7 @@ function busyOn(date){
     if(!b || b.date !== date || !b.time) return;
     const st = b.__pending ? b.__pendingStudio : studioOfBooking(b);
     const s = bookingStartMs(b);
-    out.push({studio: st || null, time: b.time,
+    out.push({studio: st || null, time: b.time, waitlist: isWaitlistRow(b),
               name: b.name || (st ? (SLABEL[st]||st) : ''),
               startMs: (s !== null && isFinite(s)) ? s : null,
               mins: durAt(b.time, st)});
@@ -3234,7 +3261,9 @@ function bookBlock(c){
 function blockLine(blk, c){
   if(!blk) return '';
   if(blk.kind === 'studio')
-    return (SLABEL[c.studio]||c.studio)+' already booked today — FIT allows one per day';
+    return (SLABEL[c.studio]||c.studio)+(blk.by && blk.by.waitlist
+      ? ' waitlist place already held today — FIT counts it as your one per day'
+      : ' already booked today — FIT allows one per day');
   const x = blk.by;
   const when = x.time ? fmt12(x.time).full : '';
   return 'Clashes with your '+(when ? when+' ' : '')+(x.name || 'booking');
@@ -3549,7 +3578,13 @@ function classRowHTML(c){
   const hasRec = pickIndex(c.day, c.time, c.studio, '') >= 0;
   /* the booking that IS this class outranks everything: it is not a conflict with itself,
      it cannot be booked again, and it is the most useful thing this row can say */
-  const mine = bookingForClass(c);
+  const held = bookingForClass(c);
+  /* A WAITLIST place for this class is on the account too, but it is not a booking: it is
+     drawn as Waitlisted (with the queue position), never as Booked, and it never satisfies
+     `mine` (10 Nov 2026 — it did, and the member read "Booked" for a class she had no
+     place in). */
+  const onWaitlist = (held && isWaitlistRow(held)) ? held : null;
+  const mine = onWaitlist ? null : held;
   /* "Booked" is the answer for anything that is on the account OR that something is now
      going to put there. A pick is not a booking and this row is the ONE place that blurs
      them, deliberately: the owner asked for a tap to read as done rather than as scheduled
@@ -3583,7 +3618,10 @@ function classRowHTML(c){
   const shownBooked = !!mine || (willBook && !(open && av.full));
 
   let stTxt = '', stCls = '', stG = '';
-  if(shownBooked){
+  if(onWaitlist){
+    /* the one fact this row must carry: a queue place, not a spot in the class */
+    stTxt = waitlistLabel(onWaitlist)+' — not booked'; stCls = 'amb'; stG = G.clock;
+  } else if(shownBooked){
     stTxt = '';                                   // the action column says "Booked"
   } else if(av.full){
     /* av.cls, not a hardcoded tone: the row and the class detail sheet were painting the
@@ -3622,7 +3660,11 @@ function classRowHTML(c){
      stale data from the week the app copied it, and offering a waitlist against it would be
      inventing a fact. 3 and 4 sit above 5 because FIT's answer outranks our intention. */
   let actHTML;
-  if(!!mine){
+  if(onWaitlist){
+    /* Above everything: the account already holds a waitlist place for THIS class, so there
+       is nothing to book, join or pick. Amber, inert — a queue place is a wait, not a spot. */
+    actHTML = '<span class="wlpill amb">'+G.clock+'<span>Waitlisted</span></span>';
+  } else if(!!mine){
     actHTML = '<span class="wlpill go">'+G.check+'<span>Booked</span></span>';
   } else if(block){
     /* A collision is a refusal, not a question (24 Aug). Inert for the same reason the
@@ -4709,6 +4751,9 @@ function renderBooked(){
       /* correctness #10 — say "Studio unknown" rather than asserting Exhale */
       const stk = studioOfBooking(b), st = stk || 'exhale';
       const stLabel = stk ? (SLABEL[stk]||stk) : 'Studio unknown';
+      /* a waitlist place: no spot, no free-cancel clock, no Confirm, no Cancel from here —
+         the row says exactly that and nothing a booking would say (10 Nov 2026) */
+      const wl = !sched && isWaitlistRow(b);
       // the date is the group heading now; the row says the time and the studio
       const when = (b.time_raw || (b.time ? fmt12(b.time).full : ''));
       const startMs = bookingStartMs(b);
@@ -4731,7 +4776,7 @@ function renderBooked(){
          about a cancel that will land in time; there is no cancel to land here, and the
          row is making a durational promise about a booking FIT has not confirmed. */
       let free = '', freeCls = 'go', freeAt = null, freeG = null;
-      if(startMs && !pending){
+      if(startMs && !pending && !wl){
         const freeUntil = startMs - 3600000, dt = freeUntil - Date.now();
         if(dt > CANCEL_LATENCY_MS){
           freeAt = freeUntil - CANCEL_LATENCY_MS;
@@ -4750,7 +4795,7 @@ function renderBooked(){
          The line says what will happen and when, in Sydney wall-clock terms, and it tells
          the truth about whether the sweep is actually armed: during the dry run it must
          not promise a cancellation that will not happen (CONTRACT §7). */
-      const nc = !sched && needsConfirm(b);
+      const nc = !sched && !wl && needsConfirm(b);
       let cf = '', cfCls = 'amb', cfAt = null;
       if(nc){
         const dl = confirmDeadlineMs(b), now = Date.now();
@@ -4791,7 +4836,7 @@ function renderBooked(){
          state this screen has: it is a no-show the system can no longer prevent. It must
          not sit in the same calm amber as one with two days to run. */
       const bad = (bw && bw.tone === 'bad') || cfCls === 'bad';
-      return '<div class="crow'+(bad ? ' alarm' : (nc ? ' tocheck' : ''))+'">'+
+      return '<div class="crow'+(bad ? ' alarm' : ((nc || wl) ? ' tocheck' : ''))+'">'+
         '<div class="cbody">'+
           '<div class="cname">'+esc(b.name||'Class')+'</div>'+
           '<div class="cmeta"><span class="ctail"><i class="sdot" style="background:'+(stk?(SCOLOR[stk]||'var(--ink3)'):'var(--ink3)')+'"></i>'+
@@ -4810,7 +4855,11 @@ function renderBooked(){
                 '<span>'+esc(bw.text)+'</span></span></div>' : '')+
           /* no cancel link on the row ⇒ the bot cannot cancel it at all (it only ever acts
              on rows that carry one). Say so instead of offering a button that cannot work. */
-          (!pending && !isCancellable(b)
+          (wl
+            ? '<div class="cmeta"><span class="cst amb longform">'+G.clock+
+              '<span>'+esc(waitlistLabel(b))+' — not booked. FIT moves you into the class if a '+
+              'place frees up, so leave the waitlist in the FIT app if you won’t go.</span></span></div>' : '')+
+          (!pending && !wl && !isCancellable(b)
             ? '<div class="cmeta"><span class="cst amb longform">'+G.warnS+
               '<span>This one can only be cancelled at the club</span></span></div>' : '')+
           (b.__dupe
@@ -4835,7 +4884,7 @@ function renderBooked(){
           (sched ? '<button class="btn-sm redtxt" data-unbook="'+
                      esc(b.__pickDay+'|'+b.__pickTime+'|'+b.__pickStudio+'|'+(b.__pickDate||''))+
                    '">Cancel</button>'
-                 : (!pending && isCancellable(b)
+                 : (!pending && !wl && isCancellable(b)
                      ? '<button class="btn-sm redtxt" data-cancel="'+esc(bookingKey(b))+'">Cancel</button>' : ''))+
         '</div>'+
       '</div>';
@@ -5236,7 +5285,9 @@ function openClassSheet(bid){
   const oneOff = pickIndex(c.day,c.time,c.studio,c.date) >= 0;
   const dur = durationMins(c);
   const t = fmt12(c.time);
-  const mine = bookingForClass(c);
+  const held = bookingForClass(c);
+  const onWaitlist = (held && isWaitlistRow(held)) ? held : null;   // same split as the row
+  const mine = onWaitlist ? null : held;
 
   /* The sheet's primary mirrors the row's action column exactly — same precedence, same
      answers. Two controls saying different things about one class is how the "Book
@@ -5251,7 +5302,9 @@ function openClassSheet(bid){
   const block = (mine || willBook) ? null : bookBlock(c);
   const clash = (mine || block) ? null : pickClash(c);
   let primary;
-  if(!!mine){
+  if(onWaitlist){
+    primary = '<div class="btn inert">'+G.clock+' '+esc(waitlistLabel(onWaitlist))+' — not booked</div>';
+  } else if(!!mine){
     primary = '<div class="btn inert go">'+G.check+' Booked</div>';
   } else if(block){
     /* Not a disabled <button>: the row's whole argument for the inert states is that a
@@ -5450,9 +5503,11 @@ async function bookNow(bid, fromSheet, waitlist){
   const t = fmt12(c.time);
   const already = bookingForClass(c);
   /* An optimistic row is an ASK, not an account fact, so say the thing that is true of
-     both cases rather than asserting FIT has it (round 2). */
-  if(already){ toast(already.__pending ? 'That one is already on your Booked list.'
-                                       : 'You’re already booked into this class.', 2800); return; }
+     both cases rather than asserting FIT has it (round 2). A waitlist place is a third
+     case and must not be called a booking (10 Nov 2026). */
+  if(already){ toast(isWaitlistRow(already) ? 'You’re already on the waitlist for this class ('+waitlistLabel(already).toLowerCase()+') — not booked. FIT moves you in if a place frees up.'
+                     : already.__pending ? 'That one is already on your Booked list.'
+                                         : 'You’re already booked into this class.', isWaitlistRow(already) ? 4600 : 2800); return; }
   /* Guard the ACTION, not just the button (24 Aug): a blocked row renders no Book button,
      but a poll can land between the render and the tap, and the sheet's button lives on
      until it closes. A refusal must never be silent (P-18), so it says why.
@@ -5496,18 +5551,21 @@ async function bookNow(bid, fromSheet, waitlist){
        yes, against fresh state; the tight path this sheet exists for is exactly the one
        where the surplus booking cannot be cancelled for free. */
     const again = bookingForClass(c);
-    if(again){ toast(again.__pending ? 'That one is already on your Booked list.'
-                                     : 'You’re already booked into this class.', 2800); return; }
+    if(again){ toast(isWaitlistRow(again) ? 'You’re already on the waitlist for this class — not booked.'
+                     : again.__pending ? 'That one is already on your Booked list.'
+                                       : 'You’re already booked into this class.', 2800); return; }
     resetDerived();
     const blk2 = bookBlock(c);
     if(blk2){ toast(blockLine(blk2, c)+'.', 4200); if(fromSheet) setTimeout(()=>openClassSheet(bid), 120); return; }
   }
 
   /* A waitlist place is NOT a booking and must never be drawn as one. It has no FIT booking
-     id, it never appears on the account page, and the bot logs it as `waitlisted` rather
-     than `booked` — which the app already surfaces as a standing notice. So: no optimistic
-     row, no pending record, nothing for the settle window to withdraw. The notice is the
-     whole feedback, and it is the honest amount. */
+     id, and the bot logs it as `waitlisted` rather than `booked` — which the app already
+     surfaces as a standing notice. (It DOES appear on the account page — as a row with a
+     /cancelbooking/waitlist/ link, which isWaitlistRow() recognises; this comment used to
+     say it never did, and the app drew it as Booked, 10 Nov 2026.) So: no optimistic row,
+     no pending record, nothing for the settle window to withdraw. The notice is the whole
+     feedback until the next sync lists the place as Waitlisted. */
   if(waitlist){
     try{
       await dispatch('booknow.yml', {day:c.day, time:c.time, studio:c.studio, date:c.date,
