@@ -5,7 +5,7 @@
  * forever, and this app changes often.
  * Modelled on the NRL Tips worker, which keeps that app auto-updating and offline-capable.
  */
-const CACHE = 'fit-booker-v12';  // v12: 24 Aug — double-booking blocks, static rail, waitlist pill, pinch kill
+const CACHE = 'fit-booker-v13';  // v13: 10 Nov — StudioONE studio (Body Pump, IGNITE, Metabolic, Strength, WOD)
 const CORE = ['./', './index.html', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

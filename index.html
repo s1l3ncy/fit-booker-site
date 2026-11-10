@@ -128,6 +128,7 @@
   --s-run:#C2410C;
   --s-cycle:#2563C9;
   --s-nurture:#A03A6E;
+  --s-studioone:#4D7C0F;
 }
 @media (prefers-color-scheme: dark){
   :root{
@@ -163,6 +164,7 @@
     --s-run:#FF8C4B;
     --s-cycle:#7FADFF;
     --s-nurture:#E88ABF;
+    --s-studioone:#A3E635;
   }
 }
 @media (max-width:359px){ :root{ --gx:12px } }
@@ -462,7 +464,7 @@ svg{display:block;flex:none}
 }
 .chip .cd{width:7px;height:7px;border-radius:4px;flex:none}
 .chip .cd.all{width:14px;height:8px;border-radius:4px;
-  background:linear-gradient(90deg,var(--s-exhale),var(--s-reformer),var(--s-run),var(--s-cycle),var(--s-nurture))}
+  background:linear-gradient(90deg,var(--s-exhale),var(--s-reformer),var(--s-run),var(--s-cycle),var(--s-nurture),var(--s-studioone))}
 .chip[aria-selected="true"]{background:var(--btn-ink);color:var(--btn-on)}
 .chip:active{opacity:.6}
 
@@ -979,10 +981,10 @@ svg{display:block;flex:none}
    ════════════════════════════════════════════════════════════════ */
 const DAY_ORDER = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 const TZ = 'Australia/Sydney';
-const STUDIOS = ['exhale','reformer','run','cycle','nurture'];
+const STUDIOS = ['exhale','reformer','run','cycle','nurture','studioone'];
 const SCOLOR = {exhale:'var(--s-exhale)',reformer:'var(--s-reformer)',run:'var(--s-run)',
-                cycle:'var(--s-cycle)',nurture:'var(--s-nurture)'};
-const SLABEL = {exhale:'Exhale',reformer:'Reformer',run:'Run',cycle:'Cycle',nurture:'Nurture'};
+                cycle:'var(--s-cycle)',nurture:'var(--s-nurture)',studioone:'var(--s-studioone)'};
+const SLABEL = {exhale:'Exhale',reformer:'Reformer',run:'Run',cycle:'Cycle',nurture:'Nurture',studioone:'StudioONE'};
 
 /* The Worker is the ONLY back end this app talks to. It verifies a FIT password (the gym
    portal sends no CORS headers, so the browser cannot ask it directly), and it holds the
@@ -3514,7 +3516,7 @@ function railHTML(){
     if(d === selDate) cls.push('sel');   // aria-current below: the strip is the only day control now
     if(d === today) cls.push('today');
     if(!st.length) cls.push('noclass');
-    const pips = st.slice(0,5).map(s=>'<i style="background:'+SCOLOR[s]+'"></i>').join('');
+    const pips = st.slice(0,6).map(s=>'<i style="background:'+SCOLOR[s]+'"></i>').join('');
     return '<button class="'+cls.join(' ')+'" data-date="'+d+'"'+
          (d === selDate ? ' aria-current="date"' : '')+
          ' aria-label="'+esc(longDate(d))+'">'+
@@ -3848,6 +3850,9 @@ function studioOfBooking(b){
   if(s.indexOf('reformer')>=0) return 'reformer';
   if(s.indexOf('sauna')>=0 || s.indexOf('nurture')>=0) return 'nurture';
   if(s.indexOf('cycle')>=0) return 'cycle';
+  /* before run: a StudioONE WOD row carries 'StudioONE' in its location, a Run WOD does not */
+  if(s.indexOf('studioone')>=0 || s.indexOf('studio one')>=0 ||
+     /\b(body pump|ignite|metabolic|strength training)\b/.test(s)) return 'studioone';
   /* word-start match so a future class called "Core Crunch" isn't mapped to run */
   if(s.indexOf('bolt')>=0 || s.indexOf('afterburner')>=0 || /\brun/.test(s) || /\bwod\b/.test(s)) return 'run';
   if(/\b(exhale|yoga|pilates|barre|vinyasa|hatha|yin|meditation|stretch|mobility)\b/.test(s)) return 'exhale';
